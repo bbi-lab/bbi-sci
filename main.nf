@@ -1,6 +1,7 @@
 
 // Parse input parameters
 params.help = false
+params.rerun = false
 
 //print usage
 if (params.help) {
@@ -29,6 +30,7 @@ if (params.help) {
     log.info '    params.max_cores = 16                      The maximum number of cores to use - fewer will be used if appropriate.'
     log.info '    process.maxForks = 20                      The maximum number of processes to run at the same time on the cluster.'
     log.info '    process.queue = "trapnell-short.q"         The queue on the cluster where the jobs should be submitted. '
+    log.info '    params.rerun = [sample1, sample2]          Add to only rerun certain samples from trimming on.'
     log.info ''
     exit 1
 }
@@ -110,7 +112,7 @@ process seg_sample_fastqs {
 
     output:
         file "demux_stats" into seg_output
-        file "demux_stats/*.fastq" into samp_fastqs mode flatten
+        file "demux_stats/*.fastq" into samp_fastqs_check mode flatten
         file "demux_stats/*.stats.json" into stats
 
     """
@@ -122,6 +124,20 @@ process seg_sample_fastqs {
         --output_dir ./demux_stats
 
     """    
+}
+
+process rerun_samples {
+    input:
+        file fastq from samp_fastqs_check
+
+    output:
+        file fastq into samp_fastqs
+
+    when:
+        fastq.name in params.rerun
+    """
+    touch fastq
+    """
 }
 
 process trim_fastqs {
