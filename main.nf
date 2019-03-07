@@ -134,7 +134,7 @@ process rerun_samples {
         file fastq into samp_fastqs
 
     when:
-        fastq.name in params.rerun
+        params.rerun == false || fastq.name in params.rerun
     """
     touch fastq
     """
