@@ -6,21 +6,36 @@ params.help = false
 if (params.help) {
     log.info ''
     log.info 'BBI 2-level sci-RNA-seq Pipeline'
-    log.info '----------------------------'
+    log.info '--------------------------------'
     log.info ''
+    log.info 'For reproducibility, please specify all parameters to a config file'
+    log.info 'by specifying -c CONFIG_FILE.config.'
     log.info ''
     log.info 'Usage: '
-    log.info '    main.nf --run_dir RUN_DIRECTORY --sample_sheet SAMPLE_SHEET_PATH [OPTIONS]...'
+    log.info '    nextflow run main.nf -c CONFIG_FILE'
     log.info ''
-    log.info 'Options:'
+    log.info 'Help: '
     log.info '    --help                              Show this message and exit.'
-    log.info '    --run_dir RUN_DIRECTORY             Path to the sequencer output.'
-    log.info '    --sample_sheet SAMPLE_SHEET_PATH    Sample sheet of the format described in the README.'
-    log.info '    --max_cores                         The maximum number of cores to use - fewer will be used if appropriate.'
-    log.info '    --output_dir OUTPUT DIRECTORY       Output directory, default is "output" in current directory.'
     log.info ''
+    log.info 'Required parameters (specify in your config file):'
+    log.info '    params.run_dir = RUN_DIRECTORY             Path to the sequencer output.'
+    log.info '    params.output_dir OUTPUT DIRECTORY         Output directory.'
+    log.info '    params.sample_sheet = SAMPLE_SHEET_PATH    Sample sheet of the format described in the README.'
+    log.info '    params.p7_rows = "A B C"                   The PCR rows used - must match order of params.p5_cols.'
+    log.info '    params.p5_cols = "1 2 3"                   The PCR columns used - must match order of params.p7_rows.'
+    log.info ''
+    log.info ''
+    log.info 'Optional parameters (specify in your config file):'
+    log.info '    params.max_cores = 16                      The maximum number of cores to use - fewer will be used if appropriate.'
+    log.info '    process.maxForks = 20                      The maximum number of processes to run at the same time on the cluster.'
+    log.info '    process.queue = "trapnell-short.q"         The queue on the cluster where the jobs should be submitted. '
     log.info ''
     exit 1
+}
+
+// check required options
+if (!params.run_dir || !params.output_dir || !params.sample_sheet || !params.p7_rows || !params.p5_cols) {
+    exit 1, "Must include config file using -c CONFIG_FILE.config that includes output_dir, sample_sheet, run_dir, p7_rows and p5_cols"
 }
 
 process make_sample_sheet {
