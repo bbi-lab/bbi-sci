@@ -9,6 +9,10 @@ First, install nextflow by logging onto the cluster, starting a qlogin session a
 ```
 curl -s https://get.nextflow.io | bash
 ```
+You probably also want to add Nextflow to your path so you can access it from anywhere. Do this by adding the following to you .bashrc file (located in your home directory).
+```
+export PATH=/path/to/whereever/you/downloaded/nextflow:$PATH
+```
 
 Next, pull the pipeline to make sure you're on the latest version
 ```
