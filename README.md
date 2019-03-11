@@ -18,7 +18,7 @@ Enter your github password when it prompts you.
 
 Check that it all worked by running:
 ```
-nextflow run bbi-sci -help
+nextflow run bbi-sci --help
 ```
 You should get some help info printed.
 
