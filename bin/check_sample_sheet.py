@@ -1,0 +1,56 @@
+#!/usr/bin/env python    
+
+import argparse
+import sys
+import os
+
+SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
+RT_FILE = os.path.join(SCRIPT_DIR, 'barcode_files/rt2.txt')
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser('Check sample sheet')
+
+    parser.add_argument('--sample_sheet', required=True, help='Path to sample sheet.')
+    args = parser.parse_args()
+
+    rtdict = {}
+    with open(RT_FILE) as rt_file:
+        for line in enumerate(rt_file):
+            line = line[1].strip().split("\t")
+            rtdict[line[0]] = line[1]
+
+    genomes = ['Human', 'Mouse', 'Barnyard', 'Barn', 'Celegans', 'Rat', 'Macaque', 'Zebrafish']
+
+    def check_line(line, line_num, rtdict = rtdict, genomes = genomes):
+        line = line.strip().split(",")
+        if not line[0] in rtdict.keys():
+            sys.exit("Sample sheet error at line " + str(line_num) + ". RT Barcode '" + line[0] + "' not valid.")
+        if not line[2] in genomes:
+            sys.exit("Sample sheet error at line " + str(line_num) + ". Reference Genome '" + line[2] + "' not valid.")
+
+    sheet = open(args.sample_sheet)
+
+    # check for header
+    topline_orig = sheet.readline()
+    topline = topline_orig.strip().split(",")
+    if topline[0] == 'RT Barcode' and topline[1] =='Sample ID' and topline[2] == 'Reference Genome':
+        sample_out = topline_orig
+        header = True
+    else:
+        sample_out = 'RT Barcode,Sample ID,Reference Genome\\n'
+        check_line(topline_orig)
+        sample_out = sample_out + topline_orig
+
+    # Check RT and Genomes against possible
+
+    line_num = 1
+    for line in sheet:
+        line_num += 1
+        check_line(line, line_num)
+        sample_out = sample_out + line
+
+    sheet.close()
+
+    new_sheet = open("good_sample_sheet.csv", "w")
+    new_sheet.write(sample_out)
+    new_sheet.close()

@@ -13,7 +13,7 @@ if (params.help) {
     log.info 'by specifying -c CONFIG_FILE.config.'
     log.info ''
     log.info 'Usage: '
-    log.info '    nextflow run main.nf -c CONFIG_FILE'
+    log.info '    nextflow run bbi-sci -c CONFIG_FILE'
     log.info ''
     log.info 'Help: '
     log.info '    --help                              Show this message and exit.'
@@ -32,12 +32,29 @@ if (params.help) {
     log.info '    process.queue = "trapnell-short.q"         The queue on the cluster where the jobs should be submitted. '
     log.info '    params.rerun = [sample1, sample2]          Add to only rerun certain samples from trimming on.'
     log.info ''
+    log.info 'Issues? Contact hpliner@uw.edu'
     exit 1
 }
 
 // check required options
 if (!params.run_dir || !params.output_dir || !params.sample_sheet || !params.p7_rows || !params.p5_cols) {
     exit 1, "Must include config file using -c CONFIG_FILE.config that includes output_dir, sample_sheet, run_dir, p7_rows and p5_cols"
+}
+
+rt2_file = Channel.fromPath('barcode_files/rt2.txt')
+//check sample sheet
+process check_sample_sheet {
+    module 'java/latest:modules:modules-init:modules-gs:python/3.6.4'
+
+    input:
+	file rt2 from rt2_file
+
+    output:
+        file "*.csv" into good_sample_sheet
+
+    """
+    check_sample_sheet.py --sample_sheet $params.sample_sheet
+    """
 }
 
 process make_sample_sheet {
@@ -69,7 +86,7 @@ process bcl2fastq {
     module 'java/latest:modules:modules-init:modules-gs:gmp/5.0.2'
     module 'mpfr/3.1.0:mpc/0.8.2:gcc/4.9.1:bcl2fastq/2.20'
     queue 'trapnell-short.q'
-    publishDir path: "$params.output_dir", pattern: "lane_fastqs/Undetermined_S0_*.fastq.gz", mode: 'copy', overwrite: 'true'
+    publishDir path: "$params.output_dir", pattern: "lane_fastqs/Undetermined_S0_*.fastq.gz", mode: 'copy'
     clusterOptions "-pe serial $max_cores_bcl -l mfree=$bcl_mem" + "G"
 
     input:
@@ -103,7 +120,7 @@ process seg_sample_fastqs {
     cache 'lenient'
     module 'java/latest:modules:modules-init:modules-gs:python/3.6.4'
     clusterOptions "-l mfree=1G"
-    publishDir = [path: "${params.output_dir}/", pattern: "demux_stats/*.stats.json", mode: 'copy', overwrite: 'true' ]
+    publishDir = [path: "${params.output_dir}/", pattern: "demux_stats/*.stats.json", mode: 'copy']
     //queue 'trapnell-short.q'
     //publishDir "$params.output_dir" + "/sample_fastqs" 
 
@@ -134,7 +151,7 @@ process rerun_samples {
         file fastq into samp_fastqs
 
     when:
-        params.rerun == false || fastq.name in params.rerun
+        params.rerun == false || (fastq.name - ~/-L00\d.fastq/) in params.rerun
     """
     touch fastq
     """
@@ -306,7 +323,7 @@ save_bam = {params.output_dir + "/" + it - ~/.txt.bam/ + "/" + it - ~/.txt/}
 process merge_bams {
     cache 'lenient'
     module 'java/latest:modules:modules-init:modules-gs:samtools/1.4'
-    publishDir = [path: "${params.output_dir}/", saveAs: save_bam, pattern: "*.bam", mode: 'copy', overwrite: 'true' ]
+    publishDir = [path: "${params.output_dir}/", saveAs: save_bam, pattern: "*.bam", mode: 'copy' ]
 
     input:
         file bam_set from Bams_to_merge
@@ -472,7 +489,7 @@ save_dup = {params.output_dir + "/" + it - ~/.txt.bam.bed.UMI_count.txt.duplicat
 process summarize_duplication {
     cache 'lenient'
     clusterOptions "-l mfree=8G"
-    publishDir = [path: "${params.output_dir}/", saveAs: save_dup, pattern: "*duplication_rate_stats.txt", mode: 'copy', overwrite: 'true' ]
+    publishDir = [path: "${params.output_dir}/", saveAs: save_dup, pattern: "*duplication_rate_stats.txt", mode: 'copy']
 
     input:
         set file(umi_count_file), file(read_count_file) from for_summarize_dup
@@ -529,7 +546,7 @@ process umi_rollup {
 
 save_bam = {params.output_dir + "/" + it - ~/.txt.bam/ + "/" + it - ~/.txt/}
 
-    publishDir = [path: "${params.output_dir}/", saveAs: save_bam, pattern: "*.bam", mode: 'copy', overwrite: 'true' ]
+    publishDir = [path: "${params.output_dir}/", saveAs: save_bam, pattern: "*.bam", mode: 'copy']
 
 
 */
@@ -543,9 +560,9 @@ process umi_by_sample_summary {
     cache 'lenient'
     clusterOptions "-l mfree=8G"
 
-    publishDir path: "${params.output_dir}/", saveAs: save_umi_per_int, pattern: "*intronic.txt", mode: 'copy', overwrite: 'true' 
-    publishDir path: "${params.output_dir}/", saveAs: save_plot, pattern: "*.knee_plot.png", mode: 'copy', overwrite: 'true'
-    publishDir path: "${params.output_dir}/", saveAs: save_umi_per_cell, pattern: "*barcode.txt", mode: 'copy', overwrite: 'true'  
+    publishDir path: "${params.output_dir}/", saveAs: save_umi_per_int, pattern: "*intronic.txt", mode: 'copy' 
+    publishDir path: "${params.output_dir}/", saveAs: save_plot, pattern: "*.knee_plot.png", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_umi_per_cell, pattern: "*barcode.txt", mode: 'copy'  
   
 
     input:
