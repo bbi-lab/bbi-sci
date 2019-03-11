@@ -53,3 +53,20 @@ To run the pipeline, do
 ```
 nextflow run bbi-sci -c experiment.config
 ```
+
+If there is an error, you can continue the pipeline where it left off with
+
+```
+nextflow run bbi-sci -c experiment.config -resume
+```
+
+#### The work folder:
+Nextflow stores all of the intermediate files in its 'work' folder, which will be in the output directory you specified. This folder can get quite large, so after the pipeline is finished, you can delete it using:
+
+```
+rm -r work/
+```
+
+Warning: after you delete the work folder, -resume will no longer restart from the middle of the run, you'll have to start from the beginning if you need to regenerate any files.
+
+
