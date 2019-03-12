@@ -144,6 +144,7 @@ process seg_sample_fastqs {
 }
 
 process rerun_samples {
+    cache false
     input:
         file fastq from samp_fastqs_check
 
