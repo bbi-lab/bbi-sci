@@ -646,17 +646,15 @@ save_gene_anno = {params.output_dir + "/" + it - ~/..txt.gene_annotations.txt/ +
 process make_matrix {
     cache 'lenient'
     clusterOptions "-l mfree=4G"
-    publishDir path: "${params.output_dir}/", saveAs: save_umi, pattern: "*umi_counts.matrix", mode: 'copy', overwrite: 'true' 
-    publishDir path: "${params.output_dir}/", saveAs: save_cell_anno, pattern: "*cell_annotations.txt", mode: 'copy', overwrite: 'true' 
-    publishDir path: "${params.output_dir}/", saveAs: save_gene_anno, pattern: "*gene_annotations.txt", mode: 'copy', overwrite: 'true' 
+    publishDir path: "${params.output_dir}/", saveAs: save_umi, pattern: "*umi_counts.matrix", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_cell_anno, pattern: "*cell_annotations.txt", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_gene_anno, pattern: "*gene_annotations.txt", mode: 'copy'
 
     input:
         set file(umi_rollup_file), file(gene_assignments_file), file(umi_cutoff_file), val(annotations_path) from make_matrix_prepped
 
     output:
-        file "*cell_annotations.txt" into cell_annotations
-        file "*umi_counts.matrix" into umi_count_matrix
-        file "*gene_annotations.txt" into gene_annos
+        set file("*cell_annotations.txt"), file("*umi_counts.matrix"), file("*gene_annotations.txt") into mat_output
 
     """
     output=${gene_assignments_file}.cell_annotations.txt
@@ -688,6 +686,29 @@ process make_matrix {
     
     rm samples_to_exclude_file
     """
+
+}
+
+save_cds = {params.output_dir + "/" + it - ~/_cds.RDS/ + "/" + it}
+
+process make_cds {
+    module 'java/latest:modules:modules-init:modules-gs:gcc/8.1.0:R/3.5.2'
+    publishDir path: "${params.output_dir}/", saveAs: save_cds, pattern: "*cds.RDS", mode: 'copy'
+
+    input:
+        set file(cell_data), file(umi_matrix), file(gene_data) from mat_output
+
+    output:
+        file "*.RDS"
+
+
+"""
+    make_cds.R \
+        $umi_matrix\
+        $cell_data\
+        $gene_data
+
+"""
 
 }
 
