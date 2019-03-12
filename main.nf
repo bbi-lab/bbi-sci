@@ -57,6 +57,8 @@ process check_sample_sheet {
     """
 }
 
+sample_sheet_file = file(good_sample_sheet)
+
 process make_sample_sheet {
     cache 'lenient'
     module 'java/latest:modules:modules-init:modules-gs:python/3.6.4'
@@ -136,7 +138,7 @@ process seg_sample_fastqs {
     mkdir demux_stats
     make_sample_fastqs.py --run_directory $params.run_dir \
         --read1 <(zcat $R1) --read2 <(zcat $R2) \
-        --file_name $R1 --sample_layout $params.sample_sheet \
+        --file_name $R1 --sample_layout $sample_sheet_file \
         --p5_cols_used $params.p5_cols --p7_rows_used $params.p7_rows \
         --output_dir ./demux_stats
 
@@ -194,7 +196,7 @@ process prep_align {
     module 'java/latest:modules:modules-init:modules-gs:python/3.6.4'
 
     input:
-        file params.sample_sheet
+        file sample_sheet_file
         file trimmed_fastq from trimmed_fastqs
 
     output:
@@ -216,7 +218,7 @@ def quick_parse(file_path):
 
 
 lookup = {}
-for rt_well in quick_parse("$params.sample_sheet"):
+for rt_well in quick_parse("$sample_sheet_file"):
     lookup[rt_well['Sample ID'].replace('-', '.').replace('_', '.').replace(' ', '.')] = rt_well['Reference Genome']
     
 
@@ -368,7 +370,7 @@ process prep_assign {
     cache 'lenient'
     
     input:
-        file params.sample_sheet
+        file sample_sheet_file
         set file(sample_bed), file(merged_bam) from for_prep_assign
 
     output:
@@ -389,7 +391,7 @@ def quick_parse(file_path):
         yield entries_dict
 
 lookup = {}
-for rt_well in quick_parse("$params.sample_sheet"):
+for rt_well in quick_parse("$sample_sheet_file"):
     lookup[rt_well['Sample ID'].replace('-', '.').replace('_', '.').replace(' ', '.')] = rt_well['Reference Genome']
 
 GENE_MODELS = {
@@ -596,7 +598,7 @@ process prep_make_matrix {
     cache 'lenient'
     
     input:
-        file params.sample_sheet
+        file sample_sheet_file
         set file(umi_rollup), file(gene_assignments_file), file(umi_cutoff) from ubss_out
 
     output:
@@ -617,7 +619,7 @@ def quick_parse(file_path):
         yield entries_dict
 
 lookup = {}
-for rt_well in quick_parse("$params.sample_sheet"):
+for rt_well in quick_parse("$sample_sheet_file"):
     lookup[rt_well['Sample ID'].replace('-', '.').replace('_', '.').replace(' ', '.')] = rt_well['Reference Genome']
 
 GENE_MODELS = {
