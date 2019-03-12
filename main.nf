@@ -57,7 +57,7 @@ process check_sample_sheet {
     """
 }
 
-sample_sheet_file = file(good_sample_sheet)
+sample_sheet_file = good_sample_sheet.first()
 
 process make_sample_sheet {
     cache 'lenient'
@@ -128,6 +128,7 @@ process seg_sample_fastqs {
 
     input:
         set file(R1), file(R2) from fastqs
+        file sample_sheet_file
 
     output:
         file "demux_stats" into seg_output
