@@ -57,7 +57,7 @@ process check_sample_sheet {
     """
 }
 
-sample_sheet_file = file(good_sample_sheet)
+sample_sheet_file = good_sample_sheet.first()
 
 process make_sample_sheet {
     cache 'lenient'
