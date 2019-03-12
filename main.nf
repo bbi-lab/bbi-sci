@@ -128,6 +128,7 @@ process seg_sample_fastqs {
 
     input:
         set file(R1), file(R2) from fastqs
+        file sample_sheet_file
 
     output:
         file "demux_stats" into seg_output
