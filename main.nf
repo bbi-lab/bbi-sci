@@ -696,7 +696,7 @@ process make_matrix {
 save_cds = {params.output_dir + "/" + it - ~/_cds.RDS/ + "/" + it}
 
 process make_cds {
-    module 'java/latest:modules:modules-init:modules-gs:gcc/8.1.0:R/3.5.2'
+    module 'java/latest:modules:modules-init:modules-gs:python/3.6.4:gcc/8.1.0:R/3.5.2'
     publishDir path: "${params.output_dir}/", saveAs: save_cds, pattern: "*cds.RDS", mode: 'copy'
 
     input:
