@@ -46,6 +46,11 @@ The second thing you need is a config file which passes in your arguments to the
 
 An example configuration file is included in the package.
 
+For Shendure lab cluster
+```
+process.queue = "ravana.q"
+```
+
 #### Run the pipeline:
 
 To run the pipeline, do 
