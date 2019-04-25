@@ -19,16 +19,16 @@ if __name__ == '__main__':
             line = line[1].strip().split("\t")
             rtdict[line[0]] = line[1]
 
-    genomes = ['Human', 'Mouse', 'Barnyard', 'Barn', 'Celegans', 'Rat', 'Macaque', 'Zebrafish', 'Drosophila']
+    genomes = ['Human', 'Mouse', 'Barnyard', 'Barn', 'Celegans', 'Rat', 'Macaque', 'Zebrafish']
 
     def check_line(line, line_num, rtdict = rtdict, genomes = genomes):
         error_flag = 0
         line = line.strip().split(",")
         if not line[0] in rtdict.keys():
-            sys.stderr.write("Sample sheet error at line " + str(line_num) + ". RT Barcode '" + line[0] + "' not valid.")
+            sys.stderr.write("Sample sheet error at line " + str(line_num) + ". RT Barcode '" + line[0] + "' not valid.\n")
             error_flag = 1
         if not line[2] in genomes:
-            sys.stderr.write("Sample sheet error at line " + str(line_num) + ". Reference Genome '" + line[2] + "' not valid.")
+            sys.stderr.write("Sample sheet error at line " + str(line_num) + ". Reference Genome '" + line[2] + "' not valid.\n")
             error_flag = 1
         return error_flag
     sheet = open(args.sample_sheet)
@@ -57,10 +57,11 @@ if __name__ == '__main__':
         error_count += check_line(line, line_num)
         sample_out = sample_out + line
     sheet.close()
-
+    
     if error_count > 0:
-        sys.stderr.write("There were " + str(error_count) + " errors in the sample sheet")
+        sys.stderr.write("There were " + str(error_count) + " errors in the sample sheet.\n")
         sys.exit("Error")
+
     new_sheet = open("good_sample_sheet.csv", "w")
     new_sheet.write(sample_out)
     new_sheet.close()
