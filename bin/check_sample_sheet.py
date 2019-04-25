@@ -22,12 +22,15 @@ if __name__ == '__main__':
     genomes = ['Human', 'Mouse', 'Barnyard', 'Barn', 'Celegans', 'Rat', 'Macaque', 'Zebrafish', 'Drosophila']
 
     def check_line(line, line_num, rtdict = rtdict, genomes = genomes):
+        error_flag = 0
         line = line.strip().split(",")
         if not line[0] in rtdict.keys():
-            sys.exit("Sample sheet error at line " + str(line_num) + ". RT Barcode '" + line[0] + "' not valid.")
+            print("Sample sheet error at line " + str(line_num) + ". RT Barcode '" + line[0] + "' not valid.")
+            error_flag = 1
         if not line[2] in genomes:
-            sys.exit("Sample sheet error at line " + str(line_num) + ". Reference Genome '" + line[2] + "' not valid.")
-
+            print("Sample sheet error at line " + str(line_num) + ". Reference Genome '" + line[2] + "' not valid.")
+            error_flag = 1
+        return error_flag
     sheet = open(args.sample_sheet)
 
     # check for header
@@ -43,15 +46,21 @@ if __name__ == '__main__':
         sample_out = sample_out + topline_orig
 
     # Check RT and Genomes against possible
+    error_count = 0
 
     line_num = 1
     for line in sheet:
         line_num += 1
-        check_line(line, line_num)
+        linesp = line.strip().split(",")
+        if linesp[0] in (None, "") and linesp[1] in (None, "") and linesp[2] in (None, ""):
+            continue
+        error_count += check_line(line, line_num)
         sample_out = sample_out + line
-
     sheet.close()
 
+    if error_count > 0:
+        print("There were " + str(error_count) + " errors in the sample sheet")
+        sys.exit("Error")
     new_sheet = open("good_sample_sheet.csv", "w")
     new_sheet.write(sample_out)
     new_sheet.close()
