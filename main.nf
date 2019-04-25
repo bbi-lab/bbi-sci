@@ -41,13 +41,13 @@ if (!params.run_dir || !params.output_dir || !params.sample_sheet || !params.p7_
     exit 1, "Must include config file using -c CONFIG_FILE.config that includes output_dir, sample_sheet, run_dir, p7_rows and p5_cols"
 }
 
-rt2_file = Channel.fromPath('barcode_files/rt2.txt')
+//rt2_file = Channel.fromPath('barcode_files/rt2.txt')
 //check sample sheet
 process check_sample_sheet {
     module 'java/latest:modules:modules-init:modules-gs:python/3.6.4'
 
     input:
-	file rt2 from rt2_file
+	val params.sample_sheet
 
     output:
         file "*.csv" into good_sample_sheet
