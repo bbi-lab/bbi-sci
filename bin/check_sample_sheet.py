@@ -19,7 +19,7 @@ if __name__ == '__main__':
             line = line[1].strip().split("\t")
             rtdict[line[0]] = line[1]
 
-    genomes = ['Human', 'Mouse', 'Barnyard', 'Barn', 'Celegans', 'Rat', 'Macaque', 'Zebrafish']
+    genomes = ['Human', 'Mouse', 'Barnyard', 'Barn', 'Celegans', 'Rat', 'Macaque', 'Zebrafish', 'Drosophila']
 
     def check_line(line, line_num, rtdict = rtdict, genomes = genomes):
         line = line.strip().split(",")
