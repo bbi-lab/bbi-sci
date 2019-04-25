@@ -57,7 +57,7 @@ process check_sample_sheet {
     """
 }
 
-sample_sheet_file = good_sample_sheet.first()
+sample_sheet_file = good_sample_sheet
 
 process make_sample_sheet {
     cache 'lenient'
@@ -65,6 +65,7 @@ process make_sample_sheet {
 
     input:
         val params.run_dir
+        file good_sample_sheet
 
     output:
         file "SampleSheet.csv" into samp_sheet
