@@ -25,10 +25,10 @@ if __name__ == '__main__':
         error_flag = 0
         line = line.strip().split(",")
         if not line[0] in rtdict.keys():
-            print("Sample sheet error at line " + str(line_num) + ". RT Barcode '" + line[0] + "' not valid.")
+            sys.stderr.write("Sample sheet error at line " + str(line_num) + ". RT Barcode '" + line[0] + "' not valid.")
             error_flag = 1
         if not line[2] in genomes:
-            print("Sample sheet error at line " + str(line_num) + ". Reference Genome '" + line[2] + "' not valid.")
+            sys.stderr.write("Sample sheet error at line " + str(line_num) + ". Reference Genome '" + line[2] + "' not valid.")
             error_flag = 1
         return error_flag
     sheet = open(args.sample_sheet)
@@ -59,7 +59,7 @@ if __name__ == '__main__':
     sheet.close()
 
     if error_count > 0:
-        print("There were " + str(error_count) + " errors in the sample sheet")
+        sys.stderr.write("There were " + str(error_count) + " errors in the sample sheet")
         sys.exit("Error")
     new_sheet = open("good_sample_sheet.csv", "w")
     new_sheet.write(sample_out)
