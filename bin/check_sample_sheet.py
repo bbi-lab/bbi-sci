@@ -57,7 +57,7 @@ if __name__ == '__main__':
         error_count += check_line(line, line_num)
         sample_out = sample_out + line
     sheet.close()
-    print(error_count) 
+    
     if error_count > 0:
         sys.stderr.write("There were " + str(error_count) + " errors in the sample sheet.\n")
         sys.exit(10)
