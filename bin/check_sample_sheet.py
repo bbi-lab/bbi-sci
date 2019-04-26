@@ -38,10 +38,10 @@ if __name__ == '__main__':
     topline = topline_orig.strip().split(",")
     line_num = 1
     if topline[0] == 'RT Barcode' and topline[1] =='Sample ID' and topline[2] == 'Reference Genome':
-        sample_out = topline_orig
+        sample_out = topline_orig + '\n'
         header = True
     else:
-        sample_out = 'RT Barcode,Sample ID,Reference Genome\\n'
+        sample_out = 'RT Barcode,Sample ID,Reference Genome\n'
         check_line(topline_orig, line_num)
         sample_out = sample_out + topline_orig
 
