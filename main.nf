@@ -233,7 +233,8 @@ STAR_INDICES = {
     'Maize': None,
     'Rat': '/net/bbi/vol1/data/genomes/rat_star',
     'Macaque': '/net/bbi/vol1/data/genomes/macaque_star',
-    'Zebrafish': '/net/bbi/vol1/data/genomes/zebrafish_star'
+    'Zebrafish': '/net/bbi/vol1/data/genomes/zebrafish_star',
+    'Drosophila': '/net/bbi/vol1/data/genomes/drosophila_star'
 }
 samp = "${trimmed_fastq}".split('-')[0]
 samp_name = "${trimmed_fastq}".replace('_trimmed.fq.gz', '.')
@@ -406,6 +407,7 @@ GENE_MODELS = {
     'Rat': '/net/bbi/vol1/data/genomes/rat/',
     'Macaque': '/net/bbi/vol1/data/genomes/macaque/',
     'Zebrafish': '/net/bbi/vol1/data/genomes/zebrafish/',
+    'Drosophila': '/net/bbi/vol1/data/genomes/drosophila/',
     'Temp': 'NA'
 }
 
@@ -633,7 +635,8 @@ GENE_MODELS = {
     'Maize': '/net/gs/vol1/home/ajh24/common_data/bbi/gene_models/maize/',
     'Rat': '/net/bbi/vol1/data/genomes/rat/',
     'Macaque': '/net/bbi/vol1/data/genomes/macaque/',
-    'Zebrafish': '/net/bbi/vol1/data/genomes/zebrafish/'
+    'Zebrafish': '/net/bbi/vol1/data/genomes/zebrafish/',
+    'Drosophila': '/net/bbi/vol1/data/genomes/drosophila/'
 }
 
 samp = "${gene_assignments_file}".replace("..txt", "")
