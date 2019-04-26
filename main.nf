@@ -44,6 +44,7 @@ if (!params.run_dir || !params.output_dir || !params.sample_sheet || !params.p7_
 //rt2_file = Channel.fromPath('barcode_files/rt2.txt')
 //check sample sheet
 process check_sample_sheet {
+    beforeScript '. /etc/profile.d/modules.sh'
     module 'modules:java/latest:modules-init:modules-gs:python/3.6.4'
 
     input:
@@ -60,6 +61,7 @@ process check_sample_sheet {
 sample_sheet_file = good_sample_sheet
 
 process make_sample_sheet {
+    beforeScript '. /etc/profile.d/modules.sh'
     cache 'lenient'
     module 'java/latest:modules:modules-init:modules-gs:python/3.6.4'
 
@@ -85,6 +87,7 @@ if (params.max_cores > 16) {
 }
 
 process bcl2fastq {
+    beforeScript '. /etc/profile.d/modules.sh'
     cache 'lenient'
     module 'java/latest:modules:modules-init:modules-gs:gmp/5.0.2'
     module 'mpfr/3.1.0:mpc/0.8.2:gcc/4.9.1:bcl2fastq/2.20'
