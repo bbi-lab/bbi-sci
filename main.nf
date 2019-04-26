@@ -44,7 +44,6 @@ if (!params.run_dir || !params.output_dir || !params.sample_sheet || !params.p7_
 //rt2_file = Channel.fromPath('barcode_files/rt2.txt')
 //check sample sheet
 process check_sample_sheet {
-    beforeScript '. /etc/profile.d/modules.sh'
     module 'modules:java/latest:modules-init:modules-gs:python/3.6.4'
 
     input:
