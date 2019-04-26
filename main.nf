@@ -91,7 +91,6 @@ process bcl2fastq {
     cache 'lenient'
     module 'java/latest:modules:modules-init:modules-gs:gmp/5.0.2'
     module 'mpfr/3.1.0:mpc/0.8.2:gcc/4.9.1:bcl2fastq/2.20'
-    queue 'trapnell-short.q'
     publishDir path: "$params.output_dir", pattern: "lane_fastqs/Undetermined_S0_*.fastq.gz", mode: 'copy'
     clusterOptions "-pe serial $max_cores_bcl -l mfree=$bcl_mem" + "G"
 
@@ -127,7 +126,6 @@ process seg_sample_fastqs {
     module 'java/latest:modules:modules-init:modules-gs:python/3.6.4'
     clusterOptions "-l mfree=1G"
     publishDir = [path: "${params.output_dir}/", pattern: "demux_stats/*.stats.json", mode: 'copy']
-    //queue 'trapnell-short.q'
     //publishDir "$params.output_dir" + "/sample_fastqs" 
 
     input:

@@ -60,7 +60,7 @@ if __name__ == '__main__':
     
     if error_count > 0:
         sys.stderr.write("There were " + str(error_count) + " errors in the sample sheet.\n")
-        sys.exit("Error")
+        sys.exit(10)
 
     new_sheet = open("good_sample_sheet.csv", "w")
     new_sheet.write(sample_out)
