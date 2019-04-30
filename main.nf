@@ -251,7 +251,7 @@ f.close()
 process align_reads {
     cache 'lenient'
     module 'java/latest:modules:modules-init:modules-gs:STAR/2.5.2b'
-    clusterOptions "-l mfree=15G -pe serial $cores_align"
+    clusterOptions "-l mfree=25G -pe serial $cores_align"
     
 
     input:
