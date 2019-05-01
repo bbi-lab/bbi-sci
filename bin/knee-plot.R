@@ -20,6 +20,8 @@ if (! is.null(args$cutoff)) {
     cutoff = args$cutoff
 }
 
+plot_name <- gsub("%", ".", args$knee_plot)
+
 df = read.table(
     args$input_file,
     col.names = c("sample", "barcode", "n.umi"),
@@ -29,7 +31,7 @@ df = read.table(
 if (nrow(df) == 0) {
 df <- data.frame()
 empty <- ggplot(df) + geom_point() + xlim(0, 10) + ylim(0, 100)
-ggsave(args$knee_plot, plot = empty, units = "in", width = 3.5*1.3, height = 3.5)
+ggsave(plot_name, plot = empty, units = "in", width = 3.5*1.3, height = 3.5)
 
 fileConn<-file(args$umi_count_threshold_file)
 writeLines(c(as.character(0)), fileConn)
@@ -59,7 +61,7 @@ plot = ggplot(df %>%
     plot = plot +
         geom_hline(yintercept = cutoff, size = 1.2, color = "firebrick2")
 
-ggsave(args$knee_plot, plot = plot, units = "in", width = 3.5*1.3, height = 3.5)
+ggsave(plot_name, plot = plot, units = "in", width = 3.5*1.3, height = 3.5)
 
 # Write out threshold to file
 fileConn<-file(args$umi_count_threshold_file)
