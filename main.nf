@@ -41,6 +41,23 @@ if (!params.run_dir || !params.output_dir || !params.sample_sheet || !params.p7_
     exit 1, "Must include config file using -c CONFIG_FILE.config that includes output_dir, sample_sheet, run_dir, p7_rows and p5_cols"
 }
 
+process check_sample_sheet {
+    module 'modules:java/latest:modules-init:modules-gs:python/3.6.4'
+
+    input:
+        val params.sample_sheet
+
+    output:
+        file "*.csv" into good_sample_sheet
+
+    """
+    check_sample_sheet.py --sample_sheet $params.sample_sheet
+    """
+}
+
+sample_sheet_file = good_sample_sheet
+
+
 process trim_fastqs {
     cache 'lenient'
     clusterOptions "-l mfree=8G"
