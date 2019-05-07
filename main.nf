@@ -453,7 +453,7 @@ process zip_up_duplication {
     input:
         file files from duplication_rate_out.collect()
     output:
-        file all_duplication_rate.txt
+        file "*ll_duplication_rate.txt"
 
     """
     tail -1 files | grep '' *.duplication_rate_stats.txt > all_duplication_rate.txt
