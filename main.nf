@@ -85,26 +85,27 @@ process trim_fastqs {
 lane = ~/-L[0-9]{3}.fastq/
 
 sample_fastqs
-    .collectFile() { item ->
-     [ "${(item.name - lane)}.fastq", item.toString() + '\n' ]
+    .map { file ->
+         def key = file.name.toString().tokenize('-L0').get(0)
+         return tuple(key, file) 
     }
+    .groupTuple()
     .set { fastqs_to_merge }
 
-save_fq = {params.output_dir + "/" + it - ~/.fastq/ + "/" + it - ~/.fastq/}
-
+save_fq = {params.output_dir + "/" + it - ~/.fq.gz/ + "/" + it}
 
 process save_sample_fastqs {
     cache = 'lenient'
     publishDir = [path: "${params.output_dir}/", saveAs: save_fq, pattern: "*.fq.gz", mode: 'copy' ]
 
     input:
-       file fastq_set from fastqs_to_merge
+       set key, file(fastqs) from fastqs_to_merge
 
     output:
        file "*.fq.gz" into fqs
 
     """
-    cat $fastq_set | gzip > ${fastq_set}.fq.gz
+    cat $fastqs | gzip > {$key}.fq.gz
 
     """
 }
