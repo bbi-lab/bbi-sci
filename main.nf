@@ -445,6 +445,20 @@ process summarize_duplication {
 
 }
 
+process zip_up_duplication {
+    cache 'lenient'
+    publishDir = [path: "${params.output_dir}/", pattern: "all_duplication_rate.txt", mode: 'copy']
+
+    input:
+        file files from duplication_rate_out.collect()
+    output:
+        file all_duplication_rate.txt
+
+    """
+    tail -1 files | grep '' *.duplication_rate_stats.txt > all_duplication_rate.txt
+    """      
+
+}
 
 assign_genes_out.into { for_umi_rollup; for_umi_by_sample_summary }
 
