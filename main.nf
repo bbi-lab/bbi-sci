@@ -69,7 +69,7 @@ process trim_fastqs {
     output:
         file "trim_out" into trim_output
         file "trim_out/*.fq.gz" into trimmed_fastqs mode flatten
-
+        file input_fastq into sample_fastqs
     """
     mkdir trim_out
     trim_galore $input_fastq \
@@ -81,6 +81,34 @@ process trim_fastqs {
         
     """
 }
+
+lane = ~/-L[0-9]{3}.fastq/
+
+sample_fastqs
+    .collectFile() { item ->
+     [ "${(item.name - lane)}.fastq", item.toString() + '\n' ]
+    }
+    .set { fastqs_to_merge }
+
+save_fastq = {params.output_dir + "/" + it - ~/.fastq/ + "/" + it - ~/.fastq/}
+
+
+process save_sample_fastqs {
+    cache = 'lenient'
+    publishDir = [path: "${params.output_dir}/", saveAs: save_fq, pattern: "*.fq.gz", mode: 'copy' ]
+
+    input:
+       file fastq_set from fastqs_to_merge
+
+    output:
+       file "*.fq.gz" into fqs
+
+    """
+    cat $fastq_set | gzip > ${fastq_set}.fq.gz
+
+    """
+}
+
 
 if (params.max_cores < 8) {
     cores_align = params.max_cores
