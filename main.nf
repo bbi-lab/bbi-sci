@@ -90,7 +90,7 @@ sample_fastqs
     }
     .set { fastqs_to_merge }
 
-save_fastq = {params.output_dir + "/" + it - ~/.fastq/ + "/" + it - ~/.fastq/}
+save_fq = {params.output_dir + "/" + it - ~/.fastq/ + "/" + it - ~/.fastq/}
 
 
 process save_sample_fastqs {
