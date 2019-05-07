@@ -20,7 +20,7 @@ if (! is.null(args$cutoff)) {
     cutoff = args$cutoff
 }
 
-plot_name <- gsub("%", ".", args$knee_plot)
+plot_name <- gsub("%", "%%", args$knee_plot)
 
 df = read.table(
     args$input_file,

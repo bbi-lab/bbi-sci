@@ -57,6 +57,6 @@ fd = new("AnnotatedDataFrame", data = gene.annotations)
 cds = newCellDataSet(mat, phenoData = pd, featureData = fd, expressionFamily = VGAM::negbinomial.size())
 pData(cds)$n.umi = Matrix::colSums(exprs(cds))
 
-sample_name <- stringr::str_split_fixed(args$matrix, "..", 2)[,1]
+sample_name <- stringr::str_split_fixed(args$matrix, "\\.\\.", 2)[,1]
 
 saveRDS(cds, file=paste0(sample_name, "_cds.RDS"))
