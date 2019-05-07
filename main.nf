@@ -86,7 +86,7 @@ lane = ~/-L[0-9]{3}.fastq/
 
 sample_fastqs
     .map { file ->
-         def key = file.name.toString().tokenize('-L0').get(0)
+         def key = file.name.toString().tokenize('-').get(0)
          return tuple(key, file) 
     }
     .groupTuple()
@@ -105,7 +105,7 @@ process save_sample_fastqs {
        file "*.fq.gz" into fqs
 
     """
-    cat $fastqs | gzip > {$key}.fq.gz
+    cat $fastqs | gzip > $key.fq.gz
 
     """
 }
