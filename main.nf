@@ -121,20 +121,19 @@ if (params.max_cores < 8) {
     cores_align = 8
 }
 
-   STAR_MAPS = "{
-    'Human': '/net/trapnell/vol1/jspacker/STAR/human/GRCh38-primary-assembly',
-    'Mouse': '/net/trapnell/vol1/jspacker/STAR/mouse/GRCm38-primary-assembly',
-    'Barnyard': '/net/trapnell/vol1/jspacker/STAR/human-and-mouse/GRCh38-GRCm38-primary-assembly',
-    'Barn': '/net/trapnell/vol1/jspacker/STAR/human-and-mouse/GRCh38-GRCm38-primary-assembly',
-    'Celegans': '/net/trapnell/vol1/jspacker/STAR/c-elegans/WS260',
-    'Camelina': None,
-    'Arabidopsis': None,
-    'Maize': None,
-    'Rat': '/net/bbi/vol1/data/genomes/rat_star',
-    'Macaque': '/net/bbi/vol1/data/genomes/macaque_star',
-    'Zebrafish': '/net/bbi/vol1/data/genomes/zebrafish_star',
-    'Drosophila': '/net/bbi/vol1/data/genomes/drosophila_star'
-    }"
+ STAR_MAPS = "{" +
+    "'Human': '/net/trapnell/vol1/jspacker/STAR/human/GRCh38-primary-assembly'," +
+    "'Mouse': '/net/trapnell/vol1/jspacker/STAR/mouse/GRCm38-primary-assembly'," +
+    "'Barnyard': '/net/trapnell/vol1/jspacker/STAR/human-and-mouse/GRCh38-GRCm38-primary-assembly'," +
+    "'Barn': '/net/trapnell/vol1/jspacker/STAR/human-and-mouse/GRCh38-GRCm38-primary-assembly'," +
+    "'Celegans': '/net/trapnell/vol1/jspacker/STAR/c-elegans/WS260'," +
+    "'Camelina': None," +
+    "'Arabidopsis': None," +
+    "'Maize': None, " +
+    "'Rat': '/net/bbi/vol1/data/genomes/rat_star'," +
+    "'Macaque': '/net/bbi/vol1/data/genomes/macaque_star'," +
+    "'Zebrafish': '/net/bbi/vol1/data/genomes/zebrafish_star'," +
+    "'Drosophila': '/net/bbi/vol1/data/genomes/drosophila_star' }"
 
 add_str = ""
 if (params.align_map != false) {
@@ -142,19 +141,19 @@ if (params.align_map != false) {
          ", '$entry.key' : '$entry.value'"
     }
 
- STAR_MAPS = "{
-    'Human': '/net/trapnell/vol1/jspacker/STAR/human/GRCh38-primary-assembly',
-    'Mouse': '/net/trapnell/vol1/jspacker/STAR/mouse/GRCm38-primary-assembly',
-    'Barnyard': '/net/trapnell/vol1/jspacker/STAR/human-and-mouse/GRCh38-GRCm38-primary-assembly',
-    'Barn': '/net/trapnell/vol1/jspacker/STAR/human-and-mouse/GRCh38-GRCm38-primary-assembly',
-    'Celegans': '/net/trapnell/vol1/jspacker/STAR/c-elegans/WS260',
-    'Camelina': None,
-    'Arabidopsis': None,
-    'Maize': None,
-    'Rat': '/net/bbi/vol1/data/genomes/rat_star',
-    'Macaque': '/net/bbi/vol1/data/genomes/macaque_star',
-    'Zebrafish': '/net/bbi/vol1/data/genomes/zebrafish_star',
-    'Drosophila': '/net/bbi/vol1/data/genomes/drosophila_star' "
+ STAR_MAPS = "{" +
+    "'Human': '/net/trapnell/vol1/jspacker/STAR/human/GRCh38-primary-assembly'," +
+    "'Mouse': '/net/trapnell/vol1/jspacker/STAR/mouse/GRCm38-primary-assembly'," +
+    "'Barnyard': '/net/trapnell/vol1/jspacker/STAR/human-and-mouse/GRCh38-GRCm38-primary-assembly'," +
+    "'Barn': '/net/trapnell/vol1/jspacker/STAR/human-and-mouse/GRCh38-GRCm38-primary-assembly'," +
+    "'Celegans': '/net/trapnell/vol1/jspacker/STAR/c-elegans/WS260'," +
+    "'Camelina': None," +
+    "'Arabidopsis': None," +
+    "'Maize': None, " +
+    "'Rat': '/net/bbi/vol1/data/genomes/rat_star'," +
+    "'Macaque': '/net/bbi/vol1/data/genomes/macaque_star'," +
+    "'Zebrafish': '/net/bbi/vol1/data/genomes/zebrafish_star'," +
+    "'Drosophila': '/net/bbi/vol1/data/genomes/drosophila_star' "
     + add_str + "}"
 }
 
