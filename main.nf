@@ -1,7 +1,7 @@
 
 // Parse input parameters
 params.help = false
-params.rerun = false
+params.run = false
 
 //print usage
 if (params.help) {
@@ -30,7 +30,8 @@ if (params.help) {
     log.info '    params.max_cores = 16                      The maximum number of cores to use - fewer will be used if appropriate.'
     log.info '    process.maxForks = 20                      The maximum number of processes to run at the same time on the cluster.'
     log.info '    process.queue = "trapnell-short.q"         The queue on the cluster where the jobs should be submitted. '
-    log.info '    params.rerun = [sample1, sample2]          Add to only rerun certain samples from trimming on.'
+    log.info '    params.run = [sample1, sample2]            Add to only run certain samples from trimming on.'
+    log.info '    params.align_map = ["species":"STAR/path"] Add to point alignment to a special genome.'
     log.info ''
     log.info 'Issues? Contact hpliner@uw.edu'
     exit 1
@@ -70,6 +71,9 @@ process trim_fastqs {
         file "trim_out" into trim_output
         file "trim_out/*.fq.gz" into trimmed_fastqs mode flatten
         file input_fastq into sample_fastqs
+
+    when:
+        params.run == false || (input_fastq.name - ~/-L00\d.fastq/) in params.run
     """
     mkdir trim_out
     trim_galore $input_fastq \
@@ -105,7 +109,7 @@ process save_sample_fastqs {
        file "*.fq.gz" into fqs
 
     """
-    cat $fastqs | gzip > ${key}.fq.gz
+    cat $fastqs | gzip > $key.fq.gz
 
     """
 }
@@ -117,6 +121,42 @@ if (params.max_cores < 8) {
     cores_align = 8
 }
 
+   STAR_MAPS = "{
+    'Human': '/net/trapnell/vol1/jspacker/STAR/human/GRCh38-primary-assembly',
+    'Mouse': '/net/trapnell/vol1/jspacker/STAR/mouse/GRCm38-primary-assembly',
+    'Barnyard': '/net/trapnell/vol1/jspacker/STAR/human-and-mouse/GRCh38-GRCm38-primary-assembly',
+    'Barn': '/net/trapnell/vol1/jspacker/STAR/human-and-mouse/GRCh38-GRCm38-primary-assembly',
+    'Celegans': '/net/trapnell/vol1/jspacker/STAR/c-elegans/WS260',
+    'Camelina': None,
+    'Arabidopsis': None,
+    'Maize': None,
+    'Rat': '/net/bbi/vol1/data/genomes/rat_star',
+    'Macaque': '/net/bbi/vol1/data/genomes/macaque_star',
+    'Zebrafish': '/net/bbi/vol1/data/genomes/zebrafish_star',
+    'Drosophila': '/net/bbi/vol1/data/genomes/drosophila_star'
+    }"
+
+add_str = ""
+if (params.align_map != false) {
+    add_str += [params.align_map.each { entry ->
+         ", '$entry.key' : '$entry.value'"
+    }
+
+ STAR_MAPS = "{
+    'Human': '/net/trapnell/vol1/jspacker/STAR/human/GRCh38-primary-assembly',
+    'Mouse': '/net/trapnell/vol1/jspacker/STAR/mouse/GRCm38-primary-assembly',
+    'Barnyard': '/net/trapnell/vol1/jspacker/STAR/human-and-mouse/GRCh38-GRCm38-primary-assembly',
+    'Barn': '/net/trapnell/vol1/jspacker/STAR/human-and-mouse/GRCh38-GRCm38-primary-assembly',
+    'Celegans': '/net/trapnell/vol1/jspacker/STAR/c-elegans/WS260',
+    'Camelina': None,
+    'Arabidopsis': None,
+    'Maize': None,
+    'Rat': '/net/bbi/vol1/data/genomes/rat_star',
+    'Macaque': '/net/bbi/vol1/data/genomes/macaque_star',
+    'Zebrafish': '/net/bbi/vol1/data/genomes/zebrafish_star',
+    'Drosophila': '/net/bbi/vol1/data/genomes/drosophila_star' "
+    + add_str + "}"
+}
 
 process prep_align {
     cache 'lenient'
@@ -149,20 +189,8 @@ for rt_well in quick_parse("$sample_sheet_file"):
     lookup[rt_well['Sample ID'].replace('-', '.').replace('_', '.').replace(' ', '.')] = rt_well['Reference Genome']
     
 
-STAR_INDICES = {
-    'Human': '/net/trapnell/vol1/jspacker/STAR/human/GRCh38-primary-assembly',
-    'Mouse': '/net/trapnell/vol1/jspacker/STAR/mouse/GRCm38-primary-assembly',
-    'Barnyard': '/net/trapnell/vol1/jspacker/STAR/human-and-mouse/GRCh38-GRCm38-primary-assembly',
-    'Barn': '/net/trapnell/vol1/jspacker/STAR/human-and-mouse/GRCh38-GRCm38-primary-assembly',
-    'Celegans': '/net/trapnell/vol1/jspacker/STAR/c-elegans/WS260',
-    'Camelina': None,
-    'Arabidopsis': None,
-    'Maize': None,
-    'Rat': '/net/bbi/vol1/data/genomes/rat_star',
-    'Macaque': '/net/bbi/vol1/data/genomes/macaque_star',
-    'Zebrafish': '/net/bbi/vol1/data/genomes/zebrafish_star',
-    'Drosophila': '/net/bbi/vol1/data/genomes/drosophila_star'
-}
+STAR_INDICES = $STAR_MAPS
+
 samp = "${trimmed_fastq}".split('-')[0]
 samp_name = "${trimmed_fastq}".replace('_trimmed.fq.gz', '.')
 star_index = STAR_INDICES[lookup[samp]]
@@ -174,12 +202,11 @@ f.close()
 
 }
 
-
+memory = 50/$cores_align
 process align_reads {
     cache 'lenient'
     module 'java/latest:modules:modules-init:modules-gs:STAR/2.5.2b'
-    clusterOptions "-l mfree=25G -pe serial $cores_align"
-    
+    clusterOptions "-l mfree=$memoryG -pe serial $cores_align"
 
     input:
         set file(input_file), file(info) from align_prepped
