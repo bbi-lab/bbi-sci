@@ -137,7 +137,7 @@ if (params.max_cores < 8) {
 
 add_str = ""
 if (params.align_map != false) {
-    add_str += [params.align_map.each { entry ->
+    add_str += params.align_map.each { entry ->
          ", '$entry.key' : '$entry.value'"
     }
 
