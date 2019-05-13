@@ -2,6 +2,7 @@
 // Parse input parameters
 params.help = false
 params.run = false
+params.align_map = false
 
 //print usage
 if (params.help) {
