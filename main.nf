@@ -2,7 +2,8 @@
 // Parse input parameters
 params.help = false
 params.run = false
-params.align_map = false
+params.star_file = "$baseDir/bin/star_file.txt"
+params.gene_file = "$baseDir/bin/gene_file.txt"
 
 //print usage
 if (params.help) {
@@ -32,7 +33,8 @@ if (params.help) {
     log.info '    process.maxForks = 20                      The maximum number of processes to run at the same time on the cluster.'
     log.info '    process.queue = "trapnell-short.q"         The queue on the cluster where the jobs should be submitted. '
     log.info '    params.run = [sample1, sample2]            Add to only run certain samples from trimming on.'
-    log.info '    params.align_map = ["species":"STAR/path"] Add to point alignment to a special genome.'
+    log.info '    params.star_file = PATH/TO/FILE            File with the genome to star maps, similar to the one included with the package.'
+    log.info '    params.gene_file = PATH/TO/FILE            File with the genome to gene model maps, similar to the one included with the package.'
     log.info ''
     log.info 'Issues? Contact hpliner@uw.edu'
     exit 1
@@ -43,17 +45,21 @@ if (!params.run_dir || !params.output_dir || !params.sample_sheet || !params.p7_
     exit 1, "Must include config file using -c CONFIG_FILE.config that includes output_dir, sample_sheet, run_dir, p7_rows and p5_cols"
 }
 
+star_file = file(params.star_file)
+gene_file = file(params.gene_file)
+
 process check_sample_sheet {
     module 'modules:java/latest:modules-init:modules-gs:python/3.6.4'
 
     input:
         val params.sample_sheet
+        file star_file
 
     output:
         file "*.csv" into good_sample_sheet
 
     """
-    check_sample_sheet.py --sample_sheet $params.sample_sheet
+    check_sample_sheet.py --sample_sheet $params.sample_sheet --star_file $star_file
     """
 }
 
@@ -122,47 +128,12 @@ if (params.max_cores < 8) {
     cores_align = 8
 }
 
- STAR_MAPS = "{" +
-    "'Human': '/net/trapnell/vol1/jspacker/STAR/human/GRCh38-primary-assembly'," +
-    "'Mouse': '/net/trapnell/vol1/jspacker/STAR/mouse/GRCm38-primary-assembly'," +
-    "'Barnyard': '/net/trapnell/vol1/jspacker/STAR/human-and-mouse/GRCh38-GRCm38-primary-assembly'," +
-    "'Barn': '/net/trapnell/vol1/jspacker/STAR/human-and-mouse/GRCh38-GRCm38-primary-assembly'," +
-    "'Celegans': '/net/trapnell/vol1/jspacker/STAR/c-elegans/WS260'," +
-    "'Camelina': None," +
-    "'Arabidopsis': None," +
-    "'Maize': None, " +
-    "'Rat': '/net/bbi/vol1/data/genomes/rat_star'," +
-    "'Macaque': '/net/bbi/vol1/data/genomes/macaque_star'," +
-    "'Zebrafish': '/net/bbi/vol1/data/genomes/zebrafish_star'," +
-    "'Drosophila': '/net/bbi/vol1/data/genomes/drosophila_star' }"
-
-add_str = ""
-if (params.align_map != false) {
-    add_str += params.align_map.each { entry ->
-         ", '$entry.key' : '$entry.value'"
-    }
-
- STAR_MAPS = "{" +
-    "'Human': '/net/trapnell/vol1/jspacker/STAR/human/GRCh38-primary-assembly'," +
-    "'Mouse': '/net/trapnell/vol1/jspacker/STAR/mouse/GRCm38-primary-assembly'," +
-    "'Barnyard': '/net/trapnell/vol1/jspacker/STAR/human-and-mouse/GRCh38-GRCm38-primary-assembly'," +
-    "'Barn': '/net/trapnell/vol1/jspacker/STAR/human-and-mouse/GRCh38-GRCm38-primary-assembly'," +
-    "'Celegans': '/net/trapnell/vol1/jspacker/STAR/c-elegans/WS260'," +
-    "'Camelina': None," +
-    "'Arabidopsis': None," +
-    "'Maize': None, " +
-    "'Rat': '/net/bbi/vol1/data/genomes/rat_star'," +
-    "'Macaque': '/net/bbi/vol1/data/genomes/macaque_star'," +
-    "'Zebrafish': '/net/bbi/vol1/data/genomes/zebrafish_star'," +
-    "'Drosophila': '/net/bbi/vol1/data/genomes/drosophila_star' "
-    + add_str + "}"
-}
-
 process prep_align {
     cache 'lenient'
     module 'java/latest:modules:modules-init:modules-gs:python/3.6.4'
 
     input:
+        file star_file
         file sample_sheet_file
         file trimmed_fastq from trimmed_fastqs
 
@@ -189,7 +160,13 @@ for rt_well in quick_parse("$sample_sheet_file"):
     lookup[rt_well['Sample ID'].replace('-', '.').replace('_', '.').replace(' ', '.')] = rt_well['Reference Genome']
     
 
-STAR_INDICES = $STAR_MAPS
+STAR_INDICES = {}
+
+with open($star_file, 'r') as f:
+    for line in f:
+        items = line.strip().split()
+        key, values = items[0], items[1]
+        STAR_INDICES[key] = values
 
 samp = "${trimmed_fastq}".split('-')[0]
 samp_name = "${trimmed_fastq}".replace('_trimmed.fq.gz', '.')
@@ -325,6 +302,7 @@ process prep_assign {
     cache 'lenient'
     
     input:
+        file gene_file
         file sample_sheet_file
         set file(sample_bed), file(merged_bam) from for_prep_assign
 
@@ -349,21 +327,13 @@ lookup = {}
 for rt_well in quick_parse("$sample_sheet_file"):
     lookup[rt_well['Sample ID'].replace('-', '.').replace('_', '.').replace(' ', '.')] = rt_well['Reference Genome']
 
-GENE_MODELS = {
-    'Human': '/net/trapnell/vol1/jspacker/gene-models/human/',
-    'Mouse': '/net/trapnell/vol1/jspacker/gene-models/mouse/',
-    'Barnyard': '/net/trapnell/vol1/jspacker/gene-models/human-and-mouse/',
-    'Barn': '/net/trapnell/vol1/jspacker/gene-models/human-and-mouse/',
-    'Celegans': '/net/trapnell/vol1/jspacker/gene-models/c-elegans/',
-    'Camelina': '/net/gs/vol1/home/ajh24/common_data/bbi/gene_models/camelina/',
-    'Arabidopsis': '/net/gs/vol1/home/ajh24/common_data/bbi/gene_models/arabidopsis/',
-    'Maize': '/net/gs/vol1/home/ajh24/common_data/bbi/gene_models/maize/',
-    'Rat': '/net/bbi/vol1/data/genomes/rat/',
-    'Macaque': '/net/bbi/vol1/data/genomes/macaque/',
-    'Zebrafish': '/net/bbi/vol1/data/genomes/zebrafish/',
-    'Drosophila': '/net/bbi/vol1/data/genomes/drosophila/',
-    'Temp': 'NA'
-}
+GENE_MODELS = {}
+
+with open($gene_file, 'r') as f:
+    for line in f:
+        items = line.strip().split()
+        key, values = items[0], items[1]
+        GENE_MODELS[key] = values
 
 samp = "${sample_bed}".replace(".txt.bam.bed", "")
 samp_name = "${sample_bed}".replace('.txt.bam.bed', '.')
@@ -592,20 +562,13 @@ lookup = {}
 for rt_well in quick_parse("$sample_sheet_file"):
     lookup[rt_well['Sample ID'].replace('-', '.').replace('_', '.').replace(' ', '.')] = rt_well['Reference Genome']
 
-GENE_MODELS = {
-    'Human': '/net/trapnell/vol1/jspacker/gene-models/human/',
-    'Mouse': '/net/trapnell/vol1/jspacker/gene-models/mouse/',
-    'Barnyard': '/net/trapnell/vol1/jspacker/gene-models/human-and-mouse/',
-    'Barn': '/net/trapnell/vol1/jspacker/gene-models/human-and-mouse/',
-    'Celegans': '/net/trapnell/vol1/jspacker/gene-models/c-elegans/',
-    'Camelina': '/net/gs/vol1/home/ajh24/common_data/bbi/gene_models/camelina/',
-    'Arabidopsis': '/net/gs/vol1/home/ajh24/common_data/bbi/gene_models/arabidopsis/',
-    'Maize': '/net/gs/vol1/home/ajh24/common_data/bbi/gene_models/maize/',
-    'Rat': '/net/bbi/vol1/data/genomes/rat/',
-    'Macaque': '/net/bbi/vol1/data/genomes/macaque/',
-    'Zebrafish': '/net/bbi/vol1/data/genomes/zebrafish/',
-    'Drosophila': '/net/bbi/vol1/data/genomes/drosophila/'
-}
+GENE_MODELS = {}
+
+with open($gene_file, 'r') as f:
+    for line in f:
+        items = line.strip().split()
+        key, values = items[0], items[1]
+        GENE_MODELS[key] = values
 
 samp = "${gene_assignments_file}".replace("..txt", "")
 exon_index = GENE_MODELS[lookup[samp]] + "latest.gene.annotations"

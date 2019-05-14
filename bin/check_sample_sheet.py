@@ -11,6 +11,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser('Check sample sheet')
 
     parser.add_argument('--sample_sheet', required=True, help='Path to sample sheet.')
+    parser.add_argument('--star_file', required=True, help='Path to star genomes file.')
     args = parser.parse_args()
 
     rtdict = {}
@@ -19,8 +20,13 @@ if __name__ == '__main__':
             line = line[1].strip().split("\t")
             rtdict[line[0]] = line[1]
 
-    genomes = ['Human', 'Mouse', 'Barnyard', 'Barn', 'Celegans', 'Rat', 'Macaque', 'Zebrafish', 'Drosophila']
+    genomes = []
 
+    with open(args.star_file, 'r') as f:
+        for line in f:
+            items = line.strip().split()
+            genomes.append(items[0])
+           
     def check_line(line, line_num, rtdict = rtdict, genomes = genomes):
         error_flag = 0
         line = line.strip().split(",")
