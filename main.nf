@@ -136,10 +136,10 @@ process prep_align {
     input:
         file star_file
         file sample_sheet_file
-        file trimmed_fastq from trimmed_fastqs
+        set file(trimmed_fastq), val(name)  from trimmed_fastqs
 
     output:
-        set file(trimmed_fastq), file('info.txt') into align_prepped
+        set file(trimmed_fastq), file('info.txt'), val(name) into align_prepped
 
     """
 #!/usr/bin/env python
@@ -158,7 +158,7 @@ def quick_parse(file_path):
 
 lookup = {}
 for rt_well in quick_parse("$sample_sheet_file"):
-    lookup[rt_well['Sample ID'].replace('-', '.').replace('_', '.').replace(' ', '.')] = rt_well['Reference Genome']
+    lookup[rt_well['Sample ID'].replace(' ', '.')] = rt_well['Reference Genome']
     
 
 STAR_INDICES = {}
@@ -187,11 +187,11 @@ process align_reads {
     clusterOptions "-l mfree=${memory}G -pe serial $cores_align"
 
     input:
-        set file(input_file), file(info) from align_prepped
+        set file(input_file), file(info), val(orig_name) from align_prepped
 
     output:
         file "align_out" into align_output
-        file "align_out/*Aligned.out.bam" into aligned_bams mode flatten
+        set file("align_out/*Aligned.out.bam"), val(orig_name) into aligned_bams mode flatten
 
     """
     mkdir align_out
@@ -223,7 +223,7 @@ process sort_and_filter {
     clusterOptions "-l mfree=1G -pe serial $cores_sf"
 
     input:
-        file aligned_bam from aligned_bams
+        set file(aligned_bam), val(orig_name) from aligned_bams
 
     output:
         file "*.bam" into sorted_bams
@@ -231,14 +231,14 @@ process sort_and_filter {
 
 
     """
-    firstString="$aligned_bam"
-    secondString="sorted"
+   // firstString="$aligned_bam"
+   // secondString="sorted"
 
-    output_bam=`echo "\${firstString/Aligned/\$secondString}"`
+   // output_bam=`echo "\${firstString/Aligned/\$secondString}"`
 
     samtools view -bh -q 30 -F 4 $aligned_bam \
         | samtools sort -@ $cores_sf - \
-        > \$output_bam
+        > ${orig_name}.bam
     """
 
 
