@@ -245,7 +245,7 @@ sorted_bams
 
 
 
-save_bam = {params.output_dir + "/" + it - ~/.txt.bam/ + "/" + it - ~/.txt/}
+save_bam = {params.output_dir + "/" + it - ~/.txt.bam.bam/ + "/" + it - ~/.txt.bam/}
 
 process merge_bams {
     cache 'lenient'
@@ -391,16 +391,16 @@ process umi_by_sample {
                 for (sample in count) {{
                 print sample "\\t" count[sample]
                 }}
-            }}' $input_bed \
+            }}' "$input_bed" \
     | sort -k1,1 \
-    >${input_bed}.UMI_count.txt
+    >"${input_bed}.UMI_count.txt"
 
-    samtools view $filtered_bam \
+    samtools view "$filtered_bam" \
     | cut -d '|' -f 2 \
     | datamash -g 1 count 1 \
     | sort -k1,1 -S 2G \
     | datamash -g 1 sum 2 \
-    > ${input_bed}.read_count.txt
+    > "${input_bed}.read_count.txt"
     """
 
 }
@@ -420,7 +420,7 @@ process summarize_duplication {
 
     """
     cat $umi_count_file \
-        | join - $read_count_file \
+        | join - "$read_count_file" \
         | awk 'BEGIN {{ 
             printf "%-18s    %10s    %10s    %8s\\n",
                 "sample", "n.reads", "n.UMI", "dup.rate"
@@ -428,7 +428,7 @@ process summarize_duplication {
                 printf "%-18s   %10d    %10d    %7.1f%\\n",
                     \$1, \$3, \$2, 100 * (1 - \$2/\$3);
         }}' \
-        >${umi_count_file}.duplication_rate_stats.txt
+        >"${umi_count_file}.duplication_rate_stats.txt"
     
     
     """
