@@ -163,7 +163,7 @@ for rt_well in quick_parse("$sample_sheet_file"):
 
 STAR_INDICES = {}
 
-with open($star_file, 'r') as f:
+with open("$star_file", 'r') as f:
     for line in f:
         items = line.strip().split()
         key, values = items[0], items[1]
