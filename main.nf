@@ -607,7 +607,7 @@ process make_matrix {
             }} else if (\$2 in cell_idx) {{
                 printf "%d\t%d\t%d\\n", gene_idx[\$3], cell_idx[\$2], \$4
             }} 
-    }}' $annotations_path \$output - \
+    }}' $annotations_path "\$output" - \
     > "${gene_assignments_file}.umi_counts.matrix"
 
     cat $annotations_path > "${gene_assignments_file}.gene_annotations.txt"
