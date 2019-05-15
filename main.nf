@@ -83,7 +83,7 @@ process trim_fastqs {
         params.run == false || (input_fastq.name - ~/-L00\d.fastq/) in params.run
     """
     mkdir trim_out
-    trim_galore $input_fastq \
+    trim_galore "$input_fastq" \
         -a AAAAAAAA \
         --three_prime_clip_R1 1 \
         --no_report_file \
