@@ -76,15 +76,16 @@ process trim_fastqs {
  
     output:
         file "trim_out" into trim_output
-        set file("trim_out/*.fq.gz"), val(1) into trimmed_fastqs mode flatten
+        set file("trim_out/*.fq.gz"), val("${input_fastq.baseName}") into trimmed_fastqs mode flatten
         file input_fastq into sample_fastqs
-//val("${input_fastq.baseName}")
+    
     when:
         params.run == false || (input_fastq.name - ~/-L00\d.fastq/) in params.run
+    
     """
     mkdir trim_out
     new_name=`echo "$input_fastq" | sed 's/ /./g'` 
-    mv "$input_fastq" \$new_name
+    cp "$input_fastq" \$new_name
     trim_galore \$new_name \
         -a AAAAAAAA \
         --three_prime_clip_R1 1 \
