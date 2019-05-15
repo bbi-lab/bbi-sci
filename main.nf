@@ -278,12 +278,12 @@ process remove_dups {
 
     """
     export LC_ALL=C
-    samtools view -h $merged_bam \
+    samtools view -h "$merged_bam" \
             | rmdup.py --bam - \
             | samtools view -bh \
             | bedtools bamtobed -i - -split \
             | sort -k1,1 -k2,2n -k3,3n -S 3G \
-            > ${merged_bam}.bed
+            > "${merged_bam}.bed"
     """
 }
 
