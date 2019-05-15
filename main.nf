@@ -184,7 +184,7 @@ memory = 50/cores_align
 process align_reads {
     cache 'lenient'
     module 'java/latest:modules:modules-init:modules-gs:STAR/2.5.2b'
-    clusterOptions "-l mfree=$memoryG -pe serial $cores_align"
+    clusterOptions "-l mfree=${memory}G -pe serial $cores_align"
 
     input:
         set file(input_file), file(info) from align_prepped
