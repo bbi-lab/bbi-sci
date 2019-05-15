@@ -561,15 +561,15 @@ with open("$gene_file", 'r') as f:
         key, values = items[0], items[1]
         GENE_MODELS[key] = values
 
-samp = "${gene_assignments_file}".replace("..txt", "")
+samp = "${gene_assignments_file}".replace(".txt", "")
 exon_index = GENE_MODELS[lookup[samp]] + "latest.gene.annotations"
 print(exon_index, end="")
     """
 }
 
-save_umi = {params.output_dir + "/" + it - ~/..txt.umi_counts.matrix/ + "/umi_counts.matrix"}
-save_cell_anno = {params.output_dir + "/" + it - ~/..txt.cell_annotations.txt/ + "/cell_annotations.txt"}
-save_gene_anno = {params.output_dir + "/" + it - ~/..txt.gene_annotations.txt/ + "/gene_annotations.txt"}
+save_umi = {params.output_dir + "/" + it - ~/.txt.umi_counts.matrix/ + "/umi_counts.matrix"}
+save_cell_anno = {params.output_dir + "/" + it - ~/.txt.cell_annotations.txt/ + "/cell_annotations.txt"}
+save_gene_anno = {params.output_dir + "/" + it - ~/.txt.gene_annotations.txt/ + "/gene_annotations.txt"}
 
 process make_matrix {
     cache 'lenient'
