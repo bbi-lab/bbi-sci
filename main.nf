@@ -76,24 +76,24 @@ process trim_fastqs {
     
     output:
         file "trim_out" into trim_output
-        file "trim_out/*.fq.gz" into trimmed_fastqs mode flatten
+        set(file "trim_out/*.fq.gz", val input_fastq.name) into trimmed_fastqs mode flatten
         file input_fastq into sample_fastqs
 
     when:
         params.run == false || (input_fastq.name - ~/-L00\d.fastq/) in params.run
     """
     mkdir trim_out
-    trim_galore "$input_fastq" \
+    new_name=`echo "$input_fastq" | sed 's/ /./g'` 
+    mv $input_fastq \$new_name
+    trim_galore \$new_name \
         -a AAAAAAAA \
         --three_prime_clip_R1 1 \
         --no_report_file \
         --gzip \
-        -o "./trim_out/${input_fastq - ~/fastq/}_trimmed.fq.gz"
+        -o "./trim_out/"
         
     """
 }
-
-lane = ~/-L[0-9]{3}.fastq/
 
 sample_fastqs
     .map { file ->
