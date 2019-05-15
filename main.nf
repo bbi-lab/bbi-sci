@@ -467,10 +467,10 @@ process umi_rollup {
     awk '\$3 == "exonic" || \$3 == "intronic" {{
             split(\$1, arr, "|")
             printf "%s|%s_%s_%s\t%s\\n", arr[2], arr[3], arr[4], arr[5], \$2
-    }}' $gene_assignments_file \
+    }}' "$gene_assignments_file" \
     | sort -k1,1 -k2,2 -S 2G \
     | datamash -g 1,2 count 2 \
-    | gzip > ${gene_assignments_file}.gz
+    | gzip > "${gene_assignments_file}.gz"
     """
 
 }
@@ -510,14 +510,14 @@ process umi_by_sample_summary {
 
     """
     tabulate_per_cell_counts.py \
-        --gene_assignment_files $gene_assignments_file \
-        --all_counts_file ${gene_assignments_file}.UMIs.per.cell.barcode.txt \
-        --intron_counts_file ${gene_assignments_file}.UMIs.per.cell.barcode.intronic.txt
+        --gene_assignment_files "$gene_assignments_file" \
+        --all_counts_file "${gene_assignments_file}.UMIs.per.cell.barcode.txt" \
+        --intron_counts_file "${gene_assignments_file}.UMIs.per.cell.barcode.intronic.txt"
     
     knee-plot.R \
-        ${gene_assignments_file}.UMIs.per.cell.barcode.txt \
-        --knee_plot ${gene_assignments_file}.knee_plot.png \
-        --umi_count_threshold_file ${gene_assignments_file}.umi_cutoff.txt
+        "${gene_assignments_file}.UMIs.per.cell.barcode.txt" \
+        --knee_plot "${gene_assignments_file}.knee_plot.png" \
+        --umi_count_threshold_file "${gene_assignments_file}.umi_cutoff.txt"
 
     """
 
@@ -551,11 +551,11 @@ def quick_parse(file_path):
 
 lookup = {}
 for rt_well in quick_parse("$sample_sheet_file"):
-    lookup[rt_well['Sample ID'].replace('-', '.').replace('_', '.').replace(' ', '.')] = rt_well['Reference Genome']
+    lookup[rt_well['Sample ID']] = rt_well['Reference Genome']
 
 GENE_MODELS = {}
 
-with open($gene_file, 'r') as f:
+with open("$gene_file", 'r') as f:
     for line in f:
         items = line.strip().split()
         key, values = items[0], items[1]
@@ -585,10 +585,10 @@ process make_matrix {
         set file("*cell_annotations.txt"), file("*umi_counts.matrix"), file("*gene_annotations.txt") into mat_output
 
     """
-    output=${gene_assignments_file}.cell_annotations.txt
+    output="${gene_assignments_file}.cell_annotations.txt"
     touch samples_to_exclude_file
     UMI_PER_CELL_CUTOFF=\$(cat $umi_cutoff_file)
-    gunzip < $umi_rollup_file \
+    gunzip < "$umi_rollup_file" \
     | datamash -g 1 sum 3 \
     | tr '|' '\t' \
     | awk -v CUTOFF=\$UMI_PER_CELL_CUTOFF 'ARGIND == 1 {{
@@ -597,8 +597,8 @@ process make_matrix {
         print \$2
     }}' samples_to_exclude_file - \
     | sort -k1,1 -S 4G \
-    > \$output
-    gunzip < $umi_rollup_file \
+    > "\$output"
+    gunzip < "$umi_rollup_file" \
     | tr '|' '\t' \
     | awk '{{ if (ARGIND == 1) {{
                 gene_idx[\$1] = FNR
@@ -608,9 +608,9 @@ process make_matrix {
                 printf "%d\t%d\t%d\\n", gene_idx[\$3], cell_idx[\$2], \$4
             }} 
     }}' $annotations_path \$output - \
-    > ${gene_assignments_file}.umi_counts.matrix
+    > "${gene_assignments_file}.umi_counts.matrix"
 
-    cat $annotations_path > ${gene_assignments_file}.gene_annotations.txt
+    cat $annotations_path > "${gene_assignments_file}.gene_annotations.txt"
     
     rm samples_to_exclude_file
     """
