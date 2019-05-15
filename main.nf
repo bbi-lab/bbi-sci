@@ -229,10 +229,6 @@ process sort_and_filter {
         file "*.bam" into sorted_bams
 
     """
-   // firstString="$aligned_bam"
-   // secondString="sorted"
-   // output_bam=`echo "\${firstString/Aligned/\$secondString}"`
-
     samtools view -bh -q 30 -F 4 "$aligned_bam" \
         | samtools sort -@ $cores_sf - \
         > "${orig_name}.bam"
