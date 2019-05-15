@@ -243,7 +243,7 @@ sorted_bams
     }
     .set { Bams_to_merge }
 
-save_bam = {params.output_dir + "/" + it - ~/.bam.txt.bam/ + "/" + it - ~/.bam.txt/}
+save_bam = {params.output_dir + "/" + it - ~/.txt.bam/ + "/" + it - ~/.txt/}
 
 process merge_bams {
     cache 'lenient'
@@ -324,8 +324,8 @@ with open("$gene_file", 'r') as f:
         items = line.strip().split()
         key, values = items[0], items[1]
         GENE_MODELS[key] = values
-print(GENE_MODELS)
-samp = "${sample_bed}".replace(".bam.txt.bam.bed", "")
+print(lookup)
+samp = "${sample_bed}".replace(".txt.bam.bed", "")
 
 print(samp)
 exon_index = GENE_MODELS[lookup[samp]] + "latest.exons.bed"
