@@ -88,7 +88,7 @@ process trim_fastqs {
         --three_prime_clip_R1 1 \
         --no_report_file \
         --gzip \
-        -o ./trim_out
+        -o "./trim_out/${input_fastq - ~/fastq/}_trimmed.fq.gz"
         
     """
 }
