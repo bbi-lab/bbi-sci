@@ -228,20 +228,15 @@ process sort_and_filter {
     output:
         file "*.bam" into sorted_bams
 
-
-
     """
    // firstString="$aligned_bam"
    // secondString="sorted"
-
    // output_bam=`echo "\${firstString/Aligned/\$secondString}"`
 
-    samtools view -bh -q 30 -F 4 $aligned_bam \
+    samtools view -bh -q 30 -F 4 "$aligned_bam" \
         | samtools sort -@ $cores_sf - \
-        > ${orig_name}.bam
+        > "${orig_name}.bam"
     """
-
-
 }
 
 lane = ~/-L[0-9]{3}.sorted.out.bam/
@@ -268,7 +263,7 @@ process merge_bams {
         file "*.bam" into sample_bams
 
     """
-    samtools merge -b $bam_set ${bam_set}.bam
+    samtools merge -b "$bam_set" "${bam_set}.bam"
     
     """
 
