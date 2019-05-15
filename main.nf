@@ -352,7 +352,7 @@ process assign_genes {
     gene_index=`head -2 $info | tail -1`
     prefix=`head -3 $info | tail -1`
     bedtools map \
-        -a $input_bed \
+        -a "$input_bed" \
         -b \$exon_index \
         -nonamecheck -s -f 0.95 -c 7 -o distinct -delim '|' \
     | bedtools map \
@@ -362,7 +362,7 @@ process assign_genes {
     | datamash \
         -g 4 first 1 first 2 last 3 first 5 first 6 collapse 7 collapse 8 \
     | assign-reads-to-genes.py \$gene_index \
-    > \$prefix
+    > "\$prefix"
 
     """
 
