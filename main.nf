@@ -317,11 +317,11 @@ def quick_parse(file_path):
 
 lookup = {}
 for rt_well in quick_parse("$sample_sheet_file"):
-    lookup[rt_well['Sample ID'].replace('-', '.').replace('_', '.').replace(' ', '.')] = rt_well['Reference Genome']
+    lookup[rt_well['Sample ID'] #.replace('-', '.').replace('_', '.').replace(' ', '.')] = rt_well['Reference Genome']
 
 GENE_MODELS = {}
 
-with open($gene_file, 'r') as f:
+with open("$gene_file", 'r') as f:
     for line in f:
         items = line.strip().split()
         key, values = items[0], items[1]
