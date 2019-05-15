@@ -77,7 +77,7 @@ process trim_fastqs {
     output:
         file "trim_out" into trim_output
         set file("trim_out/*.fq.gz"), val("${input_fastq.baseName}") into trimmed_fastqs mode flatten
-        file input_fastq into sample_fastqs
+//        file input_fastq into sample_fastqs
 
     when:
         params.run == false || (input_fastq.name - ~/-L00\d.fastq/) in params.run
