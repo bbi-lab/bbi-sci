@@ -327,12 +327,11 @@ with open("$gene_file", 'r') as f:
         key, values = items[0], items[1]
         GENE_MODELS[key] = values
 
-samp = "${sample_bed}".replace(".txt.bam.bed", "")
-samp_name = "${sample_bed}".replace('.txt.bam.bed', '.')
+samp = "${sample_bed}".replace(".bam.txt.bam.bed", "")
 exon_index = GENE_MODELS[lookup[samp]] + "latest.exons.bed"
 gene_index = GENE_MODELS[lookup[samp]] + "latest.genes.bed"
 f = open("info.txt", 'w')
-f.write(exon_index + '\\n' + gene_index + '\\n' + samp_name + ".txt")
+f.write(exon_index + '\\n' + gene_index + '\\n' + samp + ".txt")
 f.close()
     """
 }
