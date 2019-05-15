@@ -485,9 +485,9 @@ save_bam = {params.output_dir + "/" + it - ~/.txt.bam/ + "/" + it - ~/.txt/}
 
 */
 
-save_umi_per_cell = {params.output_dir + "/" + it - ~/..txt.UMIs.per.cell.barcode.txt/ + "/umis_per_cell_barcode.txt"}
-save_umi_per_int = {params.output_dir + "/" + it - ~/..txt.UMIs.per.cell.barcode.intronic.txt/ + "/intronic_umis_per_cell_barcode.txt"}
-save_plot = {params.output_dir + "/" + it - ~/..txt.knee_plot.png/ + "/knee_plot.png"}
+save_umi_per_cell = {params.output_dir + "/" + it - ~/.txt.UMIs.per.cell.barcode.txt/ + "/umis_per_cell_barcode.txt"}
+save_umi_per_int = {params.output_dir + "/" + it - ~/.txt.UMIs.per.cell.barcode.intronic.txt/ + "/intronic_umis_per_cell_barcode.txt"}
+save_plot = {params.output_dir + "/" + it - ~/.txt.knee_plot.png/ + "/knee_plot.png"}
 
 process umi_by_sample_summary {
     module 'java/latest:modules:modules-init:modules-gs:python/3.6.4:gcc/8.1.0:R/3.5.2'
