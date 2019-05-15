@@ -73,10 +73,10 @@ process trim_fastqs {
 
     input:
         file input_fastq from Channel.fromPath("${params.demux_out}/*.fastq")
-    
+ 
     output:
         file "trim_out" into trim_output
-        set file("trim_out/*.fq.gz"), val(input_fastq.baseName) into trimmed_fastqs mode flatten
+        set file("trim_out/*.fq.gz"), input_fastq.baseName into trimmed_fastqs mode flatten
         file input_fastq into sample_fastqs
 
     when:
@@ -90,7 +90,7 @@ process trim_fastqs {
         --three_prime_clip_R1 1 \
         --no_report_file \
         --gzip \
-        -o "./trim_out/"
+        -o ./trim_out/
         
     """
 }
