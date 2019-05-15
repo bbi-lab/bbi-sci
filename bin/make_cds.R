@@ -37,7 +37,7 @@ get_mat <- function(mat.path, gene.annotation.path, cell.annotation.path) {
         count = c(1, 1)))
 
     mat = sparseMatrix(i = df$gene.idx, j = df$cell.idx, x = df$count)
-    mat = mat[, 1:(ncol(mat)-1), drop=FALSE]
+    mat = mat[, 0:(ncol(mat)-1), drop=FALSE]
 
     rownames(mat) = gene.annotations$id
     colnames(mat) = cell.annotations$cell
