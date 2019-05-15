@@ -587,7 +587,7 @@ process make_matrix {
     """
     output="${gene_assignments_file}.cell_annotations.txt"
     touch samples_to_exclude_file
-    UMI_PER_CELL_CUTOFF=\$(cat $umi_cutoff_file)
+    UMI_PER_CELL_CUTOFF=\$(cat "$umi_cutoff_file")
     gunzip < "$umi_rollup_file" \
     | datamash -g 1 sum 3 \
     | tr '|' '\t' \
@@ -632,9 +632,9 @@ process make_cds {
 
 """
     make_cds.R \
-        $umi_matrix\
-        $cell_data\
-        $gene_data
+        "$umi_matrix"\
+        "$cell_data"\
+        "$gene_data"
 
 """
 
