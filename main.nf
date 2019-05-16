@@ -117,7 +117,7 @@ process save_sample_fastqs {
        file "*.fq.gz" into fqs
 
     """
-    cat "$fastqs" | gzip > "${key}.fq.gz"
+    cat *.fastq | gzip > "${key}.fq.gz"
 
     """
 }
