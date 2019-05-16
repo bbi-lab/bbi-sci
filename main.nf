@@ -80,7 +80,7 @@ process trim_fastqs {
         file input_fastq into sample_fastqs
     
     when:
-        params.run == false || (input_fastq.name - ~/-L00\d.fastq/) || (input_fastq.name.replaceAll(/ /, ".") in params.run
+        params.run == false || (input_fastq.name - ~/-L00\d.fastq/) || (input_fastq.name.replaceAll(/ /, ".")) in params.run
     
     """
     mkdir trim_out
