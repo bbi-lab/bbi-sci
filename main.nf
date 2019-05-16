@@ -81,7 +81,8 @@ process trim_fastqs {
     
     when:
         params.run == false || (input_fastq.name - ~/-L00\d.fastq/) in params.run || (input_fastq.name.replaceAll(/\s/, ".") - ~/-L00\d.fastq/) in params.run
-    
+   
+    println input_fastq.name.replaceAll(/\s/, ".") 
     """
     mkdir trim_out
     trim_galore $input_fastq \
