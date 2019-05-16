@@ -84,9 +84,7 @@ process trim_fastqs {
     
     """
     mkdir trim_out
-    new_name=`echo "$input_fastq" | sed 's/ /./g'` 
-    cp "$input_fastq" \$new_name
-    trim_galore \$new_name \
+    trim_galore $input_fastq \
         -a AAAAAAAA \
         --three_prime_clip_R1 1 \
         --no_report_file \
