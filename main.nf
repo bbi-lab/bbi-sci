@@ -615,7 +615,7 @@ process make_matrix {
 
 }
 
-save_cds = {params.output_dir + "/" + it - ~/_cds.RDS/ + "/" + it}
+save_cds = {params.output_dir + "/" + it - ~/.txt.umi_counts.matrix_cds.RDS/ + "/" + it - ~/.txt.umi_counts.matrix/}
 
 process make_cds {
     module 'java/latest:modules:modules-init:modules-gs:python/3.6.4:gcc/8.1.0:R/3.5.2'
