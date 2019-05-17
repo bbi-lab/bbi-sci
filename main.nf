@@ -549,7 +549,7 @@ def quick_parse(file_path):
 
 lookup = {}
 for rt_well in quick_parse("$sample_sheet_file"):
-    lookup[rt_well['Sample ID']] = rt_well['Reference Genome']
+    lookup[rt_well['Sample ID'].replace(" ", ".")] = rt_well['Reference Genome']
 
 GENE_MODELS = {}
 
