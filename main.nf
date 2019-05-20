@@ -80,7 +80,7 @@ process trim_fastqs {
         file input_fastq into sample_fastqs
     
     when:
-        !params.run || ((input_fastq.name - ~/-L00\d.fastq/) in params.run) || ((input_fastq.name  - ~/-L00\d.fastq/) in (params.run.collect{"$it".replaceAll(/\s/, ".")}))
+        !params.run || ((input_fastq.name - ~/-L00\d.fastq/) in params.run) || ((input_fastq.name  - ~/-L00\d.fastq/) in (params.run.collect{"$it".replaceAll(/\s/, ".").replaceAll/_/, ".").replaceAll(/-/, ".")}))
     
     """
     mkdir trim_out
@@ -156,7 +156,7 @@ def quick_parse(file_path):
 
 lookup = {}
 for rt_well in quick_parse("$sample_sheet_file"):
-    lookup[rt_well['Sample ID'].replace(' ', '.')] = rt_well['Reference Genome']
+    lookup[rt_well['Sample ID'].replace(' ', '.').replace('_', '.').replace('_', '.')] = rt_well['Reference Genome']
     
 
 STAR_INDICES = {}
@@ -313,7 +313,7 @@ def quick_parse(file_path):
 
 lookup = {}
 for rt_well in quick_parse("$sample_sheet_file"):
-    lookup[rt_well['Sample ID'].replace(' ', '.')] = rt_well['Reference Genome']
+    lookup[rt_well['Sample ID'].replace(' ', '.').replace('_', '.').replace('_', '.')] = rt_well['Reference Genome']
 
 GENE_MODELS = {}
 
@@ -549,7 +549,7 @@ def quick_parse(file_path):
 
 lookup = {}
 for rt_well in quick_parse("$sample_sheet_file"):
-    lookup[rt_well['Sample ID'].replace(" ", ".")] = rt_well['Reference Genome']
+    lookup[rt_well['Sample ID'].replace(" ", ".").replace('_', '.').replace('_', '.')] = rt_well['Reference Genome']
 
 GENE_MODELS = {}
 
