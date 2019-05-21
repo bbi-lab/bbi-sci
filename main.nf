@@ -178,7 +178,7 @@ f.close()
 
 }
 
-memory = 50/cores_align
+memory = 80/cores_align
 process align_reads {
     cache 'lenient'
     module 'java/latest:modules:modules-init:modules-gs:STAR/2.5.2b'
