@@ -625,7 +625,7 @@ process make_cds {
         set file(cell_data), file(umi_matrix), file(gene_data) from mat_output
 
     output:
-        file "*.RDS"
+        file "*.RDS" into cds
 
 
 """
@@ -647,7 +647,7 @@ process exp_dash {
 
 
     input:
-        file dup_files from mat_output.collect()
+        file cds_file from cds.collect()
         file dups from all_dups
     output:
         file exp_dash
