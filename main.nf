@@ -439,7 +439,7 @@ process zip_up_duplication {
     input:
         file files from duplication_rate_out.collect()
     output:
-        file "*ll_duplication_rate.txt"
+        file "*ll_duplication_rate.txt" into all_dups
 
     """
     tail -1 files | grep '' *.duplication_rate_stats.txt > all_duplication_rate.txt
@@ -637,6 +637,34 @@ process make_cds {
 """
 
 }
+
+
+process exp_dash {
+    module 'java/latest:modules:modules-init:modules-gs:gcc/8.1.0:R/3.5.2'
+    clusterOptions "-l mfree=8G"
+
+    publishDir path: "${params.output_dir}/", pattern: "exp_dash", mode: 'copy'
+
+
+    input:
+        file dup_files from mat_output.collect()
+        file dups from all_dups
+    output:
+        file exp_dash
+
+    """
+    mkdir exp_dash
+    mkdir exp_dash/img
+    cp $baseDir/bin/bbi_icon.png exp_dash/img/
+    generate_exp_dash.R \
+        "$params.output_dir" --all_dups "$dups"
+
+    """
+
+
+
+}
+
 
 
 workflow.onComplete { 
