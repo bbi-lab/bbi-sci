@@ -12,6 +12,7 @@ parser$add_argument('input_folder', help='input folder.')
 parser$add_argument('--all_dups', required=TRUE, help='all dup file')
 args = parser$parse_args()
 
+output_folder <- args$input_folder
 sample_folds <- list.files(output_folder)
 dedup <- readLines(args$all_dups)
 dedup <- dedup[seq(2, length(dedup), by=2)]
