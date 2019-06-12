@@ -56,7 +56,7 @@ top <- HTML('<!doctype html>
 
 if ("Barnyard" %in% sample_folds) {
   suppressPackageStartupMessages({
-    library(monocle)
+    library(monocle3)
   })
   cds <- readRDS(paste0(output_folder, "/Barnyard/Barnyard_cds.RDS"))
   fData(cds)$mouse <- grepl("ENSMUSG", fData(cds)$gene)
