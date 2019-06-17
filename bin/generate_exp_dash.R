@@ -5,6 +5,7 @@ suppressPackageStartupMessages({
   library(argparse)
   library(shiny)
   library(stringr)
+  library(monocle3)
 })
 
 parser = argparse::ArgumentParser(description='Script to generate experiment dashboard.')
@@ -55,12 +56,9 @@ top <- HTML('<!doctype html>
 
 
 if ("Barnyard" %in% sample_folds) {
-  suppressPackageStartupMessages({
-    library(monocle3)
-  })
   cds <- readRDS(paste0(output_folder, "/Barnyard/Barnyard_cds.RDS"))
-  fData(cds)$mouse <- grepl("ENSMUSG", fData(cds)$gene)
-  fData(cds)$human <- grepl("ENSG", fData(cds)$gene)
+  fData(cds)$mouse <- grepl("ENSMUSG", fData(cds)$id)
+  fData(cds)$human <- grepl("ENSG", fData(cds)$id)
   
   pData(cds)$mouse_reads <- Matrix::colSums(exprs(cds)[fData(cds)$mouse,])
   pData(cds)$human_reads <- Matrix::colSums(exprs(cds)[fData(cds)$human,])
