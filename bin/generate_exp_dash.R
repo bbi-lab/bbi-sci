@@ -68,7 +68,7 @@ if ("Barnyard" %in% sample_folds) {
   pData(cds)$collision <- ifelse(pData(cds)$human_perc >= .9 | pData(cds)$mouse_perc >= .9, FALSE, TRUE)
   
   
-  plot = ggplot(pData(cds), aes(mouse_reads, human_reads, color = collision)) +
+  plot = ggplot(as.data.frame(pData(cds)), aes(mouse_reads, human_reads, color = collision)) +
     geom_point(size = .8) +
     theme_bw() +
     scale_color_manual(values = c("black", "red")) +
