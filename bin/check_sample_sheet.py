@@ -6,16 +6,23 @@ import os
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 RT_FILE = os.path.join(SCRIPT_DIR, 'barcode_files/rt2.txt')
+RT3_FILE = os.path.join(SCRIPT_DIR, 'barcode_files/rt.txt')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('Check sample sheet')
 
     parser.add_argument('--sample_sheet', required=True, help='Path to sample sheet.')
     parser.add_argument('--star_file', required=True, help='Path to star genomes file.')
+    parser.add_argument('--level', required=True, help='2 or 3 level sci?')
     args = parser.parse_args()
 
+    if args.level == "3":
+        rtfile = RT3_FILE
+    else:
+        rtfile = RT_FILE
+
     rtdict = {}
-    with open(RT_FILE) as rt_file:
+    with open(rtfile) as rt_file:
         for line in enumerate(rt_file):
             line = line[1].strip().split("\t")
             rtdict[line[0]] = line[1]

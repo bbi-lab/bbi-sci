@@ -4,6 +4,7 @@ params.help = false
 params.run = false
 params.star_file = "$baseDir/bin/star_file.txt"
 params.gene_file = "$baseDir/bin/gene_file.txt"
+params.level = 3
 
 //print usage
 if (params.help) {
@@ -27,6 +28,7 @@ if (params.help) {
     log.info '    params.p7_rows = "A B C"                   The PCR rows used - must match order of params.p5_cols.'
     log.info '    params.p5_cols = "1 2 3"                   The PCR columns used - must match order of params.p7_rows.'
     log.info '    params.demux_out = DEMUX OUTPUT DIR        Path to the demux_out folder from the bbi-dmux run.'
+    log.info '    params.level = 3                           2 or 3 level sci?'
     log.info ''
     log.info 'Optional parameters (specify in your config file):'
     log.info '    params.max_cores = 16                      The maximum number of cores to use - fewer will be used if appropriate.'
@@ -59,7 +61,7 @@ process check_sample_sheet {
         file "*.csv" into good_sample_sheet
 
     """
-    check_sample_sheet.py --sample_sheet $params.sample_sheet --star_file $star_file
+    check_sample_sheet.py --sample_sheet $params.sample_sheet --star_file $star_file --level $params.level
     """
 }
 
