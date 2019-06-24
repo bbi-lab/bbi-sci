@@ -38,7 +38,7 @@ if (params.help) {
     log.info '    params.run = [sample1, sample2]            Add to only run certain samples from trimming on.'
     log.info '    params.star_file = PATH/TO/FILE            File with the genome to star maps, similar to the one included with the package.'
     log.info '    params.gene_file = PATH/TO/FILE            File with the genome to gene model maps, similar to the one included with the package.'
-    log.info '    params.align_mem = 80                      Gigs of memory to use for alignment. Default is 80.
+    log.info '    params.align_mem = 80                      Gigs of memory to use for alignment. Default is 80.'
     log.info ''
     log.info 'Issues? Contact hpliner@uw.edu'
     exit 1
