@@ -16,6 +16,7 @@ If you get disconnected, you can return to the head node you were using (grid-he
 tmux attach
 ```
 which will return you to your session. See a handy tmux tutorial [here](https://www.hostinger.com/tutorials/tmux-beginners-guide-and-cheat-sheet/): 
+
 2. Always start with a qlogin session before you begin the pipeline. This can be done by
 ```
 qlogin -l mfree=10G
