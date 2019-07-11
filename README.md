@@ -23,9 +23,38 @@ qlogin -l mfree=10G
 ```
 
 ## Installation
+
+### modules
 After starting a qlogin session:
 
-First, install monocle3 by running:
+First, you need to have python available. You should have version 3.6.4 in order to have nextflow work for you. Please make sure that this is the version you load in your ~/.bashrc file as this is the version that you will use to install the packages below. For example, in your ~/.bashrc file have:
+
+```
+module load python/3.6.4
+```
+
+You must also have a few modules other than python loaded:
+
+```
+module load drmaa/latest
+module load git/latest
+```
+
+After loading the above modules, you must install the following python package:
+
+```
+pip install --user drmaa
+pip install --user biopython
+pip install --user fmt
+
+git clone https://github.com/andrewhill157/barcodeutils.git
+cd barcodeutils
+python setup.py install --user
+cd ..
+```
+
+Then, install monocle3 by running:
+
 ```
 module load gcc/8.1.0
 module load R/3.5.2
