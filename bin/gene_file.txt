@@ -10,3 +10,4 @@ Rat /net/bbi/vol1/data/genomes/rat/
 Macaque /net/bbi/vol1/data/genomes/macaque/
 Zebrafish   /net/bbi/vol1/data/genomes/zebrafish/
 Drosophila  /net/bbi/vol1/data/genomes/drosophila/
+Chicken	/net/bbi/vol1/data/genomes/chicken/

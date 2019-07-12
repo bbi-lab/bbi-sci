@@ -10,3 +10,4 @@ Rat /net/bbi/vol1/data/genomes/rat_star
 Macaque /net/bbi/vol1/data/genomes/macaque_star
 Zebrafish   /net/bbi/vol1/data/genomes/zebrafish_star
 Drosophila  /net/bbi/vol1/data/genomes/drosophila_star
+Chicken	/net/bbi/vol1/data/genomes/chicken_star
