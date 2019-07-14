@@ -374,7 +374,7 @@ process assign_genes {
 
 process umi_by_sample {
     cache 'lenient'
-    clusterOptions "-l mfree=8G"
+    clusterOptions "-l mfree=10G"
     module 'java/latest:modules:modules-init:modules-gs:samtools/1.4'
 
     input:
