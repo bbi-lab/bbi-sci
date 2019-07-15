@@ -278,6 +278,7 @@ process remove_dups {
 
     """
     export LC_ALL=C
+    
     samtools view -h "$merged_bam" \
             | rmdup.py --bam - \
             | samtools view -bh \
