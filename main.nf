@@ -398,6 +398,7 @@ process umi_by_sample {
     | sort -k1,1 \
     >"${input_bed}.UMI_count.txt"
 
+
     samtools view "$filtered_bam" \
     | cut -d '|' -f 2 \
     | datamash -g 1 count 1 \
