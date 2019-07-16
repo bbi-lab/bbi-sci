@@ -278,6 +278,7 @@ process remove_dups {
 
     """
     export LC_ALL=C
+    
     samtools view -h "$merged_bam" \
             | rmdup.py --bam - \
             | samtools view -bh \
@@ -340,7 +341,7 @@ f.close()
 
 process assign_genes {
     cache 'lenient'
-    clusterOptions "-l mfree=6G"
+    clusterOptions "-l mfree=20G"
     module 'java/latest:modules:modules-init:modules-gs:bedtools/2.26.0'
 
     input:
@@ -353,6 +354,7 @@ process assign_genes {
     exon_index=`head -n 1 $info`
     gene_index=`head -2 $info | tail -1`
     prefix=`head -3 $info | tail -1`
+    
     bedtools map \
         -a "$input_bed" \
         -b \$exon_index \
