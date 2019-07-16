@@ -110,7 +110,7 @@ save_fq = {params.output_dir + "/" + it - ~/.fq.gz/ + "/" + it}
 
 process save_sample_fastqs {
     cache = 'lenient'
-    publishDir = [path: "${params.output_dir}/", saveAs: save_fq, pattern: "*.fq.gz", mode: 'copy' ]
+    publishDir = [path: "${params.output_dir}/", saveAs: save_fq, pattern: "*.fq.gz", mode: 'move' ]
 
     input:
        set key, file(fastqs) from fastqs_to_merge
