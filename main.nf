@@ -84,8 +84,7 @@ process trim_fastqs {
         file input_fastq into sample_fastqs
     
     when:
-        !params.run || ((input_fastq.name - ~/-L00\d.fastq/) in params.run) || ((input_fastq.name  - ~/-L00\d.fastq/) in (params.run.collect{"$it".replaceAll(/\s/, ".").replaceAll(/_/, ".").replaceAll(/-/, ".").replaceAll(/\\)/, ".").replaceAll(/\\(/, ".").replace(/\\//, ".")}))
-    
+	!params.run || ((input_fastq.name - ~/-L00\d.fastq/) in params.run) || ((input_fastq.name  - ~/-L00\d.fastq/) in params.run.collect{"$it".replaceAll(/\s/, ".").replaceAll(/_/, ".").replaceAll(/-/, ".").replaceAll(/\\)/, ".").replaceAll(/\\(/, ".").replace(/\\//, ".")})    
     """
     mkdir trim_out
     trim_galore $input_fastq \
