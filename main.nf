@@ -633,7 +633,7 @@ process make_matrix {
     gunzip < "$umi_rollup_file" \
     | datamash -g 1 sum 3 \
     | tr '|' '\t' \
-    | awk CUTOFF=\$UMI_PER_CELL_CUTOFF '\$3 >= int( CUTOFF ) {{
+    | awk '\$3 >= int( \$UMI_PER_CELL_CUTOFF ) {
         print \$2
     }'  - \
     | sort -k1,1 -S 4G \
