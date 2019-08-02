@@ -11,7 +11,7 @@ params.align_mem = 80
 //print usage
 if (params.help) {
     log.info ''
-    log.info 'BBI 2-level sci-RNA-seq Pipeline'
+    log.info 'BBI sci-RNA-seq Pipeline'
     log.info '--------------------------------'
     log.info ''
     log.info 'For reproducibility, please specify all parameters to a config file'
@@ -78,7 +78,7 @@ process trim_fastqs {
     module 'java/latest:modules:modules-init:modules-gs:python/2.7.3:cutadapt/1.8.3:trim_galore/0.4.1'
 
     input:
-        file input_fastq from Channel.fromPath("${params.demux_out}/*.fastq")
+        file input_fastq from Channel.fromPath("${params.demux_out}/*.fastq.gz")
  
     output:
         file "trim_out" into trim_output
@@ -120,7 +120,7 @@ process save_sample_fastqs {
        file "*.fq.gz" into fqs
 
     """
-    cat *.fastq | gzip > "${key}.fq.gz"
+    cat *.fastq.gz > "${key}.fq.gz"
 
     """
 }
@@ -396,13 +396,6 @@ process assign_genes {
 
 }
 
-/**
-
-
-
-
-**/
-
 process umi_by_sample {
     cache 'lenient'
     clusterOptions "-l mfree=30G"
@@ -427,7 +420,6 @@ process umi_by_sample {
     | sort -k1,1 \
     >"${input_bed}.UMI_count.txt"
 
-
     samtools view "$filtered_bam" \
     | cut -d '|' -f 2 \
     | datamash -g 1 count 1 \
@@ -435,7 +427,6 @@ process umi_by_sample {
     | datamash -g 1 sum 2 \
     > "${input_bed}.read_count.txt"
     """
-
 }
 
 save_dup = {params.output_dir + "/" + it - ~/.txt.bam.bed.UMI_count.txt.duplication_rate_stats.txt/ + "/duplication_stats.txt"}
@@ -562,6 +553,7 @@ process umi_by_sample_summary {
     knee-plot.R \
         "${gene_assignments_file}.UMIs.per.cell.barcode.txt" \
         --knee_plot "${gene_assignments_file}.knee_plot.png" \
+        --specify_cutoff 100\
         --umi_count_threshold_file "${gene_assignments_file}.umi_cutoff.txt"
 
     """
@@ -709,9 +701,6 @@ process exp_dash {
         "$params.output_dir" --all_dups "$dups"
 
     """
-
-
-
 }
 
 
@@ -720,15 +709,7 @@ workflow.onComplete {
 	println ( workflow.success ? "Done! Saving output" : "Oops .. something went wrong" )
 }
 
-/*
-process summarize_alignments {
-
-
-}
-
-
-
-* send mail
+/** send mail
 \
 workflow.onComplete {
     def subject = 'indropSeq execution'
@@ -746,11 +727,4 @@ workflow.onComplete {
     Error report: ${workflow.errorReport ?: '-'}
     """
 }
-
-        force_symlink(duplication_stats_file, joindir(FINAL_OUTPUT, 'duplicaton_stats.txt'))
-        force_symlink(umis_per_cell_barcode_file, joindir(FINAL_OUTPUT, 'umis_per_cell_barcode.txt'))
-        force_symlink(intronic_umis_per_cell_barcode_file, joindir(FINAL_OUTPUT, 'intronic_umis_per_cell_barcode.txt'))
-        force_symlink(knee_plot_file, joindir(FINAL_OUTPUT, 'knee_plot.png'))
-        force_symlink(region_stats_output, joindir(FINAL_OUTPUT, 'region_stats.txt'))
-        force_symlink(alignment_stats_output, joindir(FINAL_OUTPUT, 'alignment_stats.txt'))
 */
