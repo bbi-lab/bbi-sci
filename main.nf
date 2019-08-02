@@ -5,6 +5,8 @@ params.run = false
 params.star_file = "$baseDir/bin/star_file.txt"
 params.gene_file = "$baseDir/bin/gene_file.txt"
 params.umi_cutoff = 100
+params.level = 3
+params.align_mem = 80
 
 //print usage
 if (params.help) {
@@ -28,6 +30,7 @@ if (params.help) {
     log.info '    params.p7_rows = "A B C"                   The PCR rows used - must match order of params.p5_cols.'
     log.info '    params.p5_cols = "1 2 3"                   The PCR columns used - must match order of params.p7_rows.'
     log.info '    params.demux_out = DEMUX OUTPUT DIR        Path to the demux_out folder from the bbi-dmux run.'
+    log.info '    params.level = 3                           2 or 3 level sci?'
     log.info ''
     log.info 'Optional parameters (specify in your config file):'
     log.info '    params.max_cores = 16                      The maximum number of cores to use - fewer will be used if appropriate.'
@@ -37,6 +40,7 @@ if (params.help) {
     log.info '    params.star_file = PATH/TO/FILE            File with the genome to star maps, similar to the one included with the package.'
     log.info '    params.gene_file = PATH/TO/FILE            File with the genome to gene model maps, similar to the one included with the package.'
     log.info '    params.umi_cutoff = 100                    The umi cutoff to be called a cell in matrix output.'
+    log.info '    params.align_mem = 80                      Gigs of memory to use for alignment. Default is 80.'
     log.info ''
     log.info 'Issues? Contact hpliner@uw.edu'
     exit 1
@@ -61,7 +65,7 @@ process check_sample_sheet {
         file "*.csv" into good_sample_sheet
 
     """
-    check_sample_sheet.py --sample_sheet $params.sample_sheet --star_file $star_file
+    check_sample_sheet.py --sample_sheet $params.sample_sheet --star_file $star_file --level $params.level
     """
 }
 
@@ -82,8 +86,7 @@ process trim_fastqs {
         file input_fastq into sample_fastqs
     
     when:
-        !params.run || ((input_fastq.name - ~/-L00\d.fastq/) in params.run) || ((input_fastq.name  - ~/-L00\d.fastq/) in (params.run.collect{"$it".replaceAll(/\s/, ".").replaceAll(/_/, ".").replaceAll(/-/, ".")}))
-    
+	!params.run || ((input_fastq.name - ~/-L00\d.fastq/) in params.run) || ((input_fastq.name  - ~/-L00\d.fastq/) in params.run.collect{"$it".replaceAll(/\s/, ".").replaceAll(/_/, ".").replaceAll(/-/, ".").replaceAll(/\\//, ".")})    
     """
     mkdir trim_out
     trim_galore $input_fastq \
@@ -108,7 +111,7 @@ save_fq = {params.output_dir + "/" + it - ~/.fq.gz/ + "/" + it}
 
 process save_sample_fastqs {
     cache = 'lenient'
-    publishDir = [path: "${params.output_dir}/", saveAs: save_fq, pattern: "*.fq.gz", mode: 'copy' ]
+    publishDir = [path: "${params.output_dir}/", saveAs: save_fq, pattern: "*.fq.gz", mode: 'move' ]
 
     input:
        set key, file(fastqs) from fastqs_to_merge
@@ -158,7 +161,7 @@ def quick_parse(file_path):
 
 lookup = {}
 for rt_well in quick_parse("$sample_sheet_file"):
-    lookup[rt_well['Sample ID'].replace(' ', '.').replace('-', '.').replace('_', '.')] = rt_well['Reference Genome']
+    lookup[rt_well['Sample ID'].replace('(', '.').replace(')', '.').replace(' ', '.').replace('-', '.').replace('_', '.').replace('/', '.')] = rt_well['Reference Genome']
     
 
 STAR_INDICES = {}
@@ -180,7 +183,7 @@ f.close()
 
 }
 
-memory = 80/cores_align
+memory = params.align_mem/cores_align
 process align_reads {
     cache 'lenient'
     module 'java/latest:modules:modules-init:modules-gs:STAR/2.5.2b'
@@ -265,7 +268,7 @@ process merge_bams {
 
 process remove_dups {
     cache 'lenient'
-    clusterOptions "-l mfree=4G"
+    clusterOptions "-l mfree=10G"
     module 'java/latest:modules:modules-init:modules-gs:samtools/1.4:bedtools/2.26.0:python/3.6.4'
 
     input:
@@ -276,6 +279,7 @@ process remove_dups {
 
     """
     export LC_ALL=C
+    
     samtools view -h "$merged_bam" \
             | rmdup.py --bam - \
             | samtools view -bh \
@@ -315,7 +319,7 @@ def quick_parse(file_path):
 
 lookup = {}
 for rt_well in quick_parse("$sample_sheet_file"):
-    lookup[rt_well['Sample ID'].replace(' ', '.').replace('-', '.').replace('_', '.')] = rt_well['Reference Genome']
+    lookup[rt_well['Sample ID'].replace('(', '.').replace(')', '.').replace(' ', '.').replace('-', '.').replace('_', '.').replace('/', '.')] = rt_well['Reference Genome']
 
 GENE_MODELS = {}
 
@@ -361,7 +365,7 @@ Assign genes:
 
 process assign_genes {
     cache 'lenient'
-    clusterOptions "-l mfree=6G"
+    clusterOptions "-l mfree=20G"
     module 'java/latest:modules:modules-init:modules-gs:bedtools/2.26.0'
 
     input:
@@ -374,6 +378,7 @@ process assign_genes {
     exon_index=`head -n 1 $info`
     gene_index=`head -2 $info | tail -1`
     prefix=`head -3 $info | tail -1`
+    
     bedtools map \
         -a "$input_bed" \
         -b \$exon_index \
@@ -400,7 +405,7 @@ process assign_genes {
 
 process umi_by_sample {
     cache 'lenient'
-    clusterOptions "-l mfree=8G"
+    clusterOptions "-l mfree=30G"
     module 'java/latest:modules:modules-init:modules-gs:samtools/1.4'
 
     input:
@@ -421,6 +426,7 @@ process umi_by_sample {
             }}' "$input_bed" \
     | sort -k1,1 \
     >"${input_bed}.UMI_count.txt"
+
 
     samtools view "$filtered_bam" \
     | cut -d '|' -f 2 \
@@ -590,7 +596,7 @@ def quick_parse(file_path):
 
 lookup = {}
 for rt_well in quick_parse("$sample_sheet_file"):
-    lookup[rt_well['Sample ID'].replace(" ", ".").replace('-', '.').replace('_', '.')] = rt_well['Reference Genome']
+    lookup[rt_well['Sample ID'].replace('(', '.').replace(')', '.').replace(' ', '.').replace('-', '.').replace('_', '.').replace('/', '.')] = rt_well['Reference Genome']
 
 GENE_MODELS = {}
 
@@ -662,12 +668,13 @@ save_cds = {params.output_dir + "/" + it - ~/_cds.RDS/ + "/" + it}
 process make_cds {
     module 'java/latest:modules:modules-init:modules-gs:python/3.6.4:gcc/8.1.0:R/3.5.2'
     publishDir path: "${params.output_dir}/", saveAs: save_cds, pattern: "*cds.RDS", mode: 'copy'
-
+    clusterOptions "-l mfree=15G"
+    
     input:
         set file(cell_data), file(umi_matrix), file(gene_data) from mat_output
 
     output:
-        file "*.RDS"
+        file "*.RDS" into cds
 
 
 """
@@ -689,7 +696,7 @@ process exp_dash {
 
 
     input:
-        file dup_files from mat_output.collect()
+        file cds_file from cds.collect()
         file dups from all_dups
     output:
         file exp_dash

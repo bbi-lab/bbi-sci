@@ -5,6 +5,7 @@ suppressPackageStartupMessages({
   library(argparse)
   library(shiny)
   library(stringr)
+  library(monocle3)
 })
 
 parser = argparse::ArgumentParser(description='Script to generate experiment dashboard.')
@@ -12,6 +13,7 @@ parser$add_argument('input_folder', help='input folder.')
 parser$add_argument('--all_dups', required=TRUE, help='all dup file')
 args = parser$parse_args()
 
+output_folder <- args$input_folder
 sample_folds <- list.files(output_folder)
 dedup <- readLines(args$all_dups)
 dedup <- dedup[seq(2, length(dedup), by=2)]
@@ -54,12 +56,9 @@ top <- HTML('<!doctype html>
 
 
 if ("Barnyard" %in% sample_folds) {
-  suppressPackageStartupMessages({
-    library(monocle)
-  })
   cds <- readRDS(paste0(output_folder, "/Barnyard/Barnyard_cds.RDS"))
-  fData(cds)$mouse <- grepl("ENSMUSG", fData(cds)$gene)
-  fData(cds)$human <- grepl("ENSG", fData(cds)$gene)
+  fData(cds)$mouse <- grepl("ENSMUSG", fData(cds)$id)
+  fData(cds)$human <- grepl("ENSG", fData(cds)$id)
   
   pData(cds)$mouse_reads <- Matrix::colSums(exprs(cds)[fData(cds)$mouse,])
   pData(cds)$human_reads <- Matrix::colSums(exprs(cds)[fData(cds)$human,])
@@ -69,7 +68,7 @@ if ("Barnyard" %in% sample_folds) {
   pData(cds)$collision <- ifelse(pData(cds)$human_perc >= .9 | pData(cds)$mouse_perc >= .9, FALSE, TRUE)
   
   
-  plot = ggplot(pData(cds), aes(mouse_reads, human_reads, color = collision)) +
+  plot = ggplot(as.data.frame(pData(cds)), aes(mouse_reads, human_reads, color = collision)) +
     geom_point(size = .8) +
     theme_bw() +
     scale_color_manual(values = c("black", "red")) +
