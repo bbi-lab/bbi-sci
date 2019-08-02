@@ -74,7 +74,7 @@ sample_sheet_file = good_sample_sheet
 
 process trim_fastqs {
     cache 'lenient'
-    clusterOptions "-l mfree=8G"
+    clusterOptions "-l mfree=12G"
     module 'java/latest:modules:modules-init:modules-gs:python/2.7.3:cutadapt/1.8.3:trim_galore/0.4.1'
 
     input:
