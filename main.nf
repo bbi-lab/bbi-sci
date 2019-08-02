@@ -4,6 +4,7 @@ params.help = false
 params.run = false
 params.star_file = "$baseDir/bin/star_file.txt"
 params.gene_file = "$baseDir/bin/gene_file.txt"
+params.umi_cutoff = 100
 
 //print usage
 if (params.help) {
@@ -35,6 +36,7 @@ if (params.help) {
     log.info '    params.run = [sample1, sample2]            Add to only run certain samples from trimming on.'
     log.info '    params.star_file = PATH/TO/FILE            File with the genome to star maps, similar to the one included with the package.'
     log.info '    params.gene_file = PATH/TO/FILE            File with the genome to gene model maps, similar to the one included with the package.'
+    log.info '    params.umi_cutoff = 100                    The umi cutoff to be called a cell in matrix output.'
     log.info ''
     log.info 'Issues? Contact hpliner@uw.edu'
     exit 1
@@ -334,6 +336,29 @@ f.close()
     """
 }
 
+/**
+Assign genes: 
+1. First use bedtools map to map the dedupped bed file to all exons with options:
+-s forced strandedness
+-f 0.95 95% of read must overlap exon
+-c 7 map the name of the gene
+-o distinct concatenate list of gene names
+-delim "|" custom delimiter
+-nonamecheck Don't error if there are different naming conventions for the chromosomes
+
+2. Use bedtools map to map output to gene index
+-s forced strandedness
+-f 0.95 95% of read must overlap exon
+-c 4 map the name of the cell name
+-o distinct concatenate list of gene names
+-delim "|" custom delimiter
+-nonamecheck Don't error if there are different naming conventions for the chromosomes
+
+3. Sort and collapse 
+
+4. Run assign-reads-to-genes.py to deal with exon v intron
+**/
+
 process assign_genes {
     cache 'lenient'
     clusterOptions "-l mfree=6G"
@@ -366,7 +391,12 @@ process assign_genes {
 
 }
 
+/**
 
+
+
+
+**/
 
 process umi_by_sample {
     cache 'lenient'
@@ -449,6 +479,13 @@ process zip_up_duplication {
 
 assign_genes_out.into { for_umi_rollup; for_umi_by_sample_summary }
 
+/**
+make cell, gene table for each read
+
+sort
+
+count instances of the gene for each read
+**/
 
 process umi_rollup {
     cache 'lenient'
@@ -487,6 +524,10 @@ save_umi_per_cell = {params.output_dir + "/" + it - ~/.txt.UMIs.per.cell.barcode
 save_umi_per_int = {params.output_dir + "/" + it - ~/.txt.UMIs.per.cell.barcode.intronic.txt/ + "/intronic_umis_per_cell_barcode.txt"}
 save_plot = {params.output_dir + "/" + it - ~/.txt.knee_plot.png/ + "/knee_plot.png"}
 
+
+/**
+Count intronic and total umis per cell and plot knee plot
+**/
 process umi_by_sample_summary {
     module 'java/latest:modules:modules-init:modules-gs:python/3.6.4:gcc/8.1.0:R/3.5.2'
     cache 'lenient'
@@ -501,7 +542,7 @@ process umi_by_sample_summary {
         set file(umi_rollup), file(gene_assignments_file) from umi_rollup_out        
 
     output:
-        set file(umi_rollup), file(gene_assignments_file), file("*umi_cutoff.txt") into ubss_out
+        set file(umi_rollup), file(gene_assignments_file) into ubss_out
         file "*UMIs.per.cell.barcode.txt" into umis_per_cell_barcode
         file "*UMIs.per.cell.barcode.intronic.txt" into umi_per_cell_intronic
         file "*.knee_plot.png" into knee_plots
@@ -528,10 +569,10 @@ process prep_make_matrix {
     
     input:
         file sample_sheet_file
-        set file(umi_rollup), file(gene_assignments_file), file(umi_cutoff) from ubss_out
+        set file(umi_rollup), file(gene_assignments_file) from ubss_out
 
     output:
-        set file(umi_rollup), file(gene_assignments_file), file(umi_cutoff), stdout into make_matrix_prepped
+        set file(umi_rollup), file(gene_assignments_file), stdout into make_matrix_prepped
 
     """
 #!/usr/bin/env python
@@ -569,6 +610,12 @@ save_umi = {params.output_dir + "/" + it - ~/.txt.umi_counts.matrix/ + "/umi_cou
 save_cell_anno = {params.output_dir + "/" + it - ~/.txt.cell_annotations.txt/ + "/cell_annotations.txt"}
 save_gene_anno = {params.output_dir + "/" + it - ~/.txt.gene_annotations.txt/ + "/gene_annotations.txt"}
 
+
+/**
+sum up total assigned reads per cell and keep only those above the cutoff
+
+make the number matrix
+**/
 process make_matrix {
     cache 'lenient'
     clusterOptions "-l mfree=4G"
@@ -577,40 +624,35 @@ process make_matrix {
     publishDir path: "${params.output_dir}/", saveAs: save_gene_anno, pattern: "*gene_annotations.txt", mode: 'copy'
 
     input:
-        set file(umi_rollup_file), file(gene_assignments_file), file(umi_cutoff_file), val(annotations_path) from make_matrix_prepped
+        set file(umi_rollup_file), file(gene_assignments_file), val(annotations_path) from make_matrix_prepped
 
     output:
         set file("*cell_annotations.txt"), file("*umi_counts.matrix"), file("*gene_annotations.txt") into mat_output
 
     """
     output="${gene_assignments_file}.cell_annotations.txt"
-    touch samples_to_exclude_file
-    UMI_PER_CELL_CUTOFF=\$(cat "$umi_cutoff_file")
+    UMI_PER_CELL_CUTOFF=$params.umi_cutoff
     gunzip < "$umi_rollup_file" \
     | datamash -g 1 sum 3 \
     | tr '|' '\t' \
-    | awk -v CUTOFF=\$UMI_PER_CELL_CUTOFF 'ARGIND == 1 {{
-        exclude[\$1] = 1
-    }} \$3 >= int( CUTOFF ) {{
+    | awk CUTOFF=\$UMI_PER_CELL_CUTOFF '\$3 >= int( CUTOFF ) {{
         print \$2
-    }}' samples_to_exclude_file - \
+    }'  - \
     | sort -k1,1 -S 4G \
     > "\$output"
     gunzip < "$umi_rollup_file" \
     | tr '|' '\t' \
-    | awk '{{ if (ARGIND == 1) {{
+    | awk '{ if (ARGIND == 1) {
                 gene_idx[\$1] = FNR
-            }} else if (ARGIND == 2) {{ 
+            } else if (ARGIND == 2) {
                 cell_idx[\$1] = FNR
-            }} else if (\$2 in cell_idx) {{
+            } else if (\$2 in cell_idx) {{
                 printf "%d\t%d\t%d\\n", gene_idx[\$3], cell_idx[\$2], \$4
-            }} 
-    }}' $annotations_path "\$output" - \
+            } 
+    }' $annotations_path "\$output" - \
     > "${gene_assignments_file}.umi_counts.matrix"
 
     cat $annotations_path > "${gene_assignments_file}.gene_annotations.txt"
-    
-    rm samples_to_exclude_file
     """
 
 }
