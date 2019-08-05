@@ -146,7 +146,6 @@ process prep_align {
 
     """
 #!/usr/bin/env python
-print($name)
 def quick_parse(file_path):
     # a copy of only the relevant lines from easygrid.read_delim
     fh = open(file_path)
