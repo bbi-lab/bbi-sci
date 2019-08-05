@@ -11,7 +11,7 @@ The pipeline is run in two parts, the first is [bbi-dmux](https://github.com/bbi
 module load tmux/latest
 tmux
 ```
-If you get disconnected, you can return to the head node you were using (grid-head or shead) and type:
+If you get disconnected, you can return to the head node you were using (grid-head1 or grid-head2) and type:
 ```
 tmux attach
 ```
