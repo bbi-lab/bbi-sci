@@ -4,13 +4,14 @@ params.help = false
 params.run = false
 params.star_file = "$baseDir/bin/star_file.txt"
 params.gene_file = "$baseDir/bin/gene_file.txt"
+params.umi_cutoff = 100
 params.level = 3
 params.align_mem = 80
 
 //print usage
 if (params.help) {
     log.info ''
-    log.info 'BBI 2-level sci-RNA-seq Pipeline'
+    log.info 'BBI sci-RNA-seq Pipeline'
     log.info '--------------------------------'
     log.info ''
     log.info 'For reproducibility, please specify all parameters to a config file'
@@ -38,6 +39,7 @@ if (params.help) {
     log.info '    params.run = [sample1, sample2]            Add to only run certain samples from trimming on.'
     log.info '    params.star_file = PATH/TO/FILE            File with the genome to star maps, similar to the one included with the package.'
     log.info '    params.gene_file = PATH/TO/FILE            File with the genome to gene model maps, similar to the one included with the package.'
+    log.info '    params.umi_cutoff = 100                    The umi cutoff to be called a cell in matrix output.'
     log.info '    params.align_mem = 80                      Gigs of memory to use for alignment. Default is 80.'
     log.info ''
     log.info 'Issues? Contact hpliner@uw.edu'
@@ -72,11 +74,11 @@ sample_sheet_file = good_sample_sheet
 
 process trim_fastqs {
     cache 'lenient'
-    clusterOptions "-l mfree=8G"
+    clusterOptions "-l mfree=12G"
     module 'java/latest:modules:modules-init:modules-gs:python/2.7.3:cutadapt/1.8.3:trim_galore/0.4.1'
 
     input:
-        file input_fastq from Channel.fromPath("${params.demux_out}/*.fastq")
+        file input_fastq from Channel.fromPath("${params.demux_out}/*.fastq.gz")
  
     output:
         file "trim_out" into trim_output
@@ -84,8 +86,7 @@ process trim_fastqs {
         file input_fastq into sample_fastqs
     
     when:
-        !params.run || ((input_fastq.name - ~/-L00\d.fastq/) in params.run) || ((input_fastq.name  - ~/-L00\d.fastq/) in (params.run.collect{"$it".replaceAll(/\s/, ".").replaceAll(/_/, ".").replaceAll(/-/, ".").replaceAll(/\\)/, ".").replaceAll(/\\(/, ".").replace(/\\//, ".")}))
-    
+	!params.run || ((input_fastq.name - ~/-L00\d.fastq.gz/) in params.run) || ((input_fastq.name  - ~/-L00\d.fastq.gz/) in params.run.collect{"$it".replaceAll(/\s/, ".").replaceAll(/_/, ".").replaceAll(/-/, ".").replaceAll(/\\//, ".")})    
     """
     mkdir trim_out
     trim_galore $input_fastq \
@@ -110,7 +111,7 @@ save_fq = {params.output_dir + "/" + it - ~/.fq.gz/ + "/" + it}
 
 process save_sample_fastqs {
     cache = 'lenient'
-    publishDir = [path: "${params.output_dir}/", saveAs: save_fq, pattern: "*.fq.gz", mode: 'copy' ]
+    publishDir = [path: "${params.output_dir}/", saveAs: save_fq, pattern: "*.fq.gz", mode: 'move' ]
 
     input:
        set key, file(fastqs) from fastqs_to_merge
@@ -119,7 +120,7 @@ process save_sample_fastqs {
        file "*.fq.gz" into fqs
 
     """
-    cat *.fastq | gzip > "${key}.fq.gz"
+    cat *.fastq.gz > "${key}.fq.gz"
 
     """
 }
@@ -339,6 +340,29 @@ f.close()
     """
 }
 
+/**
+Assign genes: 
+1. First use bedtools map to map the dedupped bed file to all exons with options:
+-s forced strandedness
+-f 0.95 95% of read must overlap exon
+-c 7 map the name of the gene
+-o distinct concatenate list of gene names
+-delim "|" custom delimiter
+-nonamecheck Don't error if there are different naming conventions for the chromosomes
+
+2. Use bedtools map to map output to gene index
+-s forced strandedness
+-f 0.95 95% of read must overlap exon
+-c 4 map the name of the cell name
+-o distinct concatenate list of gene names
+-delim "|" custom delimiter
+-nonamecheck Don't error if there are different naming conventions for the chromosomes
+
+3. Sort and collapse 
+
+4. Run assign-reads-to-genes.py to deal with exon v intron
+**/
+
 process assign_genes {
     cache 'lenient'
     clusterOptions "-l mfree=20G"
@@ -372,11 +396,9 @@ process assign_genes {
 
 }
 
-
-
 process umi_by_sample {
     cache 'lenient'
-    clusterOptions "-l mfree=10G"
+    clusterOptions "-l mfree=30G"
     module 'java/latest:modules:modules-init:modules-gs:samtools/1.4'
 
     input:
@@ -405,7 +427,6 @@ process umi_by_sample {
     | datamash -g 1 sum 2 \
     > "${input_bed}.read_count.txt"
     """
-
 }
 
 save_dup = {params.output_dir + "/" + it - ~/.txt.bam.bed.UMI_count.txt.duplication_rate_stats.txt/ + "/duplication_stats.txt"}
@@ -455,6 +476,13 @@ process zip_up_duplication {
 
 assign_genes_out.into { for_umi_rollup; for_umi_by_sample_summary }
 
+/**
+make cell, gene table for each read
+
+sort
+
+count instances of the gene for each read
+**/
 
 process umi_rollup {
     cache 'lenient'
@@ -493,6 +521,10 @@ save_umi_per_cell = {params.output_dir + "/" + it - ~/.txt.UMIs.per.cell.barcode
 save_umi_per_int = {params.output_dir + "/" + it - ~/.txt.UMIs.per.cell.barcode.intronic.txt/ + "/intronic_umis_per_cell_barcode.txt"}
 save_plot = {params.output_dir + "/" + it - ~/.txt.knee_plot.png/ + "/knee_plot.png"}
 
+
+/**
+Count intronic and total umis per cell and plot knee plot
+**/
 process umi_by_sample_summary {
     module 'java/latest:modules:modules-init:modules-gs:python/3.6.4:gcc/8.1.0:R/3.5.2'
     cache 'lenient'
@@ -507,7 +539,7 @@ process umi_by_sample_summary {
         set file(umi_rollup), file(gene_assignments_file) from umi_rollup_out        
 
     output:
-        set file(umi_rollup), file(gene_assignments_file), file("*umi_cutoff.txt") into ubss_out
+        set file(umi_rollup), file(gene_assignments_file) into ubss_out
         file "*UMIs.per.cell.barcode.txt" into umis_per_cell_barcode
         file "*UMIs.per.cell.barcode.intronic.txt" into umi_per_cell_intronic
         file "*.knee_plot.png" into knee_plots
@@ -521,6 +553,7 @@ process umi_by_sample_summary {
     knee-plot.R \
         "${gene_assignments_file}.UMIs.per.cell.barcode.txt" \
         --knee_plot "${gene_assignments_file}.knee_plot.png" \
+        --specify_cutoff 100\
         --umi_count_threshold_file "${gene_assignments_file}.umi_cutoff.txt"
 
     """
@@ -534,10 +567,10 @@ process prep_make_matrix {
     
     input:
         file sample_sheet_file
-        set file(umi_rollup), file(gene_assignments_file), file(umi_cutoff) from ubss_out
+        set file(umi_rollup), file(gene_assignments_file) from ubss_out
 
     output:
-        set file(umi_rollup), file(gene_assignments_file), file(umi_cutoff), stdout into make_matrix_prepped
+        set file(umi_rollup), file(gene_assignments_file), stdout into make_matrix_prepped
 
     """
 #!/usr/bin/env python
@@ -575,6 +608,12 @@ save_umi = {params.output_dir + "/" + it - ~/.txt.umi_counts.matrix/ + "/umi_cou
 save_cell_anno = {params.output_dir + "/" + it - ~/.txt.cell_annotations.txt/ + "/cell_annotations.txt"}
 save_gene_anno = {params.output_dir + "/" + it - ~/.txt.gene_annotations.txt/ + "/gene_annotations.txt"}
 
+
+/**
+sum up total assigned reads per cell and keep only those above the cutoff
+
+make the number matrix
+**/
 process make_matrix {
     cache 'lenient'
     clusterOptions "-l mfree=4G"
@@ -583,40 +622,35 @@ process make_matrix {
     publishDir path: "${params.output_dir}/", saveAs: save_gene_anno, pattern: "*gene_annotations.txt", mode: 'copy'
 
     input:
-        set file(umi_rollup_file), file(gene_assignments_file), file(umi_cutoff_file), val(annotations_path) from make_matrix_prepped
+        set file(umi_rollup_file), file(gene_assignments_file), val(annotations_path) from make_matrix_prepped
 
     output:
         set file("*cell_annotations.txt"), file("*umi_counts.matrix"), file("*gene_annotations.txt") into mat_output
 
     """
     output="${gene_assignments_file}.cell_annotations.txt"
-    touch samples_to_exclude_file
-    UMI_PER_CELL_CUTOFF=\$(cat "$umi_cutoff_file")
+    UMI_PER_CELL_CUTOFF=$params.umi_cutoff
     gunzip < "$umi_rollup_file" \
     | datamash -g 1 sum 3 \
     | tr '|' '\t' \
-    | awk -v CUTOFF=\$UMI_PER_CELL_CUTOFF 'ARGIND == 1 {{
-        exclude[\$1] = 1
-    }} \$3 >= int( CUTOFF ) {{
+    | awk '\$3 >= int( \$UMI_PER_CELL_CUTOFF ) {
         print \$2
-    }}' samples_to_exclude_file - \
+    }'  - \
     | sort -k1,1 -S 4G \
     > "\$output"
     gunzip < "$umi_rollup_file" \
     | tr '|' '\t' \
-    | awk '{{ if (ARGIND == 1) {{
+    | awk '{ if (ARGIND == 1) {
                 gene_idx[\$1] = FNR
-            }} else if (ARGIND == 2) {{ 
+            } else if (ARGIND == 2) {
                 cell_idx[\$1] = FNR
-            }} else if (\$2 in cell_idx) {{
+            } else if (\$2 in cell_idx) {{
                 printf "%d\t%d\t%d\\n", gene_idx[\$3], cell_idx[\$2], \$4
-            }} 
-    }}' $annotations_path "\$output" - \
+            } 
+    }' $annotations_path "\$output" - \
     > "${gene_assignments_file}.umi_counts.matrix"
 
     cat $annotations_path > "${gene_assignments_file}.gene_annotations.txt"
-    
-    rm samples_to_exclude_file
     """
 
 }
@@ -667,9 +701,6 @@ process exp_dash {
         "$params.output_dir" --all_dups "$dups"
 
     """
-
-
-
 }
 
 
@@ -678,15 +709,7 @@ workflow.onComplete {
 	println ( workflow.success ? "Done! Saving output" : "Oops .. something went wrong" )
 }
 
-/*
-process summarize_alignments {
-
-
-}
-
-
-
-* send mail
+/** send mail
 \
 workflow.onComplete {
     def subject = 'indropSeq execution'
@@ -704,11 +727,4 @@ workflow.onComplete {
     Error report: ${workflow.errorReport ?: '-'}
     """
 }
-
-        force_symlink(duplication_stats_file, joindir(FINAL_OUTPUT, 'duplicaton_stats.txt'))
-        force_symlink(umis_per_cell_barcode_file, joindir(FINAL_OUTPUT, 'umis_per_cell_barcode.txt'))
-        force_symlink(intronic_umis_per_cell_barcode_file, joindir(FINAL_OUTPUT, 'intronic_umis_per_cell_barcode.txt'))
-        force_symlink(knee_plot_file, joindir(FINAL_OUTPUT, 'knee_plot.png'))
-        force_symlink(region_stats_output, joindir(FINAL_OUTPUT, 'region_stats.txt'))
-        force_symlink(alignment_stats_output, joindir(FINAL_OUTPUT, 'alignment_stats.txt'))
 */

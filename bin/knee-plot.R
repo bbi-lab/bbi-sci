@@ -16,9 +16,6 @@ parser$add_argument('--knee_plot', required=TRUE, help='File to save knee plot t
 args = parser$parse_args()
 
 cutoff = NULL
-if (! is.null(args$cutoff)) {
-    cutoff = args$cutoff
-}
 
 plot_name <- gsub("%", "%%", args$knee_plot)
 
@@ -41,6 +38,8 @@ close(fileConn)
 if(is.null(cutoff)) {
     background_call = Mclust(data.frame(log10(df$n.umi)),G=c(2))
     cutoff = min(df[which(background_call$classification == 2 & background_call$uncertainty < 0.005),3])
+} else  {
+    cutoff = args$cutoff
 }
 
 # Output plot
