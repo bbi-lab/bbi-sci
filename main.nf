@@ -643,7 +643,7 @@ process make_matrix {
                 gene_idx[\$1] = FNR
             } else if (ARGIND == 2) {
                 cell_idx[\$1] = FNR
-            } else if (\$2 in cell_idx) {{
+            } else if (\$2 in cell_idx) {
                 printf "%d\t%d\t%d\\n", gene_idx[\$3], cell_idx[\$2], \$4
             } 
     }' $annotations_path "\$output" - \
