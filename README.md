@@ -107,7 +107,7 @@ An example configuration file is included in the package and includes further in
 
 For Shendure lab cluster
 ```
-process.queue = "shendure-login.q"
+process.queue = "shendure-long.q"
 ```
 
 #### Run the pipeline:
