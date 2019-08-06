@@ -1,7 +1,7 @@
 
 // Parse input parameters
 params.help = false
-params.run = false
+params.samples = false
 params.star_file = "$baseDir/bin/star_file.txt"
 params.gene_file = "$baseDir/bin/gene_file.txt"
 params.umi_cutoff = 100
@@ -36,7 +36,7 @@ if (params.help) {
     log.info '    params.max_cores = 16                      The maximum number of cores to use - fewer will be used if appropriate.'
     log.info '    process.maxForks = 20                      The maximum number of processes to run at the same time on the cluster.'
     log.info '    process.queue = "trapnell-short.q"         The queue on the cluster where the jobs should be submitted. '
-    log.info '    params.run = [sample1, sample2]            Add to only run certain samples from trimming on.'
+    log.info '    params.samples = [sample1, sample2]        Add to only run certain samples from trimming on. Default is to run all.'
     log.info '    params.star_file = PATH/TO/FILE            File with the genome to star maps, similar to the one included with the package.'
     log.info '    params.gene_file = PATH/TO/FILE            File with the genome to gene model maps, similar to the one included with the package.'
     log.info '    params.umi_cutoff = 100                    The umi cutoff to be called a cell in matrix output.'
@@ -86,7 +86,7 @@ process trim_fastqs {
         file input_fastq into sample_fastqs
     
     when:
-	!params.run || ((input_fastq.name - ~/-L00\d.fastq.gz/) in params.run) || ((input_fastq.name  - ~/-L00\d.fastq.gz/) in params.run.collect{"$it".replaceAll(/\s/, ".").replaceAll(/_/, ".").replaceAll(/-/, ".").replaceAll(/\\//, ".")})    
+	!params.samples || ((input_fastq.name - ~/-L00\d.fastq.gz/) in params.samples) || ((input_fastq.name  - ~/-L00\d.fastq.gz/) in params.samples.collect{"$it".replaceAll(/\s/, ".").replaceAll(/_/, ".").replaceAll(/-/, ".").replaceAll(/\\//, ".")})    
     """
     mkdir trim_out
     trim_galore $input_fastq \
