@@ -483,9 +483,18 @@ sort
 count instances of the gene for each read
 **/
 
+
+if (params.align_mem < 30) {
+    umi_mem = params.align_mem
+} else {
+    umi_mem = 30
+}
+
+sort_mem = umi_mem - 2
+
 process umi_rollup {
     cache 'lenient'
-    clusterOptions "-l mfree=4G"
+    clusterOptions "-l mfree=${umi_mem}G"
 
     input:
         file gene_assignments_file from for_umi_rollup
@@ -499,7 +508,7 @@ process umi_rollup {
             split(\$1, arr, "|")
             printf "%s|%s_%s_%s\t%s\\n", arr[2], arr[3], arr[4], arr[5], \$2
     }}' "$gene_assignments_file" \
-    | sort -k1,1 -k2,2 -S 2G \
+    | sort -k1,1 -k2,2 -S ${sort_mem}G \
     | datamash -g 1,2 count 2 \
     | gzip > "${gene_assignments_file}.gz"
     """
