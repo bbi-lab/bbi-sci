@@ -569,7 +569,7 @@ process prep_make_matrix {
         set file(umi_rollup), file(gene_assignments_file) from ubss_out
 
     output:
-        set file(umi_rollup), file(gene_assignments_file), stdout into make_matrix_prepped
+        set file(umi_rollup), file(gene_assignments_file), stdout, file("*.genes.bed") into make_matrix_prepped
 
     """
 #!/usr/bin/env python
@@ -600,6 +600,9 @@ with open("$gene_file", 'r') as f:
 samp = "${gene_assignments_file}".replace(".txt", "")
 exon_index = GENE_MODELS[lookup[samp]] + "latest.gene.annotations"
 print(exon_index, end="")
+with open("gene_bed.bed", 'w') as f:
+    f.write(GENE_MODELS[lookup[samp]] + "latest.genes.bed")
+
     """
 }
 
@@ -621,10 +624,10 @@ process make_matrix {
     publishDir path: "${params.output_dir}/", saveAs: save_gene_anno, pattern: "*gene_annotations.txt", mode: 'copy'
 
     input:
-        set file(umi_rollup_file), file(gene_assignments_file), val(annotations_path) from make_matrix_prepped
+        set file(umi_rollup_file), file(gene_assignments_file), val(annotations_path), file(gene_bed) from make_matrix_prepped
 
     output:
-        set file("*cell_annotations.txt"), file("*umi_counts.matrix"), file("*gene_annotations.txt") into mat_output
+        set file("*cell_annotations.txt"), file("*umi_counts.matrix"), file("*gene_annotations.txt"), file(gene_bed) into mat_output
 
     """
     output="${gene_assignments_file}.cell_annotations.txt"
@@ -655,24 +658,26 @@ process make_matrix {
 }
 
 save_cds = {params.output_dir + "/" + it - ~/_cds.RDS/ + "/" + it}
-
+save_cell_qc = {params.output_dir + "/" + it - ~/_cell_qc.csv/ + "/" + it}
 process make_cds {
     module 'java/latest:modules:modules-init:modules-gs:python/3.6.4:gcc/8.1.0:R/3.5.2'
     publishDir path: "${params.output_dir}/", saveAs: save_cds, pattern: "*cds.RDS", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_cell_qc, pattern: "*cell_qc.csv", mode: 'copy'
     clusterOptions "-l mfree=15G"
     
     input:
-        set file(cell_data), file(umi_matrix), file(gene_data) from mat_output
+        set file(cell_data), file(umi_matrix), file(gene_data), file(gene_bed) from mat_output
 
     output:
         file "*.RDS" into cds
-
+	file "*cell_qc.csv" into cell_qc
 
 """
     make_cds.R \
         "$umi_matrix"\
         "$cell_data"\
-        "$gene_data"
+        "$gene_data"\
+        "$gene_bed"
 
 """
 
