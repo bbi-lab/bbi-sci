@@ -627,7 +627,7 @@ process make_matrix {
         set file(umi_rollup_file), file(gene_assignments_file), val(annotations_path), file(gene_bed) from make_matrix_prepped
 
     output:
-        set file("*cell_annotations.txt"), file("*umi_counts.matrix"), file("*gene_annotations.txt"), file(gene_bed) into mat_output
+        set file("*cell_annotations.txt"), file("*umi_counts.matrix"), file("*gene_annotations.txt"), stdout into mat_output
 
     """
     output="${gene_assignments_file}.cell_annotations.txt"
@@ -653,6 +653,7 @@ process make_matrix {
     > "${gene_assignments_file}.umi_counts.matrix"
 
     cat $annotations_path > "${gene_assignments_file}.gene_annotations.txt"
+    cat $gene_bed
     """
 
 }
@@ -673,12 +674,11 @@ process make_cds {
 	file "*cell_qc.csv" into cell_qc
 
 """
-GENE_BED=`cat $gene_bed`
     make_cds.R \
         "$umi_matrix"\
         "$cell_data"\
         "$gene_data"\
-        "\$GENE_BED"
+        "$gene_bed"
 
 """
 
