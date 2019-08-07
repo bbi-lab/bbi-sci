@@ -569,7 +569,7 @@ process prep_make_matrix {
         set file(umi_rollup), file(gene_assignments_file) from ubss_out
 
     output:
-        set file(umi_rollup), file(gene_assignments_file), stdout, file("*.genes.bed") into make_matrix_prepped
+        set file(umi_rollup), file(gene_assignments_file), stdout, file("*_info.txt") into make_matrix_prepped
 
     """
 #!/usr/bin/env python
@@ -600,7 +600,7 @@ with open("$gene_file", 'r') as f:
 samp = "${gene_assignments_file}".replace(".txt", "")
 exon_index = GENE_MODELS[lookup[samp]] + "latest.gene.annotations"
 print(exon_index, end="")
-with open("gene_bed.bed", 'w') as f:
+with open("bed_info.txt", 'w') as f:
     f.write(GENE_MODELS[lookup[samp]] + "latest.genes.bed")
 
     """
@@ -673,11 +673,12 @@ process make_cds {
 	file "*cell_qc.csv" into cell_qc
 
 """
+GENE_BED=`cat $gene_bed`
     make_cds.R \
         "$umi_matrix"\
         "$cell_data"\
         "$gene_data"\
-        "$gene_bed"
+        "\$GENE_BED"
 
 """
 
