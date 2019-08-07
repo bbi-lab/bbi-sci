@@ -16,15 +16,14 @@ args = parser$parse_args()
 sample_name <- stringr::str_split_fixed(args$matrix, "\\.txt\\.", 2)[,1]
 
 cds <- load_mtx_data(mat_path = args$matrix, gene_anno_path = args$gene_data, cell_anno_path = args$cell_data, umi_cutoff=100)
-gene_bed <- read.table(args$gene_bed)
-
+gene_bed_path <- suppressWarnings(readLines(args$gene_bed))
+gene_bed <- read.table(gene_bed_path)
 row.names(gene_bed) <- gene_bed$V4
-names(gene_bed) <- c("chromosome", "bp1", "bp2", "id", "x", "strand", "gene_biotype")
-fData(cds)$chromosome <- gene_bed[row.names(fData(cds)),"chromosome"]
-fData(cds)$bp1 <- gene_bed[row.names(fData(cds)),"bp1"]
-fData(cds)$bp2 <- gene_bed[row.names(fData(cds)),"bp2"]
-fData(cds)$strand <- gene_bed[row.names(fData(cds)),"strand"]
-fData(cds)$gene_biotype <- gene_bed[row.names(fData(cds)),"gene_biotype"]
+names(gene_bed) <- c("chromosome", "bp1", "bp2", "id", "x", "strand")
+
+temp <- gene_bed[row.names(fData(cds)),]
+fData(cds)[,c("chromosome", "bp1", "bp2", "gene_strand")] <- temp[,c("chromosome", "bp1", "bp2", "strand")]
+#fData(cds)$gene_biotype <- gene_bed[row.names(fData(cds)),"gene_biotype"]
 
 mt <- row.names(fData(cds)[!is.na(fData(cds)$chromosome) & fData(cds)$chromosome == "MT",])
 mt_cds <- cds[mt,]
@@ -35,5 +34,5 @@ pData(cds)$perc_mitochondrial_umis <- Matrix::colSums(exprs(mt_cds))/Matrix::col
 #pData(cds)$perc_rRNA_umis <- Matrix::colSums(exprs(rt_cds))/Matrix::colSums(exprs(cds)) * 100
 
 qc <- as.data.frame(pData(cds))[,c("cell", "n.umi", "perc_mitochondrial_umis")]
-write.csv(qc, file=paste0(sample_name, "_cell_qc.csv", quote=FALSE, row.names = FALSE)
+write.csv(qc, file=paste0(sample_name, "_cell_qc.csv"), quote=FALSE, row.names = FALSE)
 saveRDS(cds, file=paste0(sample_name, "_cds.RDS"))
