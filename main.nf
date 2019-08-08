@@ -268,7 +268,7 @@ process merge_bams {
 process remove_dups {
     cache 'lenient'
     clusterOptions "-l mfree=10G"
-    module 'java/latest:modules:modules-init:modules-gs:samtools/1.4:bedtools/2.26.0:python/3.6.4'
+    module 'java/latest:modules:modules-init:modules-gs:samtools/1.4:bedtools/2.26.0:python/3.6.4:coreutils/8.24'
 
     input:
         file merged_bam from sample_bams
@@ -283,7 +283,7 @@ process remove_dups {
             | rmdup.py --bam - \
             | samtools view -bh \
             | bedtools bamtobed -i - -split \
-            | sort -k1,1 -k2,2n -k3,3n -S 3G \
+            | sort -k1,1 -k2,2n -k3,3n -S 10G --parallel=8\
             > "${merged_bam}.bed"
     """
 }
@@ -364,8 +364,8 @@ Assign genes:
 
 process assign_genes {
     cache 'lenient'
-    clusterOptions "-l mfree=20G"
-    module 'java/latest:modules:modules-init:modules-gs:bedtools/2.26.0'
+    clusterOptions "-l mfree=2G -pe serial 8"
+    module 'java/latest:modules:modules-init:modules-gs:bedtools/2.26.0:coreutils/8.24'
 
     input:
         set file(input_bed), file(info) from assign_prepped
@@ -385,7 +385,7 @@ process assign_genes {
     | bedtools map \
         -a - -b \$gene_index \
         -nonamecheck -s -f 0.95 -c 4 -o distinct -delim '|' \
-    | sort -k4,4 -k2,2n -k3,3n -S 3G \
+    | sort -k4,4 -k2,2n -k3,3n -S 10G --parallel=8 \
     | datamash \
         -g 4 first 1 first 2 last 3 first 5 first 6 collapse 7 collapse 8 \
     | assign-reads-to-genes.py \$gene_index \
@@ -397,8 +397,8 @@ process assign_genes {
 
 process umi_by_sample {
     cache 'lenient'
-    clusterOptions "-l mfree=30G"
-    module 'java/latest:modules:modules-init:modules-gs:samtools/1.4'
+    clusterOptions "-l mfree=5G -pe serial 8"
+    module 'java/latest:modules:modules-init:modules-gs:samtools/1.4:coreutils/8.24'
 
     input:
         set file(input_bed), file(filtered_bam) from for_umi_by_sample
@@ -416,13 +416,13 @@ process umi_by_sample {
                 print sample "\\t" count[sample]
                 }}
             }}' "$input_bed" \
-    | sort -k1,1 \
+    | sort -k1,1 --parallel=8 \
     >"${input_bed}.UMI_count.txt"
 
     samtools view "$filtered_bam" \
     | cut -d '|' -f 2 \
     | datamash -g 1 count 1 \
-    | sort -k1,1 -S 2G \
+    | sort -k1,1 -S 2G --parallel=8 \
     | datamash -g 1 sum 2 \
     > "${input_bed}.read_count.txt"
     """
@@ -483,18 +483,10 @@ sort
 count instances of the gene for each read
 **/
 
-
-if (params.align_mem < 30) {
-    umi_mem = params.align_mem
-} else {
-    umi_mem = 30
-}
-
-sort_mem = umi_mem - 2
-
 process umi_rollup {
     cache 'lenient'
-    clusterOptions "-l mfree=${umi_mem}G"
+    clusterOptions "-l mfree=5G -pe serial 8"
+    module 'java/latest:modules:modules-init:modules-gs:coreutils/8.24'
 
     input:
         file gene_assignments_file from for_umi_rollup
@@ -508,11 +500,10 @@ process umi_rollup {
             split(\$1, arr, "|")
             printf "%s|%s_%s_%s\t%s\\n", arr[2], arr[3], arr[4], arr[5], \$2
     }}' "$gene_assignments_file" \
-    | sort -k1,1 -k2,2 -S ${sort_mem}G \
+    | sort -k1,1 -k2,2 -S 5G --parallel=8 \
     | datamash -g 1,2 count 2 \
     | gzip > "${gene_assignments_file}.gz"
     """
-
 }
 
 /*
