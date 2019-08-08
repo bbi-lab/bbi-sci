@@ -20,7 +20,8 @@ dedup <- dedup[seq(2, length(dedup), by=2)]
 dedup_df <- as.data.frame(stringr::str_split_fixed(dedup, " +", 4))
 dedup_df$sample <- stringr::str_split_fixed(dedup_df$V1, ":", 2)[,2]
 
-
+project_name <- unlist(stringr::str_split(output_folder, "/"))
+project_name <- project_name[[length(project_name)]]
 
 barn <- ""
 sent <- ""
@@ -242,7 +243,7 @@ body <- tags$body(
             </ul>
         </div>
         <div class="mx-auto order-0">
-            <a class="navbar-brand mx-auto" href="#">Experiment QC Dashboard</a>
+            <a class="navbar-brand mx-auto" href="#">'), paste('Experiment', project_name, 'QC Dashboard'), HTML('</a>
         </div>
         <div class="navbar-collapse collapse w-100 order-3 dual-collapse2">
         </div>
