@@ -267,7 +267,7 @@ process merge_bams {
 
 process remove_dups {
     cache 'lenient'
-    clusterOptions "-l mfree=10G"
+    clusterOptions "-l mfree=5G -pe serial 8"
     module 'java/latest:modules:modules-init:modules-gs:samtools/1.4:bedtools/2.26.0:python/3.6.4:coreutils/8.24'
 
     input:
@@ -283,7 +283,7 @@ process remove_dups {
             | rmdup.py --bam - \
             | samtools view -bh \
             | bedtools bamtobed -i - -split \
-            | sort -k1,1 -k2,2n -k3,3n -S 10G --parallel=8\
+            | sort -k1,1 -k2,2n -k3,3n -S 5G --parallel=8\
             > "${merged_bam}.bed"
     """
 }
