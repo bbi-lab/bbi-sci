@@ -267,7 +267,7 @@ process merge_bams {
 
 process remove_dups {
     cache 'lenient'
-    clusterOptions "-l mfree=5G -pe serial 8"
+    clusterOptions "-l mfree=8G"
     module 'java/latest:modules:modules-init:modules-gs:samtools/1.4:bedtools/2.26.0:python/3.6.4:coreutils/8.24'
 
     input:
@@ -283,7 +283,7 @@ process remove_dups {
             | rmdup.py --bam - \
             | samtools view -bh \
             | bedtools bamtobed -i - -split \
-            | sort -k1,1 -k2,2n -k3,3n -S 5G --parallel=8\
+            | sort -k1,1 -k2,2n -k3,3n -S 5G \
             > "${merged_bam}.bed"
     """
 }
@@ -364,7 +364,7 @@ Assign genes:
 
 process assign_genes {
     cache 'lenient'
-    clusterOptions "-l mfree=2G -pe serial 8"
+    clusterOptions "-l mfree=8G"
     module 'java/latest:modules:modules-init:modules-gs:bedtools/2.26.0:coreutils/8.24'
 
     input:
@@ -385,7 +385,7 @@ process assign_genes {
     | bedtools map \
         -a - -b \$gene_index \
         -nonamecheck -s -f 0.95 -c 4 -o distinct -delim '|' \
-    | sort -k4,4 -k2,2n -k3,3n -S 10G --parallel=8 \
+    | sort -k4,4 -k2,2n -k3,3n -S 5G\
     | datamash \
         -g 4 first 1 first 2 last 3 first 5 first 6 collapse 7 collapse 8 \
     | assign-reads-to-genes.py \$gene_index \
@@ -397,7 +397,7 @@ process assign_genes {
 
 process umi_by_sample {
     cache 'lenient'
-    clusterOptions "-l mfree=5G -pe serial 8"
+    clusterOptions "-l mfree=8G"
     module 'java/latest:modules:modules-init:modules-gs:samtools/1.4:coreutils/8.24'
 
     input:
@@ -416,13 +416,13 @@ process umi_by_sample {
                 print sample "\\t" count[sample]
                 }}
             }}' "$input_bed" \
-    | sort -k1,1 --parallel=8 \
+    | sort -k1,1 -S 5G\
     >"${input_bed}.UMI_count.txt"
 
     samtools view "$filtered_bam" \
     | cut -d '|' -f 2 \
     | datamash -g 1 count 1 \
-    | sort -k1,1 -S 2G --parallel=8 \
+    | sort -k1,1 -S 5G \
     | datamash -g 1 sum 2 \
     > "${input_bed}.read_count.txt"
     """
@@ -485,7 +485,7 @@ count instances of the gene for each read
 
 process umi_rollup {
     cache 'lenient'
-    clusterOptions "-l mfree=5G -pe serial 8"
+    clusterOptions "-l mfree=8G"
     module 'java/latest:modules:modules-init:modules-gs:coreutils/8.24'
 
     input:
@@ -500,7 +500,7 @@ process umi_rollup {
             split(\$1, arr, "|")
             printf "%s|%s_%s_%s\t%s\\n", arr[2], arr[3], arr[4], arr[5], \$2
     }}' "$gene_assignments_file" \
-    | sort -k1,1 -k2,2 -S 5G --parallel=8 \
+    | sort -k1,1 -k2,2 -S 5G \
     | datamash -g 1,2 count 2 \
     | gzip > "${gene_assignments_file}.gz"
     """
@@ -618,7 +618,7 @@ make the number matrix
 **/
 process make_matrix {
     cache 'lenient'
-    clusterOptions "-l mfree=4G"
+    clusterOptions "-l mfree=8G"
     publishDir path: "${params.output_dir}/", saveAs: save_umi, pattern: "*umi_counts.matrix", mode: 'copy'
     publishDir path: "${params.output_dir}/", saveAs: save_cell_anno, pattern: "*cell_annotations.txt", mode: 'copy'
     publishDir path: "${params.output_dir}/", saveAs: save_gene_anno, pattern: "*gene_annotations.txt", mode: 'copy'
@@ -638,7 +638,7 @@ process make_matrix {
     | awk '\$3 >= int( \$UMI_PER_CELL_CUTOFF ) {
         print \$2
     }'  - \
-    | sort -k1,1 -S 4G \
+    | sort -k1,1 -S 5G \
     > "\$output"
     gunzip < "$umi_rollup_file" \
     | tr '|' '\t' \
