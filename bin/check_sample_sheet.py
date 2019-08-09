@@ -60,7 +60,7 @@ if __name__ == '__main__':
             sample_out = sample_out + topline_orig
     else:
         if topline[0] == 'RT Barcode' and topline[1] =='Sample ID' and topline[2] == 'Reference Genome':
-            sample_out = topline_orig + "\n"
+            sample_out = topline_orig
         else:
             sample_out = 'RT Barcode,Sample ID,Reference Genome'
             for i in range(3, len(topline)):
