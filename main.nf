@@ -84,6 +84,7 @@ process trim_fastqs {
         file "trim_out" into trim_output
         set file("trim_out/*.fq.gz"), val("${input_fastq.baseName - ~/.fastq/}") into trimmed_fastqs mode flatten
         file input_fastq into sample_fastqs
+	stdout trim_stdout
     
     when:
 	!params.samples || ((input_fastq.name - ~/-L00\d.fastq.gz/) in params.samples) || ((input_fastq.name  - ~/-L00\d.fastq.gz/) in params.samples.collect{"$it".replaceAll(/\s/, ".").replaceAll(/_/, ".").replaceAll(/-/, ".").replaceAll(/\\//, ".")})    
