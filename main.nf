@@ -267,7 +267,7 @@ process merge_bams {
 
 process remove_dups {
     cache 'lenient'
-    clusterOptions "-l mfree=8G"
+    clusterOptions "-l mfree=10G"
     module 'java/latest:modules:modules-init:modules-gs:samtools/1.4:bedtools/2.26.0:python/3.6.4:coreutils/8.24'
 
     input:
