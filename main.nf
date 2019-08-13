@@ -399,7 +399,7 @@ process assign_genes {
 
 process umi_by_sample {
     cache 'lenient'
-    clusterOptions "-l mfree=15G"
+    clusterOptions "-l mfree=20G"
     module 'java/latest:modules:modules-init:modules-gs:samtools/1.4:coreutils/8.24'
 
     input:
@@ -620,7 +620,7 @@ make the number matrix
 **/
 process make_matrix {
     cache 'lenient'
-    clusterOptions "-l mfree=8G"
+    clusterOptions "-l mfree=15G"
     publishDir path: "${params.output_dir}/", saveAs: save_umi, pattern: "*umi_counts.matrix", mode: 'copy'
     publishDir path: "${params.output_dir}/", saveAs: save_cell_anno, pattern: "*cell_annotations.txt", mode: 'copy'
     publishDir path: "${params.output_dir}/", saveAs: save_gene_anno, pattern: "*gene_annotations.txt", mode: 'copy'
