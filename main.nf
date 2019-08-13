@@ -365,7 +365,7 @@ Assign genes:
 
 process assign_genes {
     cache 'lenient'
-    clusterOptions "-l mfree=8G"
+    clusterOptions "-l mfree=15G"
     module 'java/latest:modules:modules-init:modules-gs:bedtools/2.26.0:coreutils/8.24'
 
     input:
@@ -392,6 +392,7 @@ process assign_genes {
     | assign-reads-to-genes.py \$gene_index \
     > "\$prefix"
 
+    if [[ ! -s \$prefix ]]; then echo "File is empty"; exit 125; fi
     """
 
 }
