@@ -25,7 +25,7 @@ temp <- gene_bed[row.names(fData(cds)),]
 fData(cds)[,c("chromosome", "bp1", "bp2", "gene_strand")] <- temp[,c("chromosome", "bp1", "bp2", "strand")]
 #fData(cds)$gene_biotype <- gene_bed[row.names(fData(cds)),"gene_biotype"]
 
-mt <- row.names(fData(cds)[!is.na(fData(cds)$chromosome) & fData(cds)$chromosome == "MT",])
+mt <- row.names(fData(cds)[!is.na(fData(cds)$chromosome) & (fData(cds)$chromosome %in% c("MT","chrM")),])
 mt_cds <- cds[mt,]
 pData(cds)$perc_mitochondrial_umis <- Matrix::colSums(exprs(mt_cds))/Matrix::colSums(exprs(cds)) * 100
 
