@@ -238,7 +238,7 @@ process sort_and_filter {
     """
 }
 
-lane = ~/-L[0-9]{3}.bam/
+lane = ~/-L[0-9]{3}.gz.bam/
 
 sorted_bams
     .collectFile() { item ->
@@ -329,7 +329,7 @@ with open("$gene_file", 'r') as f:
         key, values = items[0], items[1]
         GENE_MODELS[key] = values
 print(lookup)
-samp = "${sample_bed}".replace(".txt.bam.bed", "").replace(".gz", "")
+samp = "${sample_bed}".replace(".txt.bam.bed", "")
 
 print(samp)
 exon_index = GENE_MODELS[lookup[samp]] + "latest.exons.bed"
