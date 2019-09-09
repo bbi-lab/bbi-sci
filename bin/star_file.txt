@@ -1,14 +1,14 @@
-Human   /net/bbi/vol1/data/genomes/human_star
-Mouse   /net/bbi/vol1/data/genomes/mouse_star
-Barnyard    /net/bbi/vol1/data/genomes/barnyard_star
-Worm    /net/bbi/vol1/data/genomes/worm_star
-Rat /net/bbi/vol1/data/genomes/rat_star
-Macaque /net/bbi/vol1/data/genomes/macaque_star
-Zebrafish   /net/bbi/vol1/data/genomes/zebrafish_star
-Drosophila  /net/bbi/vol1/data/genomes/drosophila_star
-Chicken	/net/bbi/vol1/data/genomes/chicken_star
-Opossum	/net/bbi/vol1/data/genomes/opossum_star
-Corn	/net/bbi/vol1/data/genomes/corn_star
-Arabidopsis	/net/bbi/vol1/data/genomes/arabidopsis_star
-Maize   None
-Camelina    None
+Human   /net/bbi/vol1/data/genomes/human_star 60
+Mouse   /net/bbi/vol1/data/genomes/mouse_star 47
+Barnyard    /net/bbi/vol1/data/genomes/barnyard_star  90
+Worm    /net/bbi/vol1/data/genomes/worm_star  10
+Rat /net/bbi/vol1/data/genomes/rat_star 37
+Macaque /net/bbi/vol1/data/genomes/macaque_star 110
+Zebrafish   /net/bbi/vol1/data/genomes/zebrafish_star 20
+Drosophila  /net/bbi/vol1/data/genomes/drosophila_star  10
+Chicken	/net/bbi/vol1/data/genomes/chicken_star 15
+Opossum	/net/bbi/vol1/data/genomes/opossum_star 40
+Corn	/net/bbi/vol1/data/genomes/corn_star  25
+Arabidopsis	/net/bbi/vol1/data/genomes/arabidopsis_star 10
+Maize   None  0
+Camelina    None  0
