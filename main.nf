@@ -143,7 +143,7 @@ process prep_align {
         set file(trimmed_fastq), val(name)  from trimmed_fastqs
 
     output:
-        set file(trimmed_fastq), file('info.txt'), val(name), stdout into align_prepped
+        set file(trimmed_fastq), file('info.txt'), val(name), stdout(mem) into align_prepped
 
     """
 #!/usr/bin/env python
