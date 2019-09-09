@@ -187,7 +187,9 @@ memory = params.align_mem/cores_align
 process align_reads {
     cache 'lenient'
     module 'java/latest:modules:modules-init:modules-gs:STAR/2.5.2b'
-    clusterOptions "-l mfree=${memory}G -pe serial $cores_align"
+    memory "${memory} GB"
+    penv 'serial'
+    cpus cores_align    
 
     input:
         set file(input_file), file(info), val(orig_name) from align_prepped
@@ -223,7 +225,9 @@ if (params.max_cores < 10) {
 process sort_and_filter {
     cache 'lenient'
     module 'java/latest:modules:modules-init:modules-gs:samtools/1.4'
-    clusterOptions "-l mfree=1G -pe serial $cores_sf"
+    memory '1 GB'
+    penv 'serial'
+    cpus cores_sf
 
     input:
         set file(aligned_bam), val(orig_name) from aligned_bams
@@ -268,7 +272,7 @@ process merge_bams {
 
 process remove_dups {
     cache 'lenient'
-    clusterOptions "-l mfree=20G"
+    memory '20 GB'    
     module 'java/latest:modules:modules-init:modules-gs:samtools/1.4:bedtools/2.26.0:python/3.6.4:coreutils/8.24'
 
     input:
@@ -365,7 +369,7 @@ Assign genes:
 
 process assign_genes {
     cache 'lenient'
-    clusterOptions "-l mfree=15G"
+    memory '15 GB'    
     module 'java/latest:modules:modules-init:modules-gs:bedtools/2.26.0:coreutils/8.24'
 
     input:
@@ -399,7 +403,7 @@ process assign_genes {
 
 process umi_by_sample {
     cache 'lenient'
-    clusterOptions "-l mfree=20G"
+    memory '20 GB'    
     module 'java/latest:modules:modules-init:modules-gs:samtools/1.4:coreutils/8.24'
 
     input:
@@ -434,7 +438,7 @@ save_dup = {params.output_dir + "/" + it - ~/.txt.bam.bed.UMI_count.txt.duplicat
 
 process summarize_duplication {
     cache 'lenient'
-    clusterOptions "-l mfree=8G"
+    memory '8 GB'
     publishDir = [path: "${params.output_dir}/", saveAs: save_dup, pattern: "*duplication_rate_stats.txt", mode: 'copy']
 
     input:
@@ -487,7 +491,7 @@ count instances of the gene for each read
 
 process umi_rollup {
     cache 'lenient'
-    clusterOptions "-l mfree=8G"
+    memory '8 GB'
     module 'java/latest:modules:modules-init:modules-gs:coreutils/8.24'
 
     input:
@@ -529,7 +533,7 @@ Count intronic and total umis per cell and plot knee plot
 process umi_by_sample_summary {
     module 'java/latest:modules:modules-init:modules-gs:python/3.6.4:gcc/8.1.0:R/3.5.2'
     cache 'lenient'
-    clusterOptions "-l mfree=8G"
+    memory '8 GB'    
 
     publishDir path: "${params.output_dir}/", saveAs: save_umi_per_int, pattern: "*intronic.txt", mode: 'copy' 
     publishDir path: "${params.output_dir}/", saveAs: save_plot, pattern: "*.knee_plot.png", mode: 'copy'
@@ -620,7 +624,7 @@ make the number matrix
 **/
 process make_matrix {
     cache 'lenient'
-    clusterOptions "-l mfree=15G"
+    memory '15 GB'    
     publishDir path: "${params.output_dir}/", saveAs: save_umi, pattern: "*umi_counts.matrix", mode: 'copy'
     publishDir path: "${params.output_dir}/", saveAs: save_cell_anno, pattern: "*cell_annotations.txt", mode: 'copy'
     publishDir path: "${params.output_dir}/", saveAs: save_gene_anno, pattern: "*gene_annotations.txt", mode: 'copy'
@@ -665,8 +669,8 @@ process make_cds {
     module 'java/latest:modules:modules-init:modules-gs:python/3.6.4:gcc/8.1.0:R/3.5.2'
     publishDir path: "${params.output_dir}/", saveAs: save_cds, pattern: "*cds.RDS", mode: 'copy'
     publishDir path: "${params.output_dir}/", saveAs: save_cell_qc, pattern: "*cell_qc.csv", mode: 'copy'
-    clusterOptions "-l mfree=15G"
-    
+    memory '15 GB'
+ 
     input:
         set file(cell_data), file(umi_matrix), file(gene_data), file(gene_bed) from mat_output
 
@@ -688,7 +692,7 @@ process make_cds {
 
 process exp_dash {
     module 'java/latest:modules:modules-init:modules-gs:gcc/8.1.0:R/3.5.2'
-    clusterOptions "-l mfree=8G"
+    memory '8 GB'
 
     publishDir path: "${params.output_dir}/", pattern: "exp_dash", mode: 'copy'
 
