@@ -177,7 +177,7 @@ with open("$star_file", 'r') as f:
 samp = "${trimmed_fastq}".split('-')[0]
 samp_name = "${trimmed_fastq}".replace('_trimmed.fq.gz', '.')
 star_index = STAR_INDICES[lookup[samp]]
-print(MEM[lookiup[samp]])
+print(MEM[lookup[samp]])
 prefix = "./align_out/" + samp_name
 f = open("info.txt", 'w')
 f.write(star_index + '\\n' + prefix)
