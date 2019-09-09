@@ -190,7 +190,7 @@ f.close()
 process align_reads {
     cache 'lenient'
     module 'java/latest:modules:modules-init:modules-gs:STAR/2.5.2b'
-    memory { mem/cores_align + " GB" }
+    memory { mem.toInteger()/cores_align + " GB" }
     penv 'serial'
     cpus cores_align    
 
