@@ -143,7 +143,7 @@ process prep_align {
         set file(trimmed_fastq), val(name)  from trimmed_fastqs
 
     output:
-        set file(trimmed_fastq), file('info.txt'), val(name) into align_prepped
+        set file(trimmed_fastq), file('info.txt'), val(name), stdout into align_prepped
 
     """
 #!/usr/bin/env python
@@ -165,16 +165,19 @@ for rt_well in quick_parse("$sample_sheet_file"):
     
 
 STAR_INDICES = {}
+MEM = {}
 
 with open("$star_file", 'r') as f:
     for line in f:
         items = line.strip().split()
-        key, values = items[0], items[1]
+        key, values, mem = items[0], items[1],  items[2]
         STAR_INDICES[key] = values
+        MEM[key] = mem
 
 samp = "${trimmed_fastq}".split('-')[0]
 samp_name = "${trimmed_fastq}".replace('_trimmed.fq.gz', '.')
 star_index = STAR_INDICES[lookup[samp]]
+print(MEM[lookiup[samp]])
 prefix = "./align_out/" + samp_name
 f = open("info.txt", 'w')
 f.write(star_index + '\\n' + prefix)
@@ -183,16 +186,16 @@ f.close()
 
 }
 
-memory = params.align_mem/cores_align
+//memory = params.align_mem/cores_align
 process align_reads {
     cache 'lenient'
     module 'java/latest:modules:modules-init:modules-gs:STAR/2.5.2b'
-    memory "${memory} GB"
+    memory (mem + " GB")
     penv 'serial'
     cpus cores_align    
 
     input:
-        set file(input_file), file(info), val(orig_name) from align_prepped
+        set file(input_file), file(info), val(orig_name), val(mem) from align_prepped
 
     output:
         file "align_out" into align_output
