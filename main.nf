@@ -245,7 +245,7 @@ process sort_and_filter {
     """
 }
 
-lane = ~/-L[0-9]{3}/
+lane = /-L[0-9]{3}/
 
 sorted_bams
     .collectFile() { item ->
