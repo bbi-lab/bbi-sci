@@ -245,11 +245,9 @@ process sort_and_filter {
     """
 }
 
-lane = /-L[0-9]{3}/
-
 sorted_bams
     .collectFile() { item ->
-     [ "${(item.split(lane)[0])}.txt", item.toString() + '\n' ]
+     [ "${(item.toString().split(/-L[0-9]{3}/)[0])}.txt", item.toString() + '\n' ]
     }
     .set { Bams_to_merge }
 
