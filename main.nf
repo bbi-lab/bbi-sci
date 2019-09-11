@@ -245,15 +245,15 @@ process sort_and_filter {
     """
 }
 
-lane = ~/-L[0-9]{3}.gz.bam/
+lane = ~/-L[0-9]{3}/
 
 sorted_bams
     .collectFile() { item ->
-     [ "${(item.name - lane)}.txt", item.toString() + '\n' ]
+     [ "${(item.split(lane)[0])}.txt", item.toString() + '\n' ]
     }
     .set { Bams_to_merge }
 
-save_bam = {params.output_dir + "/" + it - ~/.txt.bam/ + "/" + it - ~/.txt/}
+save_bam = {params.output_dir + "/" + it.split(lane)[0] + "/" + it.split(lane)[0] + ".bam"}
 
 process merge_bams {
     cache 'lenient'
