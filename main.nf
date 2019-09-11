@@ -251,7 +251,7 @@ sorted_bams
     }
     .set { Bams_to_merge }
 
-save_bam = {params.output_dir + "/" + it.split(lane)[0] + "/" + it.split(lane)[0] + ".bam"}
+save_bam = {params.output_dir + "/" + it.split(/-L[0-9]{3}/)[0] + "/" + it.split(/-L[0-9]{3}/)[0] + ".bam"}
 
 process merge_bams {
     cache 'lenient'
