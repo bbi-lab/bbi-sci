@@ -87,7 +87,7 @@ process trim_fastqs {
 	stdout trim_stdout
     
     when:
-	!params.samples || ((input_fastq.name - ~/-L00\d.fastq.gz/) in params.samples) || ((input_fastq.name  - ~/-L00\d.fastq.gz/) in params.samples.collect{"$it".replaceAll(/\s/, ".").replaceAll(/_/, ".").replaceAll(/-/, ".").replaceAll(/\\//, ".")})    
+	!params.samples || ((input_fastq.name - ~/-L00\d.gz.fastq.gz/) in params.samples) || ((input_fastq.name  - ~/-L00\d.gz.fastq.gz/) in params.samples.collect{"$it".replaceAll(/\s/, ".").replaceAll(/_/, ".").replaceAll(/-/, ".").replaceAll(/\\//, ".")})    
     """
     mkdir trim_out
     trim_galore $input_fastq \
