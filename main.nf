@@ -236,7 +236,7 @@ process sort_and_filter {
         set file(aligned_bam), val(orig_name) from aligned_bams
 
     output:
-        file "*.bam" into sorted_bams
+        file "*.bam" into sorted_bams mode flatten
 
     """
     samtools view -bh -q 30 -F 4 "$aligned_bam" \
