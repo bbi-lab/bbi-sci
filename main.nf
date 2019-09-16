@@ -336,7 +336,7 @@ with open("$gene_file", 'r') as f:
         key, values = items[0], items[1]
         GENE_MODELS[key] = values
 print(lookup)
-samp = "${sample_bed}".replace(".txt.bam.bed", "")
+samp = "${sample_bed}".replace(".bam.bed", "")
 
 print(samp)
 exon_index = GENE_MODELS[lookup[samp]] + "latest.exons.bed"
