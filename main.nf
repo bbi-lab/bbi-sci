@@ -236,7 +236,7 @@ process sort_and_filter {
         set file(aligned_bam), val(orig_name) from aligned_bams
 
     output:
-        file "*.bam" into sorted_bams mode flatten
+        file "*.bam" into sorted_bams
 
     """
     samtools view -bh -q 30 -F 4 "$aligned_bam" \
@@ -246,9 +246,11 @@ process sort_and_filter {
 }
 
 sorted_bams
-    .collectFile() { item ->
-     [ "${(item.toString().split(/-L[0-9]{3}/)[0])}.txt", item.toString() + '\n' ]
+    .map { file ->
+        def key = file.name.toString().split(/-L[0-9]{3}/)[0]
+        return tuple(key, file)
     }
+    .groupTuple()
     .set { Bams_to_merge }
 
 save_bam = {params.output_dir + "/" + it.split(/-L[0-9]{3}/)[0] - ~/.txt.bam/ + "/" + it.split(/-L[0-9]{3}/)[0] - ~/.txt.bam/ + ".bam"}
@@ -259,13 +261,13 @@ process merge_bams {
     publishDir = [path: "${params.output_dir}/", saveAs: save_bam, pattern: "*.bam", mode: 'copy' ]
 
     input:
-        file bam_set from Bams_to_merge
+        set key, file(bam_set) from Bams_to_merge
 
     output:
         file "*.bam" into sample_bams
 
     """
-    samtools merge -b "$bam_set" "${bam_set}.bam"
+    samtools merge -b "$bam_set" "${key}.bam"
     
     """
 
