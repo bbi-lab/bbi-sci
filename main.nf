@@ -267,7 +267,7 @@ process merge_bams {
         file "*.bam" into sample_bams
 
     """
-    samtools merge -b "$bam_set" "${key}.bam"
+    samtools merge -b $bam_set > ${key}.bam
     
     """
 
