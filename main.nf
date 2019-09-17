@@ -264,7 +264,7 @@ process merge_bams {
         set key, file(bam_set) from Bams_to_merge
 
     output:
-        file "*.bam" into sample_bams
+        set key, file("*.bam") into sample_bams
 
     """
     samtools merge ${key}.bam $bam_set
@@ -279,10 +279,10 @@ process remove_dups {
     module 'java/latest:modules:modules-init:modules-gs:samtools/1.4:bedtools/2.26.0:python/3.6.4:coreutils/8.24'
 
     input:
-        file merged_bam from sample_bams
+        set key file(merged_bam) from sample_bams
 
     output:
-        set file("*.bed"), file(merged_bam) into remove_dup_out
+        set key file("*.bed"), file(merged_bam) into remove_dup_out
 
     """
     export LC_ALL=C
@@ -292,7 +292,7 @@ process remove_dups {
             | samtools view -bh \
             | bedtools bamtobed -i - -split \
             | sort -k1,1 -k2,2n -k3,3n -S 5G \
-            > "${merged_bam}.bed"
+            > "${key}.bed"
     """
 }
 
@@ -305,10 +305,10 @@ process prep_assign {
     input:
         file gene_file
         file sample_sheet_file
-        set file(sample_bed), file(merged_bam) from for_prep_assign
+        set key, file(sample_bed), file(merged_bam) from for_prep_assign
 
     output:
-        set file(sample_bed), file('info.txt') into assign_prepped
+        set key, file(sample_bed), file('info.txt') into assign_prepped
 
     """
 #!/usr/bin/env python
@@ -336,7 +336,7 @@ with open("$gene_file", 'r') as f:
         key, values = items[0], items[1]
         GENE_MODELS[key] = values
 print(lookup)
-samp = "${sample_bed}".replace(".bam.bed", "")
+samp = "${key}
 
 print(samp)
 exon_index = GENE_MODELS[lookup[samp]] + "latest.exons.bed"
@@ -376,10 +376,10 @@ process assign_genes {
     module 'java/latest:modules:modules-init:modules-gs:bedtools/2.26.0:coreutils/8.24'
 
     input:
-        set file(input_bed), file(info) from assign_prepped
+        set key, file(input_bed), file(info) from assign_prepped
 
     output:
-        file "*.txt" into assign_genes_out
+        set key, file("*.txt") into assign_genes_out
 
     """
     exon_index=`head -n 1 $info`
@@ -410,10 +410,10 @@ process umi_by_sample {
     module 'java/latest:modules:modules-init:modules-gs:samtools/1.4:coreutils/8.24'
 
     input:
-        set file(input_bed), file(filtered_bam) from for_umi_by_sample
+        set key, file(input_bed), file(filtered_bam) from for_umi_by_sample
 
     output:
-        set file("*.UMI_count.txt"), file("*.read_count.txt") into for_summarize_dup
+        set key, file("*.UMI_count.txt"), file("*.read_count.txt") into for_summarize_dup
 
     """
     awk '{{ split(\$4, arr, "|")
@@ -426,18 +426,18 @@ process umi_by_sample {
                 }}
             }}' "$input_bed" \
     | sort -k1,1 -S 5G\
-    >"${input_bed}.UMI_count.txt"
+    >"${key}.UMI_count.txt"
 
     samtools view "$filtered_bam" \
     | cut -d '|' -f 2 \
     | datamash -g 1 count 1 \
     | sort -k1,1 -S 5G \
     | datamash -g 1 sum 2 \
-    > "${input_bed}.read_count.txt"
+    > "${key}.read_count.txt"
     """
 }
 
-save_dup = {params.output_dir + "/" + it - ~/.txt.bam.bed.UMI_count.txt.duplication_rate_stats.txt/ + "/duplication_stats.txt"}
+save_dup = {params.output_dir + "/" + it - ~/.duplication_rate_stats.txt/ + "/duplication_stats.txt"}
 
 process summarize_duplication {
     cache 'lenient'
@@ -445,10 +445,10 @@ process summarize_duplication {
     publishDir = [path: "${params.output_dir}/", saveAs: save_dup, pattern: "*duplication_rate_stats.txt", mode: 'copy']
 
     input:
-        set file(umi_count_file), file(read_count_file) from for_summarize_dup
+        set key, file(umi_count_file), file(read_count_file) from for_summarize_dup
 
     output:
-        file "*duplication_rate_stats.txt" into duplication_rate_out
+        file("*duplication_rate_stats.txt") into duplication_rate_out
 
     """
     cat $umi_count_file \
@@ -460,7 +460,7 @@ process summarize_duplication {
                 printf "%-18s   %10d    %10d    %7.1f%\\n",
                     \$1, \$3, \$2, 100 * (1 - \$2/\$3);
         }}' \
-        >"${umi_count_file}.duplication_rate_stats.txt"
+        >"${key}.duplication_rate_stats.txt"
     
     
     """
@@ -498,10 +498,10 @@ process umi_rollup {
     module 'java/latest:modules:modules-init:modules-gs:coreutils/8.24'
 
     input:
-        file gene_assignments_file from for_umi_rollup
+        set key, file(gene_assignments_file) from for_umi_rollup
 
     output:
-        set file("*.gz"), file(gene_assignments_file) into umi_rollup_out
+        set key file("*.gz"), file(gene_assignments_file) into umi_rollup_out
 
 
     """
@@ -511,23 +511,13 @@ process umi_rollup {
     }}' "$gene_assignments_file" \
     | sort -k1,1 -k2,2 -S 5G \
     | datamash -g 1,2 count 2 \
-    | gzip > "${gene_assignments_file}.gz"
+    | gzip > "${key}.gz"
     """
 }
 
-/*
-
-
-save_bam = {params.output_dir + "/" + it - ~/.txt.bam/ + "/" + it - ~/.txt/}
-
-    publishDir = [path: "${params.output_dir}/", saveAs: save_bam, pattern: "*.bam", mode: 'copy']
-
-
-*/
-
-save_umi_per_cell = {params.output_dir + "/" + it - ~/.txt.UMIs.per.cell.barcode.txt/ + "/umis_per_cell_barcode.txt"}
-save_umi_per_int = {params.output_dir + "/" + it - ~/.txt.UMIs.per.cell.barcode.intronic.txt/ + "/intronic_umis_per_cell_barcode.txt"}
-save_plot = {params.output_dir + "/" + it - ~/.txt.knee_plot.png/ + "/knee_plot.png"}
+save_umi_per_cell = {params.output_dir + "/" + it - ~/.UMIs.per.cell.barcode.txt/ + "/umis_per_cell_barcode.txt"}
+save_umi_per_int = {params.output_dir + "/" + it - ~/.UMIs.per.cell.barcode.intronic.txt/ + "/intronic_umis_per_cell_barcode.txt"}
+save_plot = {params.output_dir + "/" + it - ~/.knee_plot.png/ + "/knee_plot.png"}
 
 
 /**
@@ -544,10 +534,10 @@ process umi_by_sample_summary {
   
 
     input:
-        set file(umi_rollup), file(gene_assignments_file) from umi_rollup_out        
+        set key, file(umi_rollup), file(gene_assignments_file) from umi_rollup_out        
 
     output:
-        set file(umi_rollup), file(gene_assignments_file) into ubss_out
+        set key, file(umi_rollup), file(gene_assignments_file) into ubss_out
         file "*UMIs.per.cell.barcode.txt" into umis_per_cell_barcode
         file "*UMIs.per.cell.barcode.intronic.txt" into umi_per_cell_intronic
         file "*.knee_plot.png" into knee_plots
@@ -555,14 +545,14 @@ process umi_by_sample_summary {
     """
     tabulate_per_cell_counts.py \
         --gene_assignment_files "$gene_assignments_file" \
-        --all_counts_file "${gene_assignments_file}.UMIs.per.cell.barcode.txt" \
-        --intron_counts_file "${gene_assignments_file}.UMIs.per.cell.barcode.intronic.txt"
+        --all_counts_file "${key}.UMIs.per.cell.barcode.txt" \
+        --intron_counts_file "${key}.UMIs.per.cell.barcode.intronic.txt"
     
     knee-plot.R \
-        "${gene_assignments_file}.UMIs.per.cell.barcode.txt" \
-        --knee_plot "${gene_assignments_file}.knee_plot.png" \
+        "${key}.UMIs.per.cell.barcode.txt" \
+        --knee_plot "${key}.knee_plot.png" \
         --specify_cutoff 100\
-        --umi_count_threshold_file "${gene_assignments_file}.umi_cutoff.txt"
+        --umi_count_threshold_file "${key}.umi_cutoff.txt"
 
     """
 
@@ -575,10 +565,10 @@ process prep_make_matrix {
     
     input:
         file sample_sheet_file
-        set file(umi_rollup), file(gene_assignments_file) from ubss_out
+        set key, file(umi_rollup), file(gene_assignments_file) from ubss_out
 
     output:
-        set file(umi_rollup), file(gene_assignments_file), stdout, file("*_info.txt") into make_matrix_prepped
+        set key, file(umi_rollup), file(gene_assignments_file), stdout, file("*_info.txt") into make_matrix_prepped
 
     """
 #!/usr/bin/env python
@@ -606,7 +596,7 @@ with open("$gene_file", 'r') as f:
         key, values = items[0], items[1]
         GENE_MODELS[key] = values
 
-samp = "${gene_assignments_file}".replace(".txt", "")
+samp = ${key}
 exon_index = GENE_MODELS[lookup[samp]] + "latest.gene.annotations"
 print(exon_index, end="")
 with open("bed_info.txt", 'w') as f:
@@ -615,9 +605,9 @@ with open("bed_info.txt", 'w') as f:
     """
 }
 
-save_umi = {params.output_dir + "/" + it - ~/.txt.umi_counts.matrix/ + "/umi_counts.matrix"}
-save_cell_anno = {params.output_dir + "/" + it - ~/.txt.cell_annotations.txt/ + "/cell_annotations.txt"}
-save_gene_anno = {params.output_dir + "/" + it - ~/.txt.gene_annotations.txt/ + "/gene_annotations.txt"}
+save_umi = {params.output_dir + "/" + it - ~/.umi_counts.matrix/ + "/umi_counts.matrix"}
+save_cell_anno = {params.output_dir + "/" + it - ~/.cell_annotations.txt/ + "/cell_annotations.txt"}
+save_gene_anno = {params.output_dir + "/" + it - ~/.gene_annotations.txt/ + "/gene_annotations.txt"}
 
 
 /**
@@ -633,7 +623,7 @@ process make_matrix {
     publishDir path: "${params.output_dir}/", saveAs: save_gene_anno, pattern: "*gene_annotations.txt", mode: 'copy'
 
     input:
-        set file(umi_rollup_file), file(gene_assignments_file), val(annotations_path), file(gene_bed) from make_matrix_prepped
+        set key, file(umi_rollup_file), file(gene_assignments_file), val(annotations_path), file(gene_bed) from make_matrix_prepped
 
     output:
         set file("*cell_annotations.txt"), file("*umi_counts.matrix"), file("*gene_annotations.txt"), file(gene_bed) into mat_output
@@ -659,9 +649,9 @@ process make_matrix {
                 printf "%d\t%d\t%d\\n", gene_idx[\$3], cell_idx[\$2], \$4
             } 
     }' $annotations_path "\$output" - \
-    > "${gene_assignments_file}.umi_counts.matrix"
+    > "${key}.umi_counts.matrix"
 
-    cat $annotations_path > "${gene_assignments_file}.gene_annotations.txt"
+    cat $annotations_path > "${key}.gene_annotations.txt"
     """
 
 }
