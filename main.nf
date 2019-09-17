@@ -501,7 +501,7 @@ process umi_rollup {
         set key, file(gene_assignments_file) from for_umi_rollup
 
     output:
-        set key file("*.gz"), file(gene_assignments_file) into umi_rollup_out
+        set key, file("*.gz"), file(gene_assignments_file) into umi_rollup_out
 
 
     """
