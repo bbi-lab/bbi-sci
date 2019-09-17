@@ -282,7 +282,7 @@ process remove_dups {
         set key file(merged_bam) from sample_bams
 
     output:
-        set key file("*.bed"), file(merged_bam) into remove_dup_out
+        set key, file("*.bed"), file(merged_bam) into remove_dup_out
 
     """
     export LC_ALL=C
