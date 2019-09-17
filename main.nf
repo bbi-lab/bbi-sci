@@ -279,7 +279,7 @@ process remove_dups {
     module 'java/latest:modules:modules-init:modules-gs:samtools/1.4:bedtools/2.26.0:python/3.6.4:coreutils/8.24'
 
     input:
-        set key file(merged_bam) from sample_bams
+        set key, file(merged_bam) from sample_bams
 
     output:
         set key, file("*.bed"), file(merged_bam) into remove_dup_out
