@@ -99,7 +99,7 @@ process trim_fastqs {
         
     """
 }
-
+/*
 sample_fastqs
     .map { file ->
          def key = file.name.toString().tokenize('-').get(0)
@@ -125,7 +125,7 @@ process save_sample_fastqs {
 
     """
 }
-
+*/
 
 if (params.max_cores < 8) {
     cores_align = params.max_cores
