@@ -267,6 +267,7 @@ process merge_bams {
         set key, file("*.bam") into sample_bams
 
     """
+    echo ${key}
     samtools merge ${key}.bam $bam_set
     
     """
