@@ -596,7 +596,7 @@ with open("$gene_file", 'r') as f:
         key, values = items[0], items[1]
         GENE_MODELS[key] = values
 
-samp = ${key}
+samp = "${key}"
 exon_index = GENE_MODELS[lookup[samp]] + "latest.gene.annotations"
 print(exon_index, end="")
 with open("bed_info.txt", 'w') as f:
