@@ -629,7 +629,7 @@ process make_matrix {
         set file("*cell_annotations.txt"), file("*umi_counts.matrix"), file("*gene_annotations.txt"), file(gene_bed) into mat_output
 
     """
-    output="${gene_assignments_file}.cell_annotations.txt"
+    output="${key}.cell_annotations.txt"
     UMI_PER_CELL_CUTOFF=$params.umi_cutoff
     gunzip < "$umi_rollup_file" \
     | datamash -g 1 sum 3 \
