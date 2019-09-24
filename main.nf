@@ -253,7 +253,7 @@ sorted_bams
     .groupTuple()
     .set { Bams_to_merge }
 
-save_bam = {params.output_dir + "/" + it.split(/-L[0-9]{3}/)[0] - ~/.txt.bam/ + "/" + it.split(/-L[0-9]{3}/)[0] - ~/.txt.bam/ + ".bam"}
+save_bam = {params.output_dir + "/" + it - ~/.bam/ + "/" + it}
 
 process merge_bams {
     cache 'lenient'
