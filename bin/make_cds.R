@@ -11,9 +11,10 @@ parser$add_argument('matrix', help='File of umi count matrix.')
 parser$add_argument('cell_data', help='File of cell data.')
 parser$add_argument('gene_data', help='File of gene data.')
 parser$add_argument('gene_bed', help='Bed file of gene info.')
+parser$add_argument('key', help='The sample name prefix.')
 args = parser$parse_args()
 
-sample_name <- stringr::str_split_fixed(args$matrix, "\\.txt\\.", 2)[,1]
+sample_name <- args$key
 
 cds <- load_mtx_data(mat_path = args$matrix, gene_anno_path = args$gene_data, cell_anno_path = args$cell_data, umi_cutoff=100)
 gene_bed_path <- suppressWarnings(readLines(args$gene_bed))

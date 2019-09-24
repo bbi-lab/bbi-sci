@@ -626,7 +626,7 @@ process make_matrix {
         set key, file(umi_rollup_file), file(gene_assignments_file), val(annotations_path), file(gene_bed) from make_matrix_prepped
 
     output:
-        set file("*cell_annotations.txt"), file("*umi_counts.matrix"), file("*gene_annotations.txt"), file(gene_bed) into mat_output
+        set key, file("*cell_annotations.txt"), file("*umi_counts.matrix"), file("*gene_annotations.txt"), file(gene_bed) into mat_output
 
     """
     output="${key}.cell_annotations.txt"
@@ -665,7 +665,7 @@ process make_cds {
     memory '15 GB'
  
     input:
-        set file(cell_data), file(umi_matrix), file(gene_data), file(gene_bed) from mat_output
+        set key, file(cell_data), file(umi_matrix), file(gene_data), file(gene_bed) from mat_output
 
     output:
         file "*.RDS" into cds
@@ -676,7 +676,8 @@ process make_cds {
         "$umi_matrix"\
         "$cell_data"\
         "$gene_data"\
-        "$gene_bed"
+        "$gene_bed"\
+        "$key"
 
 """
 
