@@ -524,7 +524,7 @@ save_plot = {params.output_dir + "/" + it - ~/.knee_plot.png/ + "/knee_plot.png"
 Count intronic and total umis per cell and plot knee plot
 **/
 process umi_by_sample_summary {
-    module 'java/latest:modules:modules-init:modules-gs:python/3.6.4:gcc/8.1.0:R/3.5.2'
+    module 'java/latest:modules:modules-init:modules-gs:python/3.6.4:gcc/8.1.0:R/3.6.1'
     cache 'lenient'
     memory '8 GB'    
 
@@ -659,7 +659,7 @@ process make_matrix {
 save_cds = {params.output_dir + "/" + it - ~/_cds.RDS/ + "/" + it}
 save_cell_qc = {params.output_dir + "/" + it - ~/_cell_qc.csv/ + "/" + it}
 process make_cds {
-    module 'java/latest:modules:modules-init:modules-gs:python/3.6.4:gcc/8.1.0:R/3.5.2'
+    module 'java/latest:modules:modules-init:modules-gs:python/3.6.4:gcc/8.1.0:R/3.6.1'
     publishDir path: "${params.output_dir}/", saveAs: save_cds, pattern: "*cds.RDS", mode: 'copy'
     publishDir path: "${params.output_dir}/", saveAs: save_cell_qc, pattern: "*cell_qc.csv", mode: 'copy'
     memory '15 GB'
@@ -685,7 +685,7 @@ process make_cds {
 
 
 process exp_dash {
-    module 'java/latest:modules:modules-init:modules-gs:gcc/8.1.0:R/3.5.2'
+    module 'java/latest:modules:modules-init:modules-gs:gcc/8.1.0:R/3.6.1'
     memory '8 GB'
 
     publishDir path: "${params.output_dir}/", pattern: "exp_dash", mode: 'copy'
