@@ -60,7 +60,7 @@ module load gcc/8.1.0
 module load R/3.5.2
 R
 ```
-Then from within R, follow the installation instructions on the [monocle3 website](https://cole-trapnell-lab.github.io/monocle3/monocle3_docs/#installing-monocle-3).
+Then from within R, follow the installation instructions on the [monocle3 website](https://cole-trapnell-lab.github.io/monocle3/).
 
 Once monocle3 is installed, install nextflow by typing:
 
