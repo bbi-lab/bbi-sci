@@ -688,7 +688,7 @@ process calc_cell_totals {
     memory '1 GB'
 
     input:
-        qcs from cell_qc.collect()
+        file qcs from cell_qc.collect()
 
     output:
         file *.txt into cell_counts     
