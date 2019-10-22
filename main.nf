@@ -683,6 +683,26 @@ process make_cds {
 
 }
 
+process calc_cell_totals {
+    module 'java/latest:modules:modules-init:modules-gs'
+    memory '1 GB'
+
+    input:
+        qcs from cell_qc.collect()
+
+    output:
+        file *.txt to cell_counts     
+
+"""
+    for f in qcs
+    do
+      awk 'BEGIN {FS=","}; $2>100{c++} END{print $f, "100", c+0, "\n"}' $f >> cell_counts.txt
+      awk 'BEGIN {FS=","}; $2>500{c++} END{print $f, "500", c+0, "\n"}' $f >> cell_counts.txt
+      awk 'BEGIN {FS=","}; $2>1000{c++} END{print $f, "1000", c+0, "\n"}' $f >> cell_counts.txt
+    done
+"""
+
+}
 
 process exp_dash {
     module 'java/latest:modules:modules-init:modules-gs:gcc/8.1.0:R/3.5.2'
@@ -694,6 +714,7 @@ process exp_dash {
     input:
         file cds_file from cds.collect()
         file dups from all_dups
+        file counts from cell_counts
     output:
         file exp_dash
 
@@ -702,7 +723,7 @@ process exp_dash {
     mkdir exp_dash/img
     cp $baseDir/bin/bbi_icon.png exp_dash/img/
     generate_exp_dash.R \
-        "$params.output_dir" --all_dups "$dups"
+        "$params.output_dir" --all_dups "$dups" --counts "$counts"
 
     """
 }

@@ -11,6 +11,7 @@ suppressPackageStartupMessages({
 parser = argparse::ArgumentParser(description='Script to generate experiment dashboard.')
 parser$add_argument('input_folder', help='input folder.')
 parser$add_argument('--all_dups', required=TRUE, help='all dup file')
+parser$add_argument('--counts', required=TRUE, help='count info')
 args = parser$parse_args()
 
 output_folder <- args$input_folder
