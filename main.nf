@@ -682,7 +682,7 @@ process make_cds {
 """
 
 }
-/*
+
 process calc_cell_totals {
     module 'java/latest:modules:modules-init:modules-gs'
     memory '1 GB'
@@ -691,7 +691,7 @@ process calc_cell_totals {
         qcs from cell_qc.collect()
 
     output:
-        file *.txt to cell_counts     
+        file *.txt into cell_counts     
 
 """
     for f in qcs
@@ -703,7 +703,7 @@ process calc_cell_totals {
 """
 
 }
-*/
+
 process exp_dash {
     module 'java/latest:modules:modules-init:modules-gs:gcc/8.1.0:R/3.6.1'
     memory '8 GB'
