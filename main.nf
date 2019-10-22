@@ -691,7 +691,7 @@ process calc_cell_totals {
         file qcs from cell_qc.collect()
 
     output:
-        file *.txt into cell_counts     
+        file "*.txt" into cell_counts     
 
 """
     for f in qcs
