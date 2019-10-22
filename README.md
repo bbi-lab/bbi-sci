@@ -144,3 +144,6 @@ Warning: After you delete the work folder, -resume will no longer restart from t
 
 #### Questions and errors:
 If you run into problems, please leave a detailed description in the issue tab above!
+
+### Acknowledgements
+Many members of the Shendure and Trapnell labs as well as the BBI team have worked on portions of this pipeline or its predecessors, especially Andrew Hill and Jonathan Packer. Many thanks to them!
