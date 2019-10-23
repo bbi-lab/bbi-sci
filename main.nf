@@ -694,7 +694,7 @@ process calc_cell_totals {
         file "*.txt" into cell_counts     
 
 """
-    for f in qcs
+    for f in *.csv
     do
       awk 'BEGIN {FS=","}; \$2>100{c++} END{print \$f, "100", c+0, "\n"}' \$f >> cell_counts.txt
       awk 'BEGIN {FS=","}; \$2>500{c++} END{print \$f, "500", c+0, "\n"}' \$f >> cell_counts.txt
