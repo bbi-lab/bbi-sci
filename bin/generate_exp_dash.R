@@ -89,7 +89,7 @@ if ("Barnyard" %in% sample_folds) {
   collision_rate <- round(sum(pData(cds)$collision/nrow(pData(cds))) * 200, 1)
   system(paste0("cp ", output_folder, "/Barnyard/knee_plot.png", " exp_dash/img/Barnyard_knee_plot.png"))
  barn <- list(HTML('<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-                <h1 class="h3" id="rt">Barnyard</h1>
+                <h1 class="h3" id="barn">Barnyard</h1>
             </div>
           <nav>
               <div class="nav nav-tabs" id="navbarn-tab" role="tablist">
@@ -261,7 +261,7 @@ body <- tags$body(
           <div class="sidebar-sticky">
             <ul class="nav flex-column">
               <li class="nav-item">
-                <a class="nav-link active" href="#summary">
+                <a class="nav-link active" href="#cell_totals">
                   <span data-feather="home"></span>
                   Cell Totals <span class="sr-only">(current)</span>
                 </a>
@@ -279,7 +279,7 @@ body <- tags$body(
                 </a>
               </li>
               <li class="nav-item">
-                <a class="nav-link" href="#sent">
+                <a class="nav-link" href="#samples">
                   <span data-feather="shopping-cart"></span>
                   Samples
                 </a>
@@ -289,7 +289,7 @@ body <- tags$body(
         </nav>
        <main role="main" class="col-md-9 ml-sm-auto col-lg-10 px-4" style="padding-top: 15px;">'),
    HTML('<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
- <h1 class="h3" id="rt">Cell totals</h1>
+ <h1 class="h3" id="cell_totals">Cell totals</h1>
 </div>
                     <table class="table table-hover">
                         <tbody>
@@ -310,7 +310,7 @@ body <- tags$body(
   barn,
    sent,
   HTML('                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-                  <h1 class="h3" id="sent">Samples</h1>
+                  <h1 class="h3" id="samples">Samples</h1>
               </div>
         <nav>
                 <div class="nav nav-tabs" id="navsamp1-tab" role="tablist">'
