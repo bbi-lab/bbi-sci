@@ -33,7 +33,7 @@ c1000 <- sum(count_info[count_info$V2 == 1000,]$V3)
 barn <- ""
 sent <- ""
 
-top <- HTML('<!doctype html>
+top <- list(HTML('<!doctype html>
 <html lang="en">
   <head>
     <!-- Required meta tags -->
@@ -60,26 +60,7 @@ top <- HTML('<!doctype html>
           box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
         }
         </style>
-  </head>', 
-   '<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
- <h1 class="h3" id="rt">Cell totals</h1>
-</div>
-                    <table class="table table-hover">
-                        <tbody>
-                          <tr>
-                            <th scope="row">Total cells with > 100 UMIs</th>
-                            <td>'), c100, HTML('</td>
-                          </tr>
-                          <tr>
-                            <th scope="row">Total cells with > 500 UMIs</th>
-                            <td>'), c500, HTML('</td>
-                          </tr>
-                          <tr>
-                            <th scope="row">Total cells with > 1000 UMIs</th>
-                            <td>'), c1000, HTML('</td>
-                          </tr>
-                        </tbody>
-                      </table>)
+  </head>'))
 
 
 if ("Barnyard" %in% sample_folds) {
@@ -306,7 +287,26 @@ body <- tags$body(
             </ul>
           </div>
         </nav>
-       <main role="main" class="col-md-9 ml-sm-auto col-lg-10 px-4" style="padding-top: 15px;">'),
+       <main role="main" class="col-md-9 ml-sm-auto col-lg-10 px-4" style="padding-top: 15px;">'),,
+   '<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+ <h1 class="h3" id="rt">Cell totals</h1>
+</div>
+                    <table class="table table-hover">
+                        <tbody>
+                          <tr>
+                            <th scope="row">Total cells with > 100 UMIs</th>
+                            <td>'), c100, HTML('</td>
+                          </tr>
+                          <tr>
+                            <th scope="row">Total cells with > 500 UMIs</th>
+                            <td>'), c500, HTML('</td>
+                          </tr>
+                          <tr>
+                            <th scope="row">Total cells with > 1000 UMIs</th>
+                            <td>'), c1000, HTML('</td>
+                          </tr>
+                        </tbody>
+                      </table>')
   barn,
    sent,
   HTML('                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
