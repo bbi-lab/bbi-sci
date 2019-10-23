@@ -24,6 +24,12 @@ dedup_df$sample <- stringr::str_split_fixed(dedup_df$V1, ":", 2)[,2]
 project_name <- unlist(stringr::str_split(output_folder, "/"))
 project_name <- project_name[[length(project_name)]]
 
+count_info <- read.table(args$counts, header=F)
+c100 <- sum(count_info[count_info$V2 == 100,]$V3)
+c500 <- sum(count_info[count_info$V2 == 500,]$V3)
+c1000 <- sum(count_info[count_info$V2 == 1000,]$V3)
+
+
 barn <- ""
 sent <- ""
 
@@ -54,7 +60,26 @@ top <- HTML('<!doctype html>
           box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
         }
         </style>
-  </head>')
+  </head>', 
+   '<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+ <h1 class="h3" id="rt">Cell totals</h1>
+</div>
+                    <table class="table table-hover">
+                        <tbody>
+                          <tr>
+                            <th scope="row">Total cells with > 100 UMIs</th>
+                            <td>'), c100, HTML('</td>
+                          </tr>
+                          <tr>
+                            <th scope="row">Total cells with > 500 UMIs</th>
+                            <td>'), c500, HTML('</td>
+                          </tr>
+                          <tr>
+                            <th scope="row">Total cells with > 1000 UMIs</th>
+                            <td>'), c1000, HTML('</td>
+                          </tr>
+                        </tbody>
+                      </table>)
 
 
 if ("Barnyard" %in% sample_folds) {
@@ -257,7 +282,7 @@ body <- tags$body(
               <li class="nav-item">
                 <a class="nav-link active" href="#summary">
                   <span data-feather="home"></span>
-                  Summary Statistics <span class="sr-only">(current)</span>
+                  Cell Totals <span class="sr-only">(current)</span>
                 </a>
               </li>
               <li class="nav-item">
