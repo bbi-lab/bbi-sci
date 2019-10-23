@@ -696,10 +696,9 @@ process calc_cell_totals {
 """
     for f in *.csv
     do
-      filename=`basename "\$f"`
-      awk 'BEGIN {FS=","}; \$2>100{c++} END{print \$filename, "100", c+0}' \$f >> cell_counts.txt
-      awk 'BEGIN {FS=","}; \$2>500{c++} END{print \$filename, "500", c+0}' \$f >> cell_counts.txt
-      awk 'BEGIN {FS=","}; \$2>1000{c++} END{print \$filename, "1000", c+0}' \$f >> cell_counts.txt
+      awk 'BEGIN {FS=","}; \$2>100{c++} END{print FILENAME, "100", c+0}' \$f >> cell_counts.txt
+      awk 'BEGIN {FS=","}; \$2>500{c++} END{print FILENAME, "500", c+0}' \$f >> cell_counts.txt
+      awk 'BEGIN {FS=","}; \$2>1000{c++} END{print FILENAME, "1000", c+0}' \$f >> cell_counts.txt
     done
 """
 
