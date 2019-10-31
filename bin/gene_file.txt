@@ -15,5 +15,6 @@ Elephant	/net/bbi/vol1/data/genomes/elephant/
 Cow	/net/bbi/vol1/data/genomes/cow/
 Dog /net/bbi/vol1/data/genomes/dog/
 Cat /net/bbi/vol1/data/genomes/cat/
+Cynomolgus /net/bbi/vol1/data/genomes/cynomolgus/
 Maize   /net/gs/vol1/home/ajh24/common_data/bbi/gene_models/maize/
 Camelina    /net/gs/vol1/home/ajh24/common_data/bbi/gene_models/camelina/
