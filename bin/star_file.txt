@@ -15,5 +15,6 @@ Elephant	/net/bbi/vol1/data/genomes/elephant_star 47
 Cow	/net/bbi/vol1/data/genomes/cow_star 47
 Dog	/net/bbi/vol1/data/genomes/dog_star 47
 Cat	/net/bbi/vol1/data/genomes/cat_star 47
+Cynomolgus	/net/bbi/vol1/data/genomes/cynomolgus_star 110
 Maize   None  0
 Camelina    None  0
