@@ -660,16 +660,15 @@ save_cds = {params.output_dir + "/" + it - ~/_cds.RDS/ + "/" + it}
 save_cell_qc = {params.output_dir + "/" + it - ~/_cell_qc.csv/ + "/" + it}
 process make_cds {
     module 'java/latest:modules:modules-init:modules-gs:python/3.6.4:gcc/8.1.0:R/3.6.1'
-    publishDir path: "${params.output_dir}/", saveAs: save_cds, pattern: "*cds.RDS", mode: 'copy'
-    publishDir path: "${params.output_dir}/", saveAs: save_cell_qc, pattern: "*cell_qc.csv", mode: 'copy'
+//#    publishDir path: "${params.output_dir}/", saveAs: save_cds, pattern: "*cds.RDS", mode: 'copy'
+//#    publishDir path: "${params.output_dir}/", saveAs: save_cell_qc, pattern: "*cell_qc.csv", mode: 'copy'
     memory '15 GB'
  
     input:
         set key, file(cell_data), file(umi_matrix), file(gene_data), file(gene_bed) from mat_output
 
     output:
-        file "*.RDS" into cds
-	file "*cell_qc.csv" into cell_qc
+        set key, file("*for_scrub.mtx"), file("*.RDS"), file("*cell_qc.csv") into for_scrub
 
 """
     make_cds.R \
@@ -683,12 +682,78 @@ process make_cds {
 
 }
 
+save_hist = {params.output_dir + "/" + it - ~/_scrublet_hist.png/ + "/" + it}
+process run_scrublet {
+    publishDir path: "${params.output_dir}/", saveAs: save_hist, pattern: "*png", mode: 'copy'
+
+    module 'modules:java/latest:modules-init:modules-gs:python/3.6.4'
+    memory '2 GB'
+    input:
+        set key, file(scrub_mat), file(cds), file(cell_qc) from for_scrub
+    output:
+        file *.png into scrublet_png
+        set file(*.scrublet_out.csv), file(cds), file(cell_qc) into scrublet_out
+
+
+
+"""
+#!/usr/bin/env python
+
+import scrublet as scr
+import scipy.io
+
+counts_matrix = scipy.io.mmread($scrub).T.tocsc()
+scrub = scr.Scrublet(counts_matrix)
+
+doublet_scores, predicted_doublets = scrub.scrub_doublets()
+scrub.plot_histogram()[0].savefig($key + "_scrublet_hist.png")
+
+all_scores = numpy.vstack((doublet_scores, predicted_doublets))
+all_scores = numpy.transpose(all_scores)
+numpy.savetxt($key + "_scrublet_out.csv", all_scores, delimiter=",")
+
+"""
+
+}
+
+process reformat_scrub {
+    module 'java/latest:modules:modules-init:modules-gs:python/3.6.4:gcc/8.1.0:R/3.6.1' 
+    memory '10 GB'
+    publishDir path: "${params.output_dir}/", saveAs: save_cds, pattern: "*cds.RDS", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_cell_qc, pattern: "*cell_qc.csv", mode: 'copy'
+
+    input:
+        set file(scrublet_out), file(cds), file(cell_qc) from scrublet_out
+    output: 
+        file *.RDS into cdss
+        file *.csv into cell_qcs
+"""
+#!/usr/bin/env R
+
+library(monocle3)
+cds <- readRDS($cds)
+scrublet_out <- read.csv($scrublet_out, header=F)
+pData(cds)$scrublet_score <- scrublet_out$V1
+pData(cds)$scrublet_call <- ifelse(scrublet_out$V2 == 1, "Doublet", "Singlet")
+
+saveRDS(cds, file=$cds)
+
+cell_qc <- read.csv($cell_qc)
+cell_qc$scrublet_score <- scrublet_out$V1
+cell_qc$scrublet_call <- ifelse(scrublet_out$V2 == 1, "Doublet", "Singlet")
+write.csv(cell_qc, quote=FALSE, file=$cell_qc)
+
+
+"""
+
+}
+
 process calc_cell_totals {
     module 'java/latest:modules:modules-init:modules-gs'
     memory '1 GB'
 
     input:
-        file qcs from cell_qc.collect()
+        file cell_qcs from cell_qc.collect()
 
     output:
         file "*.txt" into cell_counts     
@@ -712,7 +777,7 @@ process exp_dash {
 
 
     input:
-        file cds_file from cds.collect()
+        file cds_file from cdss.collect()
         file dups from all_dups
         file counts from cell_counts
     output:
