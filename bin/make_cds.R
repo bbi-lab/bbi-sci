@@ -37,6 +37,6 @@ pData(cds)$perc_mitochondrial_umis <- Matrix::colSums(exprs(mt_cds))/Matrix::col
 qc <- as.data.frame(pData(cds))[,c("cell", "n.umi", "perc_mitochondrial_umis")]
 write.csv(qc, file=paste0(sample_name, "_cell_qc.csv"), quote=FALSE, row.names = FALSE)
 
-writeMM(exprs(cds), paste0(sample_name, "_for_scrub.mtx")
+writeMM(exprs(cds), paste0(sample_name, "_for_scrub.mtx"))
 
 saveRDS(cds, file=paste0(sample_name, "_cds.RDS"))

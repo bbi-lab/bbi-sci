@@ -656,8 +656,8 @@ process make_matrix {
 
 }
 
-save_cds = {params.output_dir + "/" + it - ~/_cds.RDS/ + "/" + it}
-save_cell_qc = {params.output_dir + "/" + it - ~/_cell_qc.csv/ + "/" + it}
+save_cds = {params.output_dir + "/" + it - ~/_cds.RDS/ - ~/temp_fold/ + "/" + it - ~/temp_fold/}
+save_cell_qc = {params.output_dir + "/" + it - ~/_cell_qc.csv/ - ~/temp_fold/ + "/" + it - ~/temp_fold/}
 process make_cds {
     module 'java/latest:modules:modules-init:modules-gs:python/3.6.4:gcc/8.1.0:R/3.6.1'
 //#    publishDir path: "${params.output_dir}/", saveAs: save_cds, pattern: "*cds.RDS", mode: 'copy'
@@ -691,8 +691,8 @@ process run_scrublet {
     input:
         set key, file(scrub_mat), file(cds), file(cell_qc) from for_scrub
     output:
-        file *.png into scrublet_png
-        set file(*.scrublet_out.csv), file(cds), file(cell_qc) into scrublet_out
+        file "*.png" into scrublet_png
+        set file("*scrublet_out.csv"), file(cds), file(cell_qc) into scrublet_out
 
 
 
@@ -701,17 +701,30 @@ process run_scrublet {
 
 import scrublet as scr
 import scipy.io
+import numpy
+import numpy.ma
+from PIL import Image, ImageDraw, ImageFont
+import os
 
-counts_matrix = scipy.io.mmread($scrub).T.tocsc()
+counts_matrix = scipy.io.mmread("$scrub_mat").T.tocsc()
 scrub = scr.Scrublet(counts_matrix)
 
-doublet_scores, predicted_doublets = scrub.scrub_doublets()
-scrub.plot_histogram()[0].savefig($key + "_scrublet_hist.png")
-
-all_scores = numpy.vstack((doublet_scores, predicted_doublets))
-all_scores = numpy.transpose(all_scores)
-numpy.savetxt($key + "_scrublet_out.csv", all_scores, delimiter=",")
-
+try:
+    doublet_scores, predicted_doublets = scrub.scrub_doublets()
+    scrub.plot_histogram()[0].savefig("$key" + "_scrublet_hist.png")
+    all_scores = numpy.vstack((doublet_scores, predicted_doublets))
+    all_scores = numpy.transpose(all_scores)
+    numpy.savetxt("$key" + "_scrublet_out.csv", all_scores, delimiter=",")
+except (ZeroDivisionError, ValueError):
+    temp = numpy.array(["NA"] * numpy.size(counts_matrix, 0))
+    all_scores = numpy.vstack((temp, temp))
+    all_scores = numpy.transpose(all_scores)
+    filename = "$key" + "_scrublet_hist.png"
+    image = Image.new(mode = "RGB", size = (250,50), color = "white")
+    draw = ImageDraw.Draw(image)
+    draw.text((10,10), "Scrublet failed. This is generally \\nbecause there aren't enough cells.", fill = "black")
+    image.save(filename)
+    numpy.savetxt("$key" + "_scrublet_out.csv", all_scores, fmt="%s", delimiter=",")
 """
 
 }
@@ -719,30 +732,31 @@ numpy.savetxt($key + "_scrublet_out.csv", all_scores, delimiter=",")
 process reformat_scrub {
     module 'java/latest:modules:modules-init:modules-gs:python/3.6.4:gcc/8.1.0:R/3.6.1' 
     memory '10 GB'
-    publishDir path: "${params.output_dir}/", saveAs: save_cds, pattern: "*cds.RDS", mode: 'copy'
-    publishDir path: "${params.output_dir}/", saveAs: save_cell_qc, pattern: "*cell_qc.csv", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_cds, pattern: "temp_fold/*cds.RDS", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_cell_qc, pattern: "temp_fold/*cell_qc.csv", mode: 'copy'
 
     input:
-        set file(scrublet_out), file(cds), file(cell_qc) from scrublet_out
+        set file(scrublet_outs), file(cds), file(cell_qc) from scrublet_out
     output: 
-        file *.RDS into cdss
-        file *.csv into cell_qcs
+        file "temp_fold/*.RDS" into cdss
+        file "temp_fold/*.csv" into cell_qcs
 """
-#!/usr/bin/env R
+#!/usr/bin/env Rscript
 
 library(monocle3)
-cds <- readRDS($cds)
-scrublet_out <- read.csv($scrublet_out, header=F)
-pData(cds)$scrublet_score <- scrublet_out$V1
-pData(cds)$scrublet_call <- ifelse(scrublet_out$V2 == 1, "Doublet", "Singlet")
+dir.create("temp_fold")
+cds <- readRDS("$cds")
+cell_qc <- read.csv("$cell_qc")
+if(nrow(pData(cds)) > 0) {
+scrublet_out <- read.csv("$scrublet_outs", header=F)
+pData(cds)\$scrublet_score <- scrublet_out\$V1
+pData(cds)\$scrublet_call <- ifelse(scrublet_out\$V2 == 1, "Doublet", "Singlet")
 
-saveRDS(cds, file=$cds)
-
-cell_qc <- read.csv($cell_qc)
-cell_qc$scrublet_score <- scrublet_out$V1
-cell_qc$scrublet_call <- ifelse(scrublet_out$V2 == 1, "Doublet", "Singlet")
-write.csv(cell_qc, quote=FALSE, file=$cell_qc)
-
+cell_qc\$scrublet_score <- scrublet_out\$V1
+cell_qc\$scrublet_call <- ifelse(scrublet_out\$V2 == 1, "Doublet", "Singlet")
+}
+write.csv(cell_qc, quote=FALSE, file="temp_fold/$cell_qc")
+saveRDS(cds, file="temp_fold/$cds")
 
 """
 
@@ -753,7 +767,7 @@ process calc_cell_totals {
     memory '1 GB'
 
     input:
-        file cell_qcs from cell_qc.collect()
+        file cell_qcs from cell_qcs.collect()
 
     output:
         file "*.txt" into cell_counts     
