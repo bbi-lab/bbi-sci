@@ -687,7 +687,7 @@ process run_scrublet {
     publishDir path: "${params.output_dir}/", saveAs: save_hist, pattern: "*png", mode: 'copy'
 
     module 'modules:java/latest:modules-init:modules-gs:python/3.6.4'
-    memory '2 GB'
+    memory '10 GB'
     input:
         set key, file(scrub_mat), file(cds), file(cell_qc) from for_scrub
     output:
