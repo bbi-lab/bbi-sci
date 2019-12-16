@@ -725,6 +725,13 @@ except (ZeroDivisionError, ValueError):
     draw.text((10,10), "Scrublet failed. This is generally \\nbecause there aren't enough cells.", fill = "black")
     image.save(filename)
     numpy.savetxt("$key" + "_scrublet_out.csv", all_scores, fmt="%s", delimiter=",")
+except (AttributeError):
+    scrub.call_doublets(threshold=0.15)
+    scrub.plot_histogram()[0].savefig("$key" + "_scrublet_hist.png")
+    all_scores = numpy.vstack((doublet_scores, predicted_doublets))
+    all_scores = numpy.transpose(all_scores)
+    numpy.savetxt("$key" + "_scrublet_out.csv", all_scores, delimiter=",")
+
 """
 
 }
