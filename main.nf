@@ -726,7 +726,7 @@ except (ZeroDivisionError, ValueError):
     image.save(filename)
     numpy.savetxt("$key" + "_scrublet_out.csv", all_scores, fmt="%s", delimiter=",")
 except (AttributeError):
-    scrub.call_doublets(threshold=0.15)
+    predicted_doublets = scrub.call_doublets(threshold=0.15)
     scrub.plot_histogram()[0].savefig("$key" + "_scrublet_hist.png")
     all_scores = numpy.vstack((doublet_scores, predicted_doublets))
     all_scores = numpy.transpose(all_scores)
