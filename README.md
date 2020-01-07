@@ -62,7 +62,17 @@ R
 ```
 Then from within R, follow the installation instructions on the [monocle3 website](https://cole-trapnell-lab.github.io/monocle3/).
 
-Once monocle3 is installed, install nextflow by typing:
+You will also require scrublet, a tool used to detect doublets in single-cell RNA-seq data. You can install it from source by running:
+
+```
+git clone https://github.com/AllonKleinLab/scrublet.git
+cd scrublet
+pip install -r requirements.txt --user
+python setup.py install --user
+cd ..
+```
+
+Once monocle3 and scrublet are installed, install nextflow by typing:
 
 ```
 curl -s https://get.nextflow.io | bash
