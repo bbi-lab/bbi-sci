@@ -1,5 +1,5 @@
 
-rams.help = false
+params.help = false
 params.samples = false
 params.star_file = "$baseDir/bin/star_file.txt"
 params.gene_file = "$baseDir/bin/gene_file.txt"
@@ -67,7 +67,7 @@ process check_sample_sheet {
         file 'tool_1.txt' into tool_ch1
 
     """
-    
+
     printf "BBI bbi-sci Pipeline Log\n\n" > start.log
     printf "Nextflow version: $nextflow.version\n" >> start.log
     printf "Pipeline ID: $workflow.scriptId\n" >> start.log
@@ -478,7 +478,7 @@ process assign_genes {
 
      printf "** End process 'assign_genes' at: \$(date)\n\n" >> remove_dups.log
     """
-   
+
 }
 
 process umi_by_sample {
@@ -597,7 +597,7 @@ process umi_rollup {
     | sort -k1,1 -k2,2 -S 5G \
     | datamash -g 1,2 count 2 \
     | gzip > "${key}.gz"
-    
+
 
      printf "** End process 'umi_rollup' at: \$(date)\n\n" >> umi_rollup.log
     """
@@ -1053,7 +1053,7 @@ gene_file = file(params.gene_file)
 
 process start_log {
     cache 'lenient'
-    module 'modules:java/latest:modules-init:modules-gs' 
+    module 'modules:java/latest:modules-init:modules-gs'
 
     input:
         val params.sample_sheet
@@ -1335,4 +1335,3 @@ process merge_bams {
     """
 
 }
-
