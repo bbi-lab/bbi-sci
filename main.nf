@@ -1,6 +1,5 @@
 
-// Parse input parameters
-params.help = false
+rams.help = false
 params.samples = false
 params.star_file = "$baseDir/bin/star_file.txt"
 params.gene_file = "$baseDir/bin/gene_file.txt"
@@ -55,6 +54,7 @@ star_file = file(params.star_file)
 gene_file = file(params.gene_file)
 
 process check_sample_sheet {
+    cache 'lenient'
     module 'modules:java/latest:modules-init:modules-gs:python/3.6.4'
 
     input:
@@ -63,10 +63,40 @@ process check_sample_sheet {
 
     output:
         file "*.csv" into good_sample_sheet
+        file '*.log' into log_check_sample
         file 'tool_1.txt' into tool_ch1
 
     """
+    
+    printf "BBI bbi-sci Pipeline Log\n\n" > start.log
+    printf "Nextflow version: $nextflow.version\n" >> start.log
+    printf "Pipeline ID: $workflow.scriptId\n" >> start.log
+    printf "Git Version: $workflow.revision, $workflow.commitId\n" >> start.log
+    printf "Run started at: $workflow.start\n\n" >> start.log
+    printf "Command:\n$workflow.commandLine\n\n" >> start.log
+    printf "***** PARAMETERS *****: \n\n" >> start.log
+    printf "    params.run_dir:      $params.run_dir\n" >> start.log
+    printf "    params.output_dir:   $params.output_dir\n" >> start.log
+    printf "    params.sample_sheet: $params.sample_sheet\n" >> start.log
+    printf "    params.p7_rows:      $params.p7_rows\n" >> start.log
+    printf "    params.p5_cols:      $params.p5_cols\n" >> start.log
+    printf "    params.demux_out:    $params.demux_out\n" >> start.log
+    printf "    params.level:        $params.level\n" >> start.log
+    printf "    params.max_cores:    $params.max_cores\n" >> start.log
+    printf "    params.samples:      $params.samples\n" >> start.log
+    printf "    params.star_file:    $params.star_file\n" >> start.log
+    printf "    params.gene_file:    $params.gene_file\n" >> start.log
+    printf "    params.umi_cutoff:   $params.umi_cutoff\n" >> start.log
+    printf "    params.align_mem:    $params.align_mem\n\n" >> start.log
+
+    printf "***** BEGIN PIPELINE *****: \n\n" >> start.log
+    printf "** Start process 'check_sample_sheet' at: \$(date)\n" >> start.log
+    printf "    Process versions: \$(python --version)\n" >> start.log
+    printf "    Process command: check_sample_sheet.py --sample_sheet $params.sample_sheet --star_file $star_file --level $params.level\n" >> start.log
+
     check_sample_sheet.py --sample_sheet $params.sample_sheet --star_file $star_file --level $params.level
+
+    printf "** End process 'check_sample_sheet' at: \$(date)\n\n" >> start.log
     python --version &> tool_1.txt
     """
 }
@@ -81,51 +111,34 @@ process trim_fastqs {
 
     input:
         file input_fastq from Channel.fromPath("${params.demux_out}/*.fastq.gz")
+        file logfile from log_check_sample
 
     output:
         file "trim_out" into trim_output
-        set file("trim_out/*.fq.gz"), val("${input_fastq.baseName - ~/.fastq/}") into trimmed_fastqs mode flatten
+        set file("trim_out/*.fq.gz"), val("${input_fastq.baseName - ~/.fastq/}"), file('*.log') into trimmed_fastqs mode flatten
         file input_fastq into sample_fastqs
-        file 'tool_2.txt' into tool_ch2
-        file 'tool_3.txt' into tool_ch3
         file 'trim_out/*trimming_report.txt' into trimgalore_results
-	stdout trim_stdout
+	    stdout trim_stdout
 
     when:
 	!((input_fastq.name - ~/-L00\d.fastq.gz/) in "Undetermined") && (!params.samples || ((input_fastq.name - ~/-L00\d.fastq.gz/) in params.samples) || ((input_fastq.name  - ~/-L00\d.fastq.gz/) in params.samples.collect{"$it".replaceAll(/\s/, ".").replaceAll(/_/, ".").replaceAll(/-/, ".").replaceAll(/\\//, ".")}))
     """
+    cat ${logfile} > trim.log
+    printf "** Start process 'trim_fastqs' at: \$(date)\n" >> trim.log
+    printf "    Process command: trim_galore $input_fastq -a AAAAAAAA --three_prime_clip_R1 1 \
+        --gzip -o ./trim_out/" >> trim.log
     mkdir trim_out
     trim_galore $input_fastq \
         -a AAAAAAAA \
         --three_prime_clip_R1 1 \
         --gzip \
         -o ./trim_out/
-
+    cat trim_out/*trimming_report.txt >> trim.log
+    printf "** End process 'trim_fastqs' at: \$(date)\n\n" >> trim.log
     cutadapt --version &> tool_2.txt
     trim_galore --version &> tool_3.txt
     """
 }
-/*
-sample_fastqs
-    .map { file ->
-         def key = file.name.toString().tokenize('-').get(0)
-         return tuple(key, file)
-    }
-    .groupTuple()
-    .set { fastqs_to_merge }
-save_fq = {params.output_dir + "/" + it - ~/.fq.gz/ + "/" + it}
-process save_sample_fastqs {
-    cache = 'lenient'
-    publishDir = [path: "${params.output_dir}/", saveAs: save_fq, pattern: "*.fq.gz", mode: 'move' ]
-    input:
-       set key, file(fastqs) from fastqs_to_merge
-    output:
-       file "*.fq.gz" into fqs
-    """
-    cat *.fastq.gz > "${key}.fq.gz"
-    """
-}
-*/
 
 if (params.max_cores < 8) {
     cores_align = params.max_cores
@@ -140,10 +153,10 @@ process prep_align {
     input:
         file star_file
         file sample_sheet_file
-        set file(trimmed_fastq), val(name)  from trimmed_fastqs
+        set file(trimmed_fastq), val(name), file(logfile) from trimmed_fastqs
 
     output:
-        set file(trimmed_fastq), file('info.txt'), val(name), stdout into align_prepped
+        set file(trimmed_fastq), file('info.txt'), val(name), file(logfile), stdout  into align_prepped
 
     """
 #!/usr/bin/env python
@@ -181,7 +194,6 @@ f.close()
 
 }
 
-//memory = params.align_mem/cores_align
 process align_reads {
     cache 'lenient'
     module 'java/latest:modules:modules-init:modules-gs:STAR/2.5.2b'
@@ -190,18 +202,27 @@ process align_reads {
     cpus cores_align
 
     input:
-        set file(input_file), file(info), val(orig_name), val(mem) from align_prepped
+        set file(input_file), file(info), val(orig_name), file(logfile), val(mem) from align_prepped
 
     output:
         file "align_out" into align_output
-        set file("align_out/*Aligned.out.bam"), val(orig_name) into aligned_bams mode flatten
+        set file("align_out/*Aligned.out.bam"), val(orig_name), file('*.log') into aligned_bams mode flatten
         file 'v_star.txt' into tool_ch4
-        file 'align_out/*Log.final.out:' into star_results
+        file 'align_out/*Log.final.out' into star_results
 
     """
+    cat ${logfile} > align.log
+    printf "** Start process 'align_reads' at: \$(date)\n" >> align.log
+    printf "    Process versions: \$(STAR --version)\n" >> align.log
+
     mkdir align_out
     info1=`head -n 1 $info`
     info2=`head -2 $info | tail -1`
+
+    printf "    Process command: STAR --runThreadN $cores_align --genomeDir \$info1 \
+        --readFilesIn $input_file --readFilesCommand zcat --outFileNamePrefix \$info2 \
+        --outSAMtype BAM Unsorted --outSAMmultNmax 2 --outSAMstrandField intronMotif" >> align.log
+
     STAR \
         --runThreadN $cores_align \
         --genomeDir \$info1 \
@@ -212,7 +233,12 @@ process align_reads {
         --outSAMmultNmax 2 \
         --outSAMstrandField intronMotif
 
+    cat align_out/*Log.final.out >> align.log
+
+    printf "** End process 'align_reads' at: \$(date)\n\n" >> align.log
+
     STAR --version &> v_star.txt
+
     """
 
 }
@@ -231,17 +257,25 @@ process sort_and_filter {
     cpus cores_sf
 
     input:
-        set file(aligned_bam), val(orig_name) from aligned_bams
+        set file(aligned_bam), val(orig_name), file(logfile) from aligned_bams
 
     output:
         file "*.bam" into sorted_bams
         file 'v_samtools.txt' into tool_ch5
+        file '*.log' into log_sort_and_filter
 
     """
+    cat ${logfile} > ${orig_name}.log
+    printf "** Start process 'sort_and_filter' at: \$(date)\n" >> ${orig_name}.log
+    printf "    Process versions: \$(samtools --version)\n" >> ${orig_name}.log
+    printf "    Process command: samtools view -bh -q 30 -F 4 "$aligned_bam" \
+        | samtools sort -@ $cores_sf - > "${orig_name}.bam""
+
     samtools view -bh -q 30 -F 4 "$aligned_bam" \
         | samtools sort -@ $cores_sf - \
-        > "${orig_name}.bam"
+        > "${orig_name}.bam" >> ${orig_name}.log
 
+    printf "** End process 'sort_and_filter' at: \$(date)\n\n" >> ${orig_name}.log
     samtools --version &> v_samtools.txt
     """
 }
@@ -252,7 +286,17 @@ sorted_bams
         return tuple(key, file)
     }
     .groupTuple()
-    .set { Bams_to_merge }
+    .set { bams_to_merge }
+
+log_sort_and_filter
+    .map { file ->
+        def key = file.name.toString().split(/-L[0-9]{3}/)[0]
+        return tuple(key, file)
+    }
+    .groupTuple()
+    .set { logs_to_merge }
+
+logs_to_merge.join(bams_to_merge).set{for_merge_bams}
 
 save_bam = {params.output_dir + "/" + it - ~/.bam/ + "/" + it}
 
@@ -262,14 +306,20 @@ process merge_bams {
     publishDir = [path: "${params.output_dir}/", saveAs: save_bam, pattern: "*.bam", mode: 'copy' ]
 
     input:
-        set key, file(bam_set) from Bams_to_merge
+        set key, file(logfile), file(bam_set) from for_merge_bams
 
     output:
-        set key, file("*.bam") into sample_bams
+        set key, file("*.bam"), file("*.log") into sample_bams
 
     """
+    cat ${logfile} > merge_bams.log
+    printf "** Start process 'merge_bams' at: \$(date)\n" >> merge_bams.log
+    printf "    Process versions: \$(samtools --version)\n" >> merge_bams.log
+    printf "    Process command: samtools merge ${key}.bam $bam_set" >> merge_bams.log
+
     samtools merge ${key}.bam $bam_set
 
+    printf "** End process 'merge_bams' at: \$(date)\n\n" >> merge_bams.log
     """
 
 }
@@ -280,13 +330,24 @@ process remove_dups {
     module 'java/latest:modules:modules-init:modules-gs:samtools/1.4:bedtools/2.26.0:python/3.6.4:coreutils/8.24'
 
     input:
-        set key, file(merged_bam) from sample_bams
+        set key, file(merged_bam), file(logfile) from sample_bams
+
 
     output:
-        set key, file("*.bed"), file(merged_bam) into remove_dup_out
+        set key, file("*.bed"), file(merged_bam), file("*.log") into remove_dup_out
         file 'v_bedtools.txt' into tool_ch6
 
     """
+    cat ${logfile} > remove_dups.log
+    printf "** Start process 'remove_dups' at: \$(date)\n" >> remove_dups.log
+    printf "    Process versions: \$(bedtools --version), \$(samtools --version), \$(python --version)\n" >> remove_dups.log
+    printf "    Process command:     samtools view -h "$merged_bam" \
+            | rmdup.py --bam - \
+            | samtools view -bh \
+            | bedtools bamtobed -i - -split \
+            | sort -k1,1 -k2,2n -k3,3n -S 5G \
+            > "${key}.bed"" >> remove_dups.log
+
     export LC_ALL=C
 
     samtools view -h "$merged_bam" \
@@ -296,6 +357,7 @@ process remove_dups {
             | sort -k1,1 -k2,2n -k3,3n -S 5G \
             > "${key}.bed"
 
+    printf "** End process 'remove_dups' at: \$(date)\n\n" >> remove_dups.log
     bedtools --version &> v_bedtools.txt
     """
 }
@@ -309,10 +371,10 @@ process prep_assign {
     input:
         file gene_file
         file sample_sheet_file
-        set key, file(sample_bed), file(merged_bam) from for_prep_assign
+        set key, file(sample_bed), file(merged_bam), file(logfile) from for_prep_assign
 
     output:
-        set key, file(sample_bed), file('info.txt') into assign_prepped
+        set key, file(sample_bed), file('info.txt'), file("*.log") into assign_prepped
 
     """
 #!/usr/bin/env python
@@ -372,12 +434,30 @@ process assign_genes {
     module 'java/latest:modules:modules-init:modules-gs:bedtools/2.26.0:coreutils/8.24'
 
     input:
-        set key, file(input_bed), file(info) from assign_prepped
+        set key, file(input_bed), file(info), file(logfile) from assign_prepped
 
     output:
-        set key, file("*.txt") into assign_genes_out
+        set key, file("*.txt"), file("*.log") into assign_genes_out
 
     """
+    cat ${logfile} > assign_genes.log
+    printf "** Start process 'assign_genes' at: \$(date)\n" >> assign_genes.log
+    printf "    Process versions: \$(bedtools --version), \$(python --version)\n" >> assign_genes.log
+    printf "    Process command:         bedtools map \
+        -a "$input_bed" \
+        -b \$exon_index \
+        -nonamecheck -s -f 0.95 -c 7 -o distinct -delim '|' \
+    | bedtools map \
+        -a - -b \$gene_index \
+        -nonamecheck -s -f 0.95 -c 4 -o distinct -delim '|' \
+    | sort -k4,4 -k2,2n -k3,3n -S 5G\
+    | datamash \
+        -g 4 first 1 first 2 last 3 first 5 first 6 collapse 7 collapse 8 \
+    | assign-reads-to-genes.py \$gene_index \
+    > "\$prefix"
+    if [[ ! -s \$prefix ]]; then echo "File is empty"; exit 125; fi" >> assign_genes.log
+
+
     exon_index=`head -n 1 $info`
     gene_index=`head -2 $info | tail -1`
     prefix=`head -3 $info | tail -1`
@@ -395,8 +475,10 @@ process assign_genes {
     | assign-reads-to-genes.py \$gene_index \
     > "\$prefix"
     if [[ ! -s \$prefix ]]; then echo "File is empty"; exit 125; fi
-    """
 
+     printf "** End process 'assign_genes' at: \$(date)\n\n" >> remove_dups.log
+    """
+   
 }
 
 process umi_by_sample {
@@ -405,7 +487,7 @@ process umi_by_sample {
     module 'java/latest:modules:modules-init:modules-gs:samtools/1.4:coreutils/8.24'
 
     input:
-        set key, file(input_bed), file(filtered_bam) from for_umi_by_sample
+        set key, file(input_bed), file(filtered_bam), file(logfile) from for_umi_by_sample
 
     output:
         set key, file("*.UMI_count.txt"), file("*.read_count.txt") into for_summarize_dup
@@ -490,13 +572,24 @@ process umi_rollup {
     module 'java/latest:modules:modules-init:modules-gs:coreutils/8.24'
 
     input:
-        set key, file(gene_assignments_file) from for_umi_rollup
+        set key, file(gene_assignments_file), file(logfile) from for_umi_rollup
 
     output:
-        set key, file("*.gz"), file(gene_assignments_file) into umi_rollup_out
+        set key, file("*.gz"), file(gene_assignments_file), file("*.log") into umi_rollup_out
 
 
     """
+    cat ${logfile} > umi_rollup.log
+    printf "** Start process 'umi_rollup' at: \$(date)\n" >> umi_rollup.log
+    printf "    Process versions: \$(python --version)\n" >> umi_rollup.log
+    printf "    Process command:  awk '\$3 == "exonic" || \$3 == "intronic" {{
+            split(\$1, arr, "|")
+            printf "%s|%s_%s_%s\t%s\\n", arr[2], arr[3], arr[4], arr[5], \$2
+    }}' "$gene_assignments_file" \
+    | sort -k1,1 -k2,2 -S 5G \
+    | datamash -g 1,2 count 2 \
+    | gzip > "${key}.gz"      >> umi_rollup.log
+
     awk '\$3 == "exonic" || \$3 == "intronic" {{
             split(\$1, arr, "|")
             printf "%s|%s_%s_%s\t%s\\n", arr[2], arr[3], arr[4], arr[5], \$2
@@ -504,6 +597,9 @@ process umi_rollup {
     | sort -k1,1 -k2,2 -S 5G \
     | datamash -g 1,2 count 2 \
     | gzip > "${key}.gz"
+    
+
+     printf "** End process 'umi_rollup' at: \$(date)\n\n" >> umi_rollup.log
     """
 }
 
@@ -526,16 +622,31 @@ process umi_by_sample_summary {
 
 
     input:
-        set key, file(umi_rollup), file(gene_assignments_file) from umi_rollup_out
+        set key, file(umi_rollup), file(gene_assignments_file), file(logfile) from umi_rollup_out
 
     output:
-        set key, file(umi_rollup), file(gene_assignments_file) into ubss_out
+        set key, file(umi_rollup), file(gene_assignments_file), file("*.log") into ubss_out
         file "*UMIs.per.cell.barcode.txt" into umis_per_cell_barcode
         file "*UMIs.per.cell.barcode.intronic.txt" into umi_per_cell_intronic
         file "*.knee_plot.png" into knee_plots
         file 'v_R.txt' into tool_ch7
 
     """
+    cat ${logfile} > umi_by_sample_summary.log
+    printf "** Start process 'umi_by_sample_summary' at: \$(date)\n" >> umi_by_sample_summary.log
+    printf "    Process versions: \$(python --version), \$(R --version)\n" >> umi_by_sample_summary.log
+    printf "    Process command:  tabulate_per_cell_counts.py \
+        --gene_assignment_files "$gene_assignments_file" \
+        --all_counts_file "${key}.UMIs.per.cell.barcode.txt" \
+        --intron_counts_file "${key}.UMIs.per.cell.barcode.intronic.txt"
+
+    knee-plot.R \
+        "${key}.UMIs.per.cell.barcode.txt" \
+        --knee_plot "${key}.knee_plot.png" \
+        --specify_cutoff 100\
+        --umi_count_threshold_file "${key}.umi_cutoff.txt""      >> umi_by_sample_summary.log
+
+
     tabulate_per_cell_counts.py \
         --gene_assignment_files "$gene_assignments_file" \
         --all_counts_file "${key}.UMIs.per.cell.barcode.txt" \
@@ -547,10 +658,9 @@ process umi_by_sample_summary {
         --specify_cutoff 100\
         --umi_count_threshold_file "${key}.umi_cutoff.txt"
 
+    printf "** End process 'umi_rollup' at: \$(date)\n\n" >> umi_rollup.log
     R --version &> v_R.txt
     """
-
-
 }
 
 process prep_make_matrix {
@@ -559,10 +669,10 @@ process prep_make_matrix {
 
     input:
         file sample_sheet_file
-        set key, file(umi_rollup), file(gene_assignments_file) from ubss_out
+        set key, file(umi_rollup), file(gene_assignments_file), file(logfile) from ubss_out
 
     output:
-        set key, file(umi_rollup), file(gene_assignments_file), stdout, file("*_info.txt") into make_matrix_prepped
+        set key, file(umi_rollup), file(gene_assignments_file), stdout, file("*_info.txt"), file(logfile) into make_matrix_prepped
 
     """
 #!/usr/bin/env python
@@ -610,10 +720,10 @@ process make_matrix {
     publishDir path: "${params.output_dir}/", saveAs: save_gene_anno, pattern: "*gene_annotations.txt", mode: 'copy'
 
     input:
-        set key, file(umi_rollup_file), file(gene_assignments_file), val(annotations_path), file(gene_bed) from make_matrix_prepped
+        set key, file(umi_rollup_file), file(gene_assignments_file), val(annotations_path), file(gene_bed), file(logfile) from make_matrix_prepped
 
     output:
-        set key, file("*cell_annotations.txt"), file("*umi_counts.matrix"), file("*gene_annotations.txt"), file(gene_bed) into mat_output
+        set key, file("*cell_annotations.txt"), file("*umi_counts.matrix"), file("*gene_annotations.txt"), file(gene_bed), file("*.log") into mat_output
 
     """
     output="${key}.cell_annotations.txt"
@@ -791,6 +901,7 @@ process exp_dash {
     """
 }
 
+/*
 process get_software_versions {
     cache 'lenient'
     publishDir = [path: "${params.output_dir}/", pattern: "software_versions.txt", mode: 'copy']
@@ -861,7 +972,7 @@ process zip_up_logs {
     """
 }
 
-
+*/
 workflow.onComplete {
 	println ( workflow.success ? "Done! Saving output" : "Oops .. something went wrong" )
 }
@@ -884,3 +995,344 @@ workflow.onComplete {
     """
 }
 */
+
+// Parse input parameters
+params.help = false
+params.samples = false
+params.star_file = "$baseDir/bin/star_file.txt"
+params.gene_file = "$baseDir/bin/gene_file.txt"
+params.umi_cutoff = 100
+params.level = 3
+params.align_mem = 80
+
+//print usage
+if (params.help) {
+    log.info ''
+    log.info 'BBI sci-RNA-seq Pipeline'
+    log.info '--------------------------------'
+    log.info ''
+    log.info 'For reproducibility, please specify all parameters to a config file'
+    log.info 'by specifying -c CONFIG_FILE.config.'
+    log.info ''
+    log.info 'Usage: '
+    log.info '    nextflow run bbi-sci -c CONFIG_FILE'
+    log.info ''
+    log.info 'Help: '
+    log.info '    --help                              Show this message and exit.'
+    log.info ''
+    log.info 'Required parameters (specify in your config file):'
+    log.info '    params.run_dir = RUN_DIRECTORY             Path to the sequencer output.'
+    log.info '    params.output_dir OUTPUT DIRECTORY         Output directory.'
+    log.info '    params.sample_sheet = SAMPLE_SHEET_PATH    Sample sheet of the format described in the README.'
+    log.info '    params.p7_rows = "A B C"                   The PCR rows used - must match order of params.p5_cols.'
+    log.info '    params.p5_cols = "1 2 3"                   The PCR columns used - must match order of params.p7_rows.'
+    log.info '    params.demux_out = DEMUX OUTPUT DIR        Path to the demux_out folder from the bbi-dmux run.'
+    log.info '    params.level = 3                           2 or 3 level sci?'
+    log.info ''
+    log.info 'Optional parameters (specify in your config file):'
+    log.info '    params.max_cores = 16                      The maximum number of cores to use - fewer will be used if appropriate.'
+    log.info '    process.maxForks = 20                      The maximum number of processes to run at the same time on the cluster.'
+    log.info '    process.queue = "trapnell-short.q"         The queue on the cluster where the jobs should be submitted. '
+    log.info '    params.samples = [sample1, sample2]        Add to only run certain samples from trimming on. Default is to run all.'
+    log.info '    params.star_file = PATH/TO/FILE            File with the genome to star maps, similar to the one included with the package.'
+    log.info '    params.gene_file = PATH/TO/FILE            File with the genome to gene model maps, similar to the one included with the package.'
+    log.info '    params.umi_cutoff = 100                    The umi cutoff to be called a cell in matrix output.'
+    log.info '    params.align_mem = 80                      Gigs of memory to use for alignment. Default is 80.'
+    log.info ''
+    log.info 'Issues? Contact hpliner@uw.edu'
+    exit 1
+}
+
+// check required options
+if (!params.run_dir || !params.output_dir || !params.sample_sheet || !params.p7_rows || !params.p5_cols) {
+    exit 1, "Must include config file using -c CONFIG_FILE.config that includes output_dir, sample_sheet, run_dir, p7_rows and p5_cols"
+}
+
+star_file = file(params.star_file)
+gene_file = file(params.gene_file)
+
+process start_log {
+    cache 'lenient'
+    module 'modules:java/latest:modules-init:modules-gs' 
+
+    input:
+        val params.sample_sheet
+
+    output:
+        file '*.log' into log_start
+
+    """
+    printf "BBI bbi-sci Pipeline Log\n\n" > start.log
+    printf "Nextflow version: $nextflow.version\n" >> start.log
+    printf "Pipeline ID: $workflow.scriptId\n" >> start.log
+    printf "Git Version: $workflow.revision, $workflow.commitId\n" >> start.log
+    printf "Run started at: $workflow.start\n\n" >> start.log
+    printf "Command:\n$workflow.commandLine\n\n" >> start.log
+    printf "***** PARAMETERS *****: \n\n" >> start.log
+    printf "    params.run_dir:      $params.run_dir\n" >> start.log
+    printf "    params.output_dir:   $params.output_dir\n" >> start.log
+    printf "    params.sample_sheet: $params.sample_sheet\n" >> start.log
+    printf "    params.p7_rows:      $params.p7_rows\n" >> start.log
+    printf "    params.p5_cols:      $params.p5_cols\n" >> start.log
+    printf "    params.demux_out:    $params.demux_out\n" >> start.log
+    printf "    params.level:        $params.level\n" >> start.log
+    printf "    params.max_cores:    $params.max_cores\n" >> start.log
+    printf "    params.samples:      $params.samples\n" >> start.log
+    printf "    params.star_file:    $params.star_file\n" >> start.log
+    printf "    params.gene_file:    $params.gene_file\n" >> start.log
+    printf "    params.umi_cutoff:   $params.umi_cutoff\n" >> start.log
+    printf "    params.align_mem:    $params.align_mem\n\n" >> start.log
+    """
+}
+
+process check_sample_sheet {
+    cache 'lenient'
+    module 'modules:java/latest:modules-init:modules-gs:python/3.6.4'
+
+    input:
+        val params.sample_sheet
+        file star_file
+        file logfile from log_start
+
+    output:
+        file "*.csv" into good_sample_sheet
+        file '*.log' into log_check_sample
+        file 'tool_1.txt' into tool_ch1
+
+    """
+    cat ${logfile} > css.log
+    printf "***** BEGIN PIPELINE *****: \n\n" >> css.log
+    printf "** Start process 'check_sample_sheet' at: \$(date)\n" >> css.log
+    printf "    Process versions: \$(python --version)\n" >> css.log
+    printf "    Process command: check_sample_sheet.py --sample_sheet $params.sample_sheet --star_file $star_file --level $params.level\n" >> css.log
+
+    check_sample_sheet.py --sample_sheet $params.sample_sheet --star_file $star_file --level $params.level
+
+    printf "** End process 'check_sample_sheet' at: \$(date)\n\n" >> css.log
+    python --version &> tool_1.txt
+    """
+}
+
+sample_sheet_file = good_sample_sheet
+
+
+process trim_fastqs {
+    cache 'lenient'
+    memory '12G'
+    module 'java/latest:modules:modules-init:modules-gs:python/2.7.3:cutadapt/1.8.3:trim_galore/0.4.1'
+
+    input:
+        file input_fastq from Channel.fromPath("${params.demux_out}/*.fastq.gz")
+        file logfile from log_check_sample
+
+    output:
+        file "trim_out" into trim_output
+        set file("trim_out/*.fq.gz"), val("${input_fastq.baseName - ~/.fastq/}"), file('*.log') into trimmed_fastqs mode flatten
+        file input_fastq into sample_fastqs
+        file 'trim_out/*trimming_report.txt' into trimgalore_results
+	    stdout trim_stdout
+
+    when:
+	!((input_fastq.name - ~/-L00\d.fastq.gz/) in "Undetermined") && (!params.samples || ((input_fastq.name - ~/-L00\d.fastq.gz/) in params.samples) || ((input_fastq.name  - ~/-L00\d.fastq.gz/) in params.samples.collect{"$it".replaceAll(/\s/, ".").replaceAll(/_/, ".").replaceAll(/-/, ".").replaceAll(/\\//, ".")}))
+    """
+    cat ${logfile} > trim.log
+    printf "** Start process 'trim_fastqs' at: \$(date)\n" >> trim.log
+    printf "    Process command: trim_galore $input_fastq -a AAAAAAAA --three_prime_clip_R1 1 \
+        --gzip -o ./trim_out/" >> trim.log
+    mkdir trim_out
+    trim_galore $input_fastq \
+        -a AAAAAAAA \
+        --three_prime_clip_R1 1 \
+        --gzip \
+        -o ./trim_out/
+    cat trim_out/*trimming_report.txt >> trim.log
+    printf "** End process 'trim_fastqs' at: \$(date)\n\n" >> trim.log
+    cutadapt --version &> tool_2.txt
+    trim_galore --version &> tool_3.txt
+    """
+}
+
+if (params.max_cores < 8) {
+    cores_align = params.max_cores
+} else {
+    cores_align = 8
+}
+
+process prep_align {
+    cache 'lenient'
+    module 'java/latest:modules:modules-init:modules-gs:python/3.6.4'
+
+    input:
+        file star_file
+        file sample_sheet_file
+        set file(trimmed_fastq), val(name), file(logfile) from trimmed_fastqs
+
+    output:
+        set file(trimmed_fastq), file('info.txt'), val(name), file(logfile), stdout  into align_prepped
+
+    """
+#!/usr/bin/env python
+def quick_parse(file_path):
+    # a copy of only the relevant lines from easygrid.read_delim
+    fh = open(file_path)
+    columns = next(fh).strip().split(",")
+    for line_number, line in enumerate(fh):
+        entries = line.strip().split(",")
+        if len(entries) != len(columns):
+            raise ValueError('Length of entries: %s, not equal to length of columns %s, in file: %s, line number %s' % (len(entries), len(columns), file_path, line_number))
+        entries_dict = dict(zip(columns, entries))
+        yield entries_dict
+lookup = {}
+for rt_well in quick_parse("$sample_sheet_file"):
+    lookup[rt_well['Sample ID'].replace('(', '.').replace(')', '.').replace(' ', '.').replace('-', '.').replace('_', '.').replace('/', '.')] = rt_well['Reference Genome']
+
+STAR_INDICES = {}
+MEM = {}
+with open("$star_file", 'r') as f:
+    for line in f:
+        items = line.strip().split()
+        key, values, mem = items[0], items[1],  items[2]
+        STAR_INDICES[key] = values
+        MEM[key] = mem
+samp = "${trimmed_fastq}".split('-')[0]
+samp_name = "${trimmed_fastq}".replace('_trimmed.fq.gz', '.')
+star_index = STAR_INDICES[lookup[samp]]
+print(MEM[lookup[samp]])
+prefix = "./align_out/" + samp_name
+f = open("info.txt", 'w')
+f.write(star_index + '\\n' + prefix)
+f.close()
+    """
+
+}
+
+process align_reads {
+    cache 'lenient'
+    module 'java/latest:modules:modules-init:modules-gs:STAR/2.5.2b'
+    memory { mem.toInteger()/cores_align + " GB" }
+    penv 'serial'
+    cpus cores_align
+
+    input:
+        set file(input_file), file(info), val(orig_name), file(logfile), val(mem) from align_prepped
+
+    output:
+        file "align_out" into align_output
+        set file("align_out/*Aligned.out.bam"), val(orig_name), file('*.log') into aligned_bams mode flatten
+        file 'v_star.txt' into tool_ch4
+        file 'align_out/*Log.final.out' into star_results
+
+    """
+    cat ${logfile} > align.log
+    printf "** Start process 'align_reads' at: \$(date)\n" >> align.log
+    printf "    Process versions: \$(STAR --version)\n" >> align.log
+
+    mkdir align_out
+    info1=`head -n 1 $info`
+    info2=`head -2 $info | tail -1`
+
+    printf "    Process command: STAR --runThreadN $cores_align --genomeDir \$info1 \
+        --readFilesIn $input_file --readFilesCommand zcat --outFileNamePrefix \$info2 \
+        --outSAMtype BAM Unsorted --outSAMmultNmax 2 --outSAMstrandField intronMotif" >> align.log
+
+    STAR \
+        --runThreadN $cores_align \
+        --genomeDir \$info1 \
+        --readFilesIn $input_file \
+        --readFilesCommand zcat \
+        --outFileNamePrefix \$info2 \
+        --outSAMtype BAM Unsorted \
+        --outSAMmultNmax 2 \
+        --outSAMstrandField intronMotif
+
+    cat align_out/*Log.final.out >> align.log
+
+    printf "** End process 'align_reads' at: \$(date)\n\n" >> align.log
+
+    STAR --version &> v_star.txt
+
+    """
+
+}
+
+if (params.max_cores < 10) {
+    cores_sf = params.max_cores
+} else {
+    cores_sf = 10
+}
+
+process sort_and_filter {
+    cache 'lenient'
+    module 'java/latest:modules:modules-init:modules-gs:samtools/1.4'
+    memory '1 GB'
+    penv 'serial'
+    cpus cores_sf
+
+    input:
+        set file(aligned_bam), val(orig_name), file(logfile) from aligned_bams
+
+    output:
+        file "*.bam" into sorted_bams
+        file 'v_samtools.txt' into tool_ch5
+        file '*.log' into log_sort_and_filter
+
+    """
+    cat ${logfile} > ${orig_name}.log
+    printf "** Start process 'sort_and_filter' at: \$(date)\n" >> ${orig_name}.log
+    printf "    Process versions: \$(samtools --version)\n" >> ${orig_name}.log
+    printf "    Process command: samtools view -bh -q 30 -F 4 "$aligned_bam" \
+        | samtools sort -@ $cores_sf - > "${orig_name}.bam""
+
+    samtools view -bh -q 30 -F 4 "$aligned_bam" \
+        | samtools sort -@ $cores_sf - \
+        > "${orig_name}.bam" >> ${orig_name}.log
+
+    printf "** End process 'sort_and_filter' at: \$(date)\n\n" >> ${orig_name}.log
+    samtools --version &> v_samtools.txt
+    """
+}
+
+sorted_bams
+    .map { file ->
+        def key = file.name.toString().split(/-L[0-9]{3}/)[0]
+        return tuple(key, file)
+    }
+    .groupTuple()
+    .set { bams_to_merge }
+
+log_sort_and_filter
+    .map { file ->
+        def key = file.name.toString().split(/-L[0-9]{3}/)[0]
+        return tuple(key, file)
+    }
+    .groupTuple()
+    .set { logs_to_merge }
+
+logs_to_merge.join(bams_to_merge).set{for_merge_bams}
+
+save_bam = {params.output_dir + "/" + it - ~/.bam/ + "/" + it}
+
+process merge_bams {
+    cache 'lenient'
+    module 'java/latest:modules:modules-init:modules-gs:samtools/1.4'
+    publishDir = [path: "${params.output_dir}/", saveAs: save_bam, pattern: "*.bam", mode: 'copy' ]
+
+    input:
+        set key, file(logfile), file(bam_set) from for_merge_bams
+
+    output:
+        set key, file("*.bam"), file("*.log") into sample_bams
+
+    """
+    cat ${logfile} > merge_bams.log
+    printf "** Start process 'merge_bams' at: \$(date)\n" >> merge_bams.log
+    printf "    Process versions: \$(samtools --version)\n" >> merge_bams.log
+    printf "    Process command: samtools merge ${key}.bam $bam_set" >> merge_bams.log
+
+    samtools merge ${key}.bam $bam_set
+
+    printf "** End process 'merge_bams' at: \$(date)\n\n" >> merge_bams.log
+    """
+
+}
+
