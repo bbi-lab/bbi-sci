@@ -63,9 +63,11 @@ process check_sample_sheet {
 
     output:
         file "*.csv" into good_sample_sheet
+        file 'tool_1.txt' into tool_ch1
 
     """
     check_sample_sheet.py --sample_sheet $params.sample_sheet --star_file $star_file --level $params.level
+    python --version &> tool_1.txt
     """
 }
 
@@ -79,50 +81,48 @@ process trim_fastqs {
 
     input:
         file input_fastq from Channel.fromPath("${params.demux_out}/*.fastq.gz")
- 
+
     output:
         file "trim_out" into trim_output
         set file("trim_out/*.fq.gz"), val("${input_fastq.baseName - ~/.fastq/}") into trimmed_fastqs mode flatten
         file input_fastq into sample_fastqs
+        file 'tool_2.txt' into tool_ch2
+        file 'tool_3.txt' into tool_ch3
+        file 'trim_out/*trimming_report.txt' into trimgalore_results
 	stdout trim_stdout
-    
+
     when:
-	!((input_fastq.name - ~/-L00\d.fastq.gz/) in "Undetermined") && (!params.samples || ((input_fastq.name - ~/-L00\d.fastq.gz/) in params.samples) || ((input_fastq.name  - ~/-L00\d.fastq.gz/) in params.samples.collect{"$it".replaceAll(/\s/, ".").replaceAll(/_/, ".").replaceAll(/-/, ".").replaceAll(/\\//, ".")})) 
+	!((input_fastq.name - ~/-L00\d.fastq.gz/) in "Undetermined") && (!params.samples || ((input_fastq.name - ~/-L00\d.fastq.gz/) in params.samples) || ((input_fastq.name  - ~/-L00\d.fastq.gz/) in params.samples.collect{"$it".replaceAll(/\s/, ".").replaceAll(/_/, ".").replaceAll(/-/, ".").replaceAll(/\\//, ".")}))
     """
     mkdir trim_out
     trim_galore $input_fastq \
         -a AAAAAAAA \
         --three_prime_clip_R1 1 \
-        --no_report_file \
         --gzip \
         -o ./trim_out/
-        
+
+    cutadapt --version &> tool_2.txt
+    trim_galore --version &> tool_3.txt
     """
 }
 /*
 sample_fastqs
     .map { file ->
          def key = file.name.toString().tokenize('-').get(0)
-         return tuple(key, file) 
+         return tuple(key, file)
     }
     .groupTuple()
     .set { fastqs_to_merge }
-
 save_fq = {params.output_dir + "/" + it - ~/.fq.gz/ + "/" + it}
-
 process save_sample_fastqs {
     cache = 'lenient'
     publishDir = [path: "${params.output_dir}/", saveAs: save_fq, pattern: "*.fq.gz", mode: 'move' ]
-
     input:
        set key, file(fastqs) from fastqs_to_merge
-
     output:
        file "*.fq.gz" into fqs
-
     """
     cat *.fastq.gz > "${key}.fq.gz"
-
     """
 }
 */
@@ -157,23 +157,18 @@ def quick_parse(file_path):
             raise ValueError('Length of entries: %s, not equal to length of columns %s, in file: %s, line number %s' % (len(entries), len(columns), file_path, line_number))
         entries_dict = dict(zip(columns, entries))
         yield entries_dict
-
-
 lookup = {}
 for rt_well in quick_parse("$sample_sheet_file"):
     lookup[rt_well['Sample ID'].replace('(', '.').replace(')', '.').replace(' ', '.').replace('-', '.').replace('_', '.').replace('/', '.')] = rt_well['Reference Genome']
-    
 
 STAR_INDICES = {}
 MEM = {}
-
 with open("$star_file", 'r') as f:
     for line in f:
         items = line.strip().split()
         key, values, mem = items[0], items[1],  items[2]
         STAR_INDICES[key] = values
         MEM[key] = mem
-
 samp = "${trimmed_fastq}".split('-')[0]
 samp_name = "${trimmed_fastq}".replace('_trimmed.fq.gz', '.')
 star_index = STAR_INDICES[lookup[samp]]
@@ -192,7 +187,7 @@ process align_reads {
     module 'java/latest:modules:modules-init:modules-gs:STAR/2.5.2b'
     memory { mem.toInteger()/cores_align + " GB" }
     penv 'serial'
-    cpus cores_align    
+    cpus cores_align
 
     input:
         set file(input_file), file(info), val(orig_name), val(mem) from align_prepped
@@ -200,6 +195,8 @@ process align_reads {
     output:
         file "align_out" into align_output
         set file("align_out/*Aligned.out.bam"), val(orig_name) into aligned_bams mode flatten
+        file 'v_star.txt' into tool_ch4
+        file 'align_out/*Log.final.out:' into star_results
 
     """
     mkdir align_out
@@ -215,6 +212,7 @@ process align_reads {
         --outSAMmultNmax 2 \
         --outSAMstrandField intronMotif
 
+    STAR --version &> v_star.txt
     """
 
 }
@@ -237,11 +235,14 @@ process sort_and_filter {
 
     output:
         file "*.bam" into sorted_bams
+        file 'v_samtools.txt' into tool_ch5
 
     """
     samtools view -bh -q 30 -F 4 "$aligned_bam" \
         | samtools sort -@ $cores_sf - \
         > "${orig_name}.bam"
+
+    samtools --version &> v_samtools.txt
     """
 }
 
@@ -268,14 +269,14 @@ process merge_bams {
 
     """
     samtools merge ${key}.bam $bam_set
-    
+
     """
 
 }
 
 process remove_dups {
     cache 'lenient'
-    memory '20 GB'    
+    memory '20 GB'
     module 'java/latest:modules:modules-init:modules-gs:samtools/1.4:bedtools/2.26.0:python/3.6.4:coreutils/8.24'
 
     input:
@@ -283,16 +284,19 @@ process remove_dups {
 
     output:
         set key, file("*.bed"), file(merged_bam) into remove_dup_out
+        file 'v_bedtools.txt' into tool_ch6
 
     """
     export LC_ALL=C
-    
+
     samtools view -h "$merged_bam" \
             | rmdup.py --bam - \
             | samtools view -bh \
             | bedtools bamtobed -i - -split \
             | sort -k1,1 -k2,2n -k3,3n -S 5G \
             > "${key}.bed"
+
+    bedtools --version &> v_bedtools.txt
     """
 }
 
@@ -301,7 +305,7 @@ remove_dup_out.into { for_prep_assign; for_umi_by_sample }
 process prep_assign {
     module 'java/latest:modules:modules-init:modules-gs:python/3.6.4'
     cache 'lenient'
-    
+
     input:
         file gene_file
         file sample_sheet_file
@@ -312,7 +316,6 @@ process prep_assign {
 
     """
 #!/usr/bin/env python
-
 def quick_parse(file_path):
     # a copy of only the relevant lines from easygrid.read_delim
     fh = open(file_path)
@@ -323,13 +326,10 @@ def quick_parse(file_path):
             raise ValueError('Length of entries: %s, not equal to length of columns %s, in file: %s, line number %s' % (len(entries), len(columns), file_path, line_number))
         entries_dict = dict(zip(columns, entries))
         yield entries_dict
-
 lookup = {}
 for rt_well in quick_parse("$sample_sheet_file"):
     lookup[rt_well['Sample ID'].replace('(', '.').replace(')', '.').replace(' ', '.').replace('-', '.').replace('_', '.').replace('/', '.')] = rt_well['Reference Genome']
-
 GENE_MODELS = {}
-
 with open("$gene_file", 'r') as f:
     for line in f:
         items = line.strip().split()
@@ -337,7 +337,6 @@ with open("$gene_file", 'r') as f:
         GENE_MODELS[key] = values
 print(lookup)
 samp = "${key}"
-
 print(samp)
 exon_index = GENE_MODELS[lookup[samp]] + "latest.exons.bed"
 gene_index = GENE_MODELS[lookup[samp]] + "latest.genes.bed"
@@ -348,7 +347,7 @@ f.close()
 }
 
 /**
-Assign genes: 
+Assign genes:
 1. First use bedtools map to map the dedupped bed file to all exons with options:
 -s forced strandedness
 -f 0.95 95% of read must overlap exon
@@ -356,7 +355,6 @@ Assign genes:
 -o distinct concatenate list of gene names
 -delim "|" custom delimiter
 -nonamecheck Don't error if there are different naming conventions for the chromosomes
-
 2. Use bedtools map to map output to gene index
 -s forced strandedness
 -f 0.95 95% of read must overlap exon
@@ -364,15 +362,13 @@ Assign genes:
 -o distinct concatenate list of gene names
 -delim "|" custom delimiter
 -nonamecheck Don't error if there are different naming conventions for the chromosomes
-
-3. Sort and collapse 
-
+3. Sort and collapse
 4. Run assign-reads-to-genes.py to deal with exon v intron
 **/
 
 process assign_genes {
     cache 'lenient'
-    memory '15 GB'    
+    memory '15 GB'
     module 'java/latest:modules:modules-init:modules-gs:bedtools/2.26.0:coreutils/8.24'
 
     input:
@@ -385,7 +381,7 @@ process assign_genes {
     exon_index=`head -n 1 $info`
     gene_index=`head -2 $info | tail -1`
     prefix=`head -3 $info | tail -1`
-    
+
     bedtools map \
         -a "$input_bed" \
         -b \$exon_index \
@@ -398,7 +394,6 @@ process assign_genes {
         -g 4 first 1 first 2 last 3 first 5 first 6 collapse 7 collapse 8 \
     | assign-reads-to-genes.py \$gene_index \
     > "\$prefix"
-
     if [[ ! -s \$prefix ]]; then echo "File is empty"; exit 125; fi
     """
 
@@ -406,7 +401,7 @@ process assign_genes {
 
 process umi_by_sample {
     cache 'lenient'
-    memory '20 GB'    
+    memory '20 GB'
     module 'java/latest:modules:modules-init:modules-gs:samtools/1.4:coreutils/8.24'
 
     input:
@@ -427,7 +422,6 @@ process umi_by_sample {
             }}' "$input_bed" \
     | sort -k1,1 -S 5G\
     >"${key}.UMI_count.txt"
-
     samtools view "$filtered_bam" \
     | cut -d '|' -f 2 \
     | datamash -g 1 count 1 \
@@ -453,16 +447,16 @@ process summarize_duplication {
     """
     cat $umi_count_file \
         | join - "$read_count_file" \
-        | awk 'BEGIN {{ 
+        | awk 'BEGIN {{
             printf "%-18s    %10s    %10s    %8s\\n",
                 "sample", "n.reads", "n.UMI", "dup.rate"
-        }} {{ 
+        }} {{
                 printf "%-18s   %10d    %10d    %7.1f%\\n",
                     \$1, \$3, \$2, 100 * (1 - \$2/\$3);
         }}' \
         >"${key}.duplication_rate_stats.txt"
-    
-    
+
+
     """
 
 }
@@ -478,7 +472,7 @@ process zip_up_duplication {
 
     """
     tail -1 files | grep '' *.duplication_rate_stats.txt > all_duplication_rate.txt
-    """      
+    """
 
 }
 
@@ -486,9 +480,7 @@ assign_genes_out.into { for_umi_rollup; for_umi_by_sample_summary }
 
 /**
 make cell, gene table for each read
-
 sort
-
 count instances of the gene for each read
 **/
 
@@ -526,34 +518,36 @@ Count intronic and total umis per cell and plot knee plot
 process umi_by_sample_summary {
     module 'java/latest:modules:modules-init:modules-gs:python/3.6.4:gcc/8.1.0:R/3.6.1'
     cache 'lenient'
-    memory '8 GB'    
+    memory '8 GB'
 
-    publishDir path: "${params.output_dir}/", saveAs: save_umi_per_int, pattern: "*intronic.txt", mode: 'copy' 
+    publishDir path: "${params.output_dir}/", saveAs: save_umi_per_int, pattern: "*intronic.txt", mode: 'copy'
     publishDir path: "${params.output_dir}/", saveAs: save_plot, pattern: "*.knee_plot.png", mode: 'copy'
-    publishDir path: "${params.output_dir}/", saveAs: save_umi_per_cell, pattern: "*barcode.txt", mode: 'copy'  
-  
+    publishDir path: "${params.output_dir}/", saveAs: save_umi_per_cell, pattern: "*barcode.txt", mode: 'copy'
+
 
     input:
-        set key, file(umi_rollup), file(gene_assignments_file) from umi_rollup_out        
+        set key, file(umi_rollup), file(gene_assignments_file) from umi_rollup_out
 
     output:
         set key, file(umi_rollup), file(gene_assignments_file) into ubss_out
         file "*UMIs.per.cell.barcode.txt" into umis_per_cell_barcode
         file "*UMIs.per.cell.barcode.intronic.txt" into umi_per_cell_intronic
         file "*.knee_plot.png" into knee_plots
+        file 'v_R.txt' into tool_ch7
 
     """
     tabulate_per_cell_counts.py \
         --gene_assignment_files "$gene_assignments_file" \
         --all_counts_file "${key}.UMIs.per.cell.barcode.txt" \
         --intron_counts_file "${key}.UMIs.per.cell.barcode.intronic.txt"
-    
+
     knee-plot.R \
         "${key}.UMIs.per.cell.barcode.txt" \
         --knee_plot "${key}.knee_plot.png" \
         --specify_cutoff 100\
         --umi_count_threshold_file "${key}.umi_cutoff.txt"
 
+    R --version &> v_R.txt
     """
 
 
@@ -562,7 +556,7 @@ process umi_by_sample_summary {
 process prep_make_matrix {
     module 'java/latest:modules:modules-init:modules-gs:python/3.6.4'
     cache 'lenient'
-    
+
     input:
         file sample_sheet_file
         set key, file(umi_rollup), file(gene_assignments_file) from ubss_out
@@ -572,7 +566,6 @@ process prep_make_matrix {
 
     """
 #!/usr/bin/env python
-
 def quick_parse(file_path):
     # a copy of only the relevant lines from easygrid.read_delim
     fh = open(file_path)
@@ -583,25 +576,20 @@ def quick_parse(file_path):
             raise ValueError('Length of entries: %s, not equal to length of columns %s, in file: %s, line number %s' % (len(entries), len(columns), file_path, line_number))
         entries_dict = dict(zip(columns, entries))
         yield entries_dict
-
 lookup = {}
 for rt_well in quick_parse("$sample_sheet_file"):
     lookup[rt_well['Sample ID'].replace('(', '.').replace(')', '.').replace(' ', '.').replace('-', '.').replace('_', '.').replace('/', '.')] = rt_well['Reference Genome']
-
 GENE_MODELS = {}
-
 with open("$gene_file", 'r') as f:
     for line in f:
         items = line.strip().split()
         key, values = items[0], items[1]
         GENE_MODELS[key] = values
-
 samp = "${key}"
 exon_index = GENE_MODELS[lookup[samp]] + "latest.gene.annotations"
 print(exon_index, end="")
 with open("bed_info.txt", 'w') as f:
     f.write(GENE_MODELS[lookup[samp]] + "latest.genes.bed")
-
     """
 }
 
@@ -612,12 +600,11 @@ save_gene_anno = {params.output_dir + "/" + it - ~/.gene_annotations.txt/ + "/ge
 
 /**
 sum up total assigned reads per cell and keep only those above the cutoff
-
 make the number matrix
 **/
 process make_matrix {
     cache 'lenient'
-    memory '15 GB'    
+    memory '15 GB'
     publishDir path: "${params.output_dir}/", saveAs: save_umi, pattern: "*umi_counts.matrix", mode: 'copy'
     publishDir path: "${params.output_dir}/", saveAs: save_cell_anno, pattern: "*cell_annotations.txt", mode: 'copy'
     publishDir path: "${params.output_dir}/", saveAs: save_gene_anno, pattern: "*gene_annotations.txt", mode: 'copy'
@@ -647,10 +634,9 @@ process make_matrix {
                 cell_idx[\$1] = FNR
             } else if (\$2 in cell_idx) {
                 printf "%d\t%d\t%d\\n", gene_idx[\$3], cell_idx[\$2], \$4
-            } 
+            }
     }' $annotations_path "\$output" - \
     > "${key}.umi_counts.matrix"
-
     cat $annotations_path > "${key}.gene_annotations.txt"
     """
 
@@ -663,7 +649,7 @@ process make_cds {
 //#    publishDir path: "${params.output_dir}/", saveAs: save_cds, pattern: "*cds.RDS", mode: 'copy'
 //#    publishDir path: "${params.output_dir}/", saveAs: save_cell_qc, pattern: "*cell_qc.csv", mode: 'copy'
     memory '15 GB'
- 
+
     input:
         set key, file(cell_data), file(umi_matrix), file(gene_data), file(gene_bed) from mat_output
 
@@ -677,7 +663,6 @@ process make_cds {
         "$gene_data"\
         "$gene_bed"\
         "$key"
-
 """
 
 }
@@ -698,17 +683,14 @@ process run_scrublet {
 
 """
 #!/usr/bin/env python
-
 import scrublet as scr
 import scipy.io
 import numpy
 import numpy.ma
 from PIL import Image, ImageDraw, ImageFont
 import os
-
 counts_matrix = scipy.io.mmread("$scrub_mat").T.tocsc()
 scrub = scr.Scrublet(counts_matrix)
-
 try:
     doublet_scores, predicted_doublets = scrub.scrub_doublets()
     scrub.plot_histogram()[0].savefig("$key" + "_scrublet_hist.png")
@@ -731,25 +713,23 @@ except (AttributeError):
     all_scores = numpy.vstack((doublet_scores, predicted_doublets))
     all_scores = numpy.transpose(all_scores)
     numpy.savetxt("$key" + "_scrublet_out.csv", all_scores, delimiter=",")
-
 """
 
 }
 
 process reformat_scrub {
-    module 'java/latest:modules:modules-init:modules-gs:python/3.6.4:gcc/8.1.0:R/3.6.1' 
+    module 'java/latest:modules:modules-init:modules-gs:python/3.6.4:gcc/8.1.0:R/3.6.1'
     memory '10 GB'
     publishDir path: "${params.output_dir}/", saveAs: save_cds, pattern: "temp_fold/*cds.RDS", mode: 'copy'
     publishDir path: "${params.output_dir}/", saveAs: save_cell_qc, pattern: "temp_fold/*cell_qc.csv", mode: 'copy'
 
     input:
         set file(scrublet_outs), file(cds), file(cell_qc) from scrublet_out
-    output: 
+    output:
         file "temp_fold/*.RDS" into cdss
         file "temp_fold/*.csv" into cell_qcs
 """
 #!/usr/bin/env Rscript
-
 library(monocle3)
 dir.create("temp_fold")
 cds <- readRDS("$cds")
@@ -758,13 +738,11 @@ if(nrow(pData(cds)) > 0) {
 scrublet_out <- read.csv("$scrublet_outs", header=F)
 pData(cds)\$scrublet_score <- scrublet_out\$V1
 pData(cds)\$scrublet_call <- ifelse(scrublet_out\$V2 == 1, "Doublet", "Singlet")
-
 cell_qc\$scrublet_score <- scrublet_out\$V1
 cell_qc\$scrublet_call <- ifelse(scrublet_out\$V2 == 1, "Doublet", "Singlet")
 }
 write.csv(cell_qc, quote=FALSE, file="temp_fold/$cell_qc")
 saveRDS(cds, file="temp_fold/$cds")
-
 """
 
 }
@@ -777,7 +755,7 @@ process calc_cell_totals {
         file cell_qcs from cell_qcs.collect()
 
     output:
-        file "*.txt" into cell_counts     
+        file "*.txt" into cell_counts
 
 """
     for f in *.csv
@@ -810,13 +788,81 @@ process exp_dash {
     cp $baseDir/bin/bbi_icon.png exp_dash/img/
     generate_exp_dash.R \
         "$params.output_dir" --all_dups "$dups" --counts "$counts"
+    """
+}
 
+process get_software_versions {
+    cache 'lenient'
+    publishDir = [path: "${params.output_dir}/", pattern: "software_versions.txt", mode: 'copy']
+
+    input:
+        file "v_python.txt" from tool_ch1
+        file "v_cutadapt.txt" from tool_ch2
+        file "v_trim_galore.txt" from tool_ch3
+        file "v_star.txt" from tool_ch4
+        file "v_samtools.txt" from tool_ch5
+        file "v_bedtools.txt" from tool_ch6
+        file "v_R.txt" from tool_ch7
+
+    output:
+        file 'software_versions.txt' into software_versions
+
+    """
+    cat v_python.txt v_cutadapt.txt v_trim_galore.txt v_star.txt v_samtools.txt v_bedtools.txt v_R.txt > software_versions.txt
+    """
+}
+
+process trim_log {
+    cache 'lenient'
+    publishDir = [path: "${params.output_dir}/", pattern: "all_trimming.txt", mode: 'copy']
+
+    input:
+        file files from trimgalore_results.collect()
+
+    output:
+        file 'all_trimming.txt' into all_trim
+
+    """
+    cat files *trimming_report.txt > all_trimming.txt
+    """
+
+}
+
+process align_log {
+    cache 'lenient'
+    publishDir = [path: "${params.output_dir}/", pattern: "all_alignment.txt", mode: 'copy']
+
+    input:
+        file files from star_results.collect()
+
+    output:
+        file 'all_alignment.txt' into all_align
+
+    """
+    cat files *Log.final.out > all_alignment.txt
+    """
+
+}
+
+process zip_up_logs {
+    cache 'lenient'
+    memory '8 GB'
+    publishDir = [path: "${params.output_dir}/", pattern: "pipeline_logs.txt", mode: 'copy']
+
+    input:
+        file "all_trimming.txt" from all_trim
+        file "all_alignment.txt" from all_align
+
+    output:
+        file 'pipeline_logs.txt' into pipeline_logs
+
+    """
+    cat all_trimming.txt all_alignment.txt > pipeline_logs.txt
     """
 }
 
 
-
-workflow.onComplete { 
+workflow.onComplete {
 	println ( workflow.success ? "Done! Saving output" : "Oops .. something went wrong" )
 }
 
@@ -826,7 +872,6 @@ workflow.onComplete {
     def subject = 'indropSeq execution'
     def recipient = "${params.email}"
     def attachment = "${outputMultiQC}/multiqc_report.html"
-
     ['mail', '-s', subject, '-a', attachment, recipient].execute() << """
     Pipeline execution summary
     ---------------------------
