@@ -375,7 +375,7 @@ process prep_assign {
         set key, file(sample_bed), file(merged_bam), file(logfile) from for_prep_assign
 
     output:
-        set key, file(sample_bed), file('info.txt'), file("*.log") into assign_prepped
+        set key, file(sample_bed), file('info.txt'), file(logfile) into assign_prepped
 
     """
 #!/usr/bin/env python
