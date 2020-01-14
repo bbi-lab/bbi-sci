@@ -477,7 +477,7 @@ process assign_genes {
     > "\$prefix"
     if [[ ! -s \$prefix ]]; then echo "File is empty"; exit 125; fi
 
-     printf "** End process 'assign_genes' at: \$(date)\n\n" >> remove_dups.log
+     printf "** End process 'assign_genes' at: \$(date)\n\n" >> assign_genes.log
     """
 
 }
