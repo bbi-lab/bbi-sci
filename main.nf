@@ -58,14 +58,10 @@ process check_sample_sheet {
     cache 'lenient'
     module 'modules:java/latest:modules-init:modules-gs:python/3.6.4'
 
-    input:
-        val params.sample_sheet
-        file star_file
 
     output:
         file "*.csv" into good_sample_sheet
         file '*.log' into log_check_sample
-        file 'tool_1.txt' into tool_ch1
 
     """
 
@@ -73,7 +69,7 @@ process check_sample_sheet {
     printf "Nextflow version: $nextflow.version\n" >> start.log
     printf "Pipeline ID: $workflow.scriptId\n" >> start.log
     printf "Git Version: $workflow.revision, $workflow.commitId\n" >> start.log
-    printf "Run started at: $workflow.start\n\n" >> start.log
+    printf "Run started at: \$(date)\n\n" >> start.log
     printf "Command:\n$workflow.commandLine\n\n" >> start.log
     printf "***** PARAMETERS *****: \n\n" >> start.log
     printf "    params.run_dir:      $params.run_dir\n" >> start.log
@@ -98,12 +94,10 @@ process check_sample_sheet {
     check_sample_sheet.py --sample_sheet $params.sample_sheet --star_file $star_file --level $params.level
 
     printf "** End process 'check_sample_sheet' at: \$(date)\n\n" >> start.log
-    python --version &> tool_1.txt
     """
 }
 
-sample_sheet_file = good_sample_sheet
-
+good_sample_sheet.into { sample_sheet_file1; sample_sheet_file2; sample_sheet_file3 }
 
 process trim_fastqs {
     cache 'lenient'
@@ -152,8 +146,7 @@ process prep_align {
     module 'java/latest:modules:modules-init:modules-gs:python/3.6.4'
 
     input:
-        file star_file
-        file sample_sheet_file
+        file sample_sheet_file1
         set file(trimmed_fastq), val(name), file(logfile) from trimmed_fastqs
 
     output:
@@ -172,7 +165,7 @@ def quick_parse(file_path):
         entries_dict = dict(zip(columns, entries))
         yield entries_dict
 lookup = {}
-for rt_well in quick_parse("$sample_sheet_file"):
+for rt_well in quick_parse("$sample_sheet_file1"):
     lookup[rt_well['Sample ID'].replace('(', '.').replace(')', '.').replace(' ', '.').replace('-', '.').replace('_', '.').replace('/', '.')] = rt_well['Reference Genome']
 
 STAR_INDICES = {}
@@ -370,8 +363,7 @@ process prep_assign {
     cache 'lenient'
 
     input:
-        file gene_file
-        file sample_sheet_file
+        file sample_sheet_file2
         set key, file(sample_bed), file(merged_bam), file(logfile) from for_prep_assign
 
     output:
@@ -390,7 +382,7 @@ def quick_parse(file_path):
         entries_dict = dict(zip(columns, entries))
         yield entries_dict
 lookup = {}
-for rt_well in quick_parse("$sample_sheet_file"):
+for rt_well in quick_parse("$sample_sheet_file2"):
     lookup[rt_well['Sample ID'].replace('(', '.').replace(')', '.').replace(' ', '.').replace('-', '.').replace('_', '.').replace('/', '.')] = rt_well['Reference Genome']
 GENE_MODELS = {}
 with open("$gene_file", 'r') as f:
@@ -612,6 +604,7 @@ save_plot = {params.output_dir + "/" + it - ~/.knee_plot.png/ + "/knee_plot.png"
 /**
 Count intronic and total umis per cell and plot knee plot
 **/
+
 process umi_by_sample_summary {
     module 'java/latest:modules:modules-init:modules-gs:python/3.6.4:gcc/8.1.0:R/3.6.1'
     cache 'lenient'
@@ -669,7 +662,7 @@ process prep_make_matrix {
     cache 'lenient'
 
     input:
-        file sample_sheet_file
+        file sample_sheet_file3
         set key, file(umi_rollup), file(gene_assignments_file), file(logfile) from ubss_out
 
     output:
@@ -688,7 +681,7 @@ def quick_parse(file_path):
         entries_dict = dict(zip(columns, entries))
         yield entries_dict
 lookup = {}
-for rt_well in quick_parse("$sample_sheet_file"):
+for rt_well in quick_parse("$sample_sheet_file3"):
     lookup[rt_well['Sample ID'].replace('(', '.').replace(')', '.').replace(' ', '.').replace('-', '.').replace('_', '.').replace('/', '.')] = rt_well['Reference Genome']
 GENE_MODELS = {}
 with open("$gene_file", 'r') as f:
@@ -713,6 +706,7 @@ save_gene_anno = {params.output_dir + "/" + it - ~/.gene_annotations.txt/ + "/ge
 sum up total assigned reads per cell and keep only those above the cutoff
 make the number matrix
 **/
+
 process make_matrix {
     cache 'lenient'
     memory '15 GB'
