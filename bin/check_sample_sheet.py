@@ -14,13 +14,16 @@ if __name__ == '__main__':
     parser.add_argument('--sample_sheet', required=True, help='Path to sample sheet.')
     parser.add_argument('--star_file', required=True, help='Path to star genomes file.')
     parser.add_argument('--level', required=True, help='2 or 3 level sci?')
+    parser.add_argument('--rt_barcode_file', required=True, help='Custom barcode file path or "default"')
     args = parser.parse_args()
 
-    if args.level == "3":
-        rtfile = RT3_FILE
+    if args.rt_barcode_file == "default":
+        if args.level == "3":
+            rtfile = RT3_FILE
+        else:
+            rtfile = RT_FILE
     else:
-        rtfile = RT_FILE
-
+        rtfile = args.rt_barcode_file
     rtdict = {}
     with open(rtfile) as rt_file:
         for line in enumerate(rt_file):

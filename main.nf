@@ -7,6 +7,8 @@ params.gene_file = "$baseDir/bin/gene_file.txt"
 params.umi_cutoff = 100
 params.level = 3
 params.align_mem = 80
+params.rt_barcode_file="default"
+
 
 //print usage
 if (params.help) {
@@ -33,6 +35,7 @@ if (params.help) {
     log.info '    params.level = 3                           2 or 3 level sci?'
     log.info ''
     log.info 'Optional parameters (specify in your config file):'
+    log.info '    params.rt_barcode_file = "default"         The path to a custom RT barcode file. If "default", default BBI barcodes will be used.'
     log.info '    params.max_cores = 16                      The maximum number of cores to use - fewer will be used if appropriate.'
     log.info '    process.maxForks = 20                      The maximum number of processes to run at the same time on the cluster.'
     log.info '    process.queue = "trapnell-short.q"         The queue on the cluster where the jobs should be submitted. '
@@ -65,7 +68,7 @@ process check_sample_sheet {
         file "*.csv" into good_sample_sheet
 
     """
-    check_sample_sheet.py --sample_sheet $params.sample_sheet --star_file $star_file --level $params.level
+    check_sample_sheet.py --sample_sheet $params.sample_sheet --star_file $star_file --level $params.level --rt_barcode_file $params.rt_barcode_file
     """
 }
 
@@ -462,23 +465,7 @@ process summarize_duplication {
         }}' \
         >"${key}.duplication_rate_stats.txt"
     
-    
     """
-
-}
-
-process zip_up_duplication {
-    cache 'lenient'
-    publishDir = [path: "${params.output_dir}/", pattern: "all_duplication_rate.txt", mode: 'copy']
-
-    input:
-        file files from duplication_rate_out.collect()
-    output:
-        file "*ll_duplication_rate.txt" into all_dups
-
-    """
-    tail -1 files | grep '' *.duplication_rate_stats.txt > all_duplication_rate.txt
-    """      
 
 }
 
@@ -517,7 +504,7 @@ process umi_rollup {
 
 save_umi_per_cell = {params.output_dir + "/" + it - ~/.UMIs.per.cell.barcode.txt/ + "/umis_per_cell_barcode.txt"}
 save_umi_per_int = {params.output_dir + "/" + it - ~/.UMIs.per.cell.barcode.intronic.txt/ + "/intronic_umis_per_cell_barcode.txt"}
-save_plot = {params.output_dir + "/" + it - ~/.knee_plot.png/ + "/knee_plot.png"}
+
 
 
 /**
@@ -529,34 +516,23 @@ process umi_by_sample_summary {
     memory '8 GB'    
 
     publishDir path: "${params.output_dir}/", saveAs: save_umi_per_int, pattern: "*intronic.txt", mode: 'copy' 
-    publishDir path: "${params.output_dir}/", saveAs: save_plot, pattern: "*.knee_plot.png", mode: 'copy'
     publishDir path: "${params.output_dir}/", saveAs: save_umi_per_cell, pattern: "*barcode.txt", mode: 'copy'  
   
-
     input:
         set key, file(umi_rollup), file(gene_assignments_file) from umi_rollup_out        
 
     output:
         set key, file(umi_rollup), file(gene_assignments_file) into ubss_out
-        file "*UMIs.per.cell.barcode.txt" into umis_per_cell_barcode
+        set key, file("*UMIs.per.cell.barcode.txt") into umis_per_cell_barcode
         file "*UMIs.per.cell.barcode.intronic.txt" into umi_per_cell_intronic
-        file "*.knee_plot.png" into knee_plots
+//        file "*.knee_plot.png" into knee_plots
 
     """
     tabulate_per_cell_counts.py \
         --gene_assignment_files "$gene_assignments_file" \
         --all_counts_file "${key}.UMIs.per.cell.barcode.txt" \
         --intron_counts_file "${key}.UMIs.per.cell.barcode.intronic.txt"
-    
-    knee-plot.R \
-        "${key}.UMIs.per.cell.barcode.txt" \
-        --knee_plot "${key}.knee_plot.png" \
-        --specify_cutoff 100\
-        --umi_count_threshold_file "${key}.umi_cutoff.txt"
-
     """
-
-
 }
 
 process prep_make_matrix {
@@ -669,6 +645,7 @@ process make_cds {
 
     output:
         set key, file("*for_scrub.mtx"), file("*.RDS"), file("*cell_qc.csv") into for_scrub
+        file("*cell_qc.csv") into cell_qcs
 
 """
     make_cds.R \
@@ -691,9 +668,8 @@ process run_scrublet {
     input:
         set key, file(scrub_mat), file(cds), file(cell_qc) from for_scrub
     output:
-        file "*.png" into scrublet_png
-        set file("*scrublet_out.csv"), file(cds), file(cell_qc) into scrublet_out
-
+        set key, file("*scrublet_out.csv"), file(cds), file(cell_qc) into scrublet_out
+        file ("*.png") into scrub_pngs
 
 
 """
@@ -743,10 +719,12 @@ process reformat_scrub {
     publishDir path: "${params.output_dir}/", saveAs: save_cell_qc, pattern: "temp_fold/*cell_qc.csv", mode: 'copy'
 
     input:
-        set file(scrublet_outs), file(cds), file(cell_qc) from scrublet_out
+        set key, file(scrublet_outs), file(cds), file(cell_qc) from scrublet_out
     output: 
-        file "temp_fold/*.RDS" into cdss
-        file "temp_fold/*.csv" into cell_qcs
+        set key, file("temp_fold/*.RDS"),  file("temp_fold/*.csv") into rscrub_out
+        file("*scrublet_stats.csv") into scrub_stats
+        file("*collision.txt") optional true into barn_collision
+
 """
 #!/usr/bin/env Rscript
 
@@ -763,10 +741,75 @@ cell_qc\$scrublet_score <- scrublet_out\$V1
 cell_qc\$scrublet_call <- ifelse(scrublet_out\$V2 == 1, "Doublet", "Singlet")
 }
 write.csv(cell_qc, quote=FALSE, file="temp_fold/$cell_qc")
+df <- data.frame(sample="$key", doublet_count = sum(cell_qc\$scrublet_call == "Doublet", na.rm=TRUE), doublet_perc = paste0(round(sum(cell_qc\$scrublet_call == "Doublet", na.rm=TRUE)/nrow(cell_qc) * 100, 1), "%"),
+                 NAs=sum(is.na(cell_qc\$scrublet_call)))
+write.csv(df, file=paste0("$key", "_scrublet_stats.csv"), quote=FALSE, row.names=FALSE)
 saveRDS(cds, file="temp_fold/$cds")
 
+if ("$key" == "Barnyard") {
+  fData(cds)\$mouse <- grepl("ENSMUSG", fData(cds)\$id)
+  fData(cds)\$human <- grepl("ENSG", fData(cds)\$id)
+
+  pData(cds)\$mouse_reads <- Matrix::colSums(exprs(cds)[fData(cds)\$mouse,])
+  pData(cds)\$human_reads <- Matrix::colSums(exprs(cds)[fData(cds)\$human,])
+  pData(cds)\$total_reads <- pData(cds)\$mouse_reads + pData(cds)\$human_reads
+  pData(cds)\$human_perc <- pData(cds)\$human_reads/pData(cds)\$total_reads
+  pData(cds)\$mouse_perc <- pData(cds)\$mouse_reads/pData(cds)\$total_reads
+  pData(cds)\$collision <- ifelse(pData(cds)\$human_perc >= .9 | pData(cds)\$mouse_perc >= .9, FALSE, TRUE)
+
+
+
+  collision_rate <- round(sum(pData(cds)\$collision/nrow(pData(cds))) * 200, 1)
+  fileConn<-file("Barn_collision.txt")
+  writeLines(paste0(collision_rate, "%"), fileConn)
+  close(fileConn)
+
+}
 """
 
+}
+
+for_gen_qc = rscrub_out.join(umis_per_cell_barcode)
+save_knee = {params.output_dir + "/" + it - ~/_knee_plot.png/ + "/" + it}
+save_umap = {params.output_dir + "/" + it - ~/_UMAP.png/ + "/" + it}
+save_cellqc = {params.output_dir + "/" + it - ~/_cell_qc.png/ + "/" + it}
+
+process generate_qc_metrics {
+    module 'java/latest:modules:modules-init:modules-gs:gcc/8.1.0:R/3.6.1'
+    memory '10 GB'
+    publishDir path: "${params.output_dir}/", saveAs: save_umap, pattern: "*UMAP.png", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_knee, pattern: "*knee_plot.png", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_cellqc, pattern: "*cell_qc.png", mode: 'copy'
+
+    input:
+        set key, file(cds), file(cell_qc), file(umis_per_cell) from for_gen_qc
+
+    output:
+        file("*.png") into qc_plots
+        file("*.txt") into cutoff
+"""
+mkdir temp2
+generate_qc.R\
+    $cds $umis_per_cell $key \
+    --specify_cutoff 100\
+"""
+
+}
+
+process zip_up_duplication {
+    cache 'lenient'
+    publishDir = [path: "${params.output_dir}/", pattern: "all_duplication_rate.txt", mode: 'copy']
+
+    input:
+        file files from duplication_rate_out.collect()
+        file scrub_stat from scrub_stats.collect()
+    output:
+        file "*ll_duplication_rate.txt" into all_dups
+        file "*ll_scrub_stats.csv" into all_scrub
+    """
+     sed -s 1d $files > all_duplication_rate.txt
+     sed -s 1d $scrub_stat > all_scrub_stats.csv
+    """      
 }
 
 process calc_cell_totals {
@@ -790,27 +833,114 @@ process calc_cell_totals {
 
 }
 
+process generate_dash_info {
+    module 'java/latest:modules:modules-init:modules-gs:gcc/8.1.0:R/3.6.1'
+    memory '1 GB'
+
+    input:
+        file(dup_file) from all_dups
+        file(cell_counts) from cell_counts
+        file(scrub_file) from all_scrub
+        file(barn_col) from barn_collision       
+    output:
+        file("*.js") into run_data
+
+"""
+#!/usr/bin/env Rscript
+
+library(jsonlite)
+
+all_dups <- read.table("$dup_file", stringsAsFactors=FALSE)
+all_scrub <- read.csv("$scrub_file", header=F, stringsAsFactors=FALSE)
+output_folder <- "$params.output_dir"
+count_info <- read.table("$cell_counts", stringsAsFactors=FALSE)
+
+project_name <- unlist(stringr::str_split(output_folder, "/"))
+project_name <- project_name[[length(project_name)]]
+
+c100 <- sum(count_info[count_info\$V2 == 100,]\$V3)
+c500 <- sum(count_info[count_info\$V2 == 500,]\$V3)
+c1000 <- sum(count_info[count_info\$V2 == 1000,]\$V3)
+
+count_info_tab <- count_info
+
+count_info_tab\$V1 <- gsub("_cell_qc.csv", "", count_info_tab\$V1)
+ct100 <- count_info_tab[count_info_tab\$V2 == 100,]
+ct500 <- count_info_tab[count_info_tab\$V2 == 500,]
+ct1000 <- count_info_tab[count_info_tab\$V2 == 1000,]
+row.names(ct100) <- ct100\$V1
+row.names(ct500) <- ct500\$V1
+row.names(ct1000) <- ct1000\$V1
+
+all_dups\$V1 <- as.character(all_dups\$V1)
+all_dups\$c100 <- ct100[all_dups\$V1,"V3"]
+all_dups\$c1000 <- ct1000[all_dups\$V1,"V3"]
+
+all_scrub\$V2[all_scrub\$V4 > 0] <- "Fail"
+all_scrub\$V3[all_scrub\$V4 > 0] <-  "Fail"
+all_scrub\$V3[all_scrub\$V3 == "NaN%"] <-  "Fail"
+
+row.names(all_scrub) <- all_scrub\$V1
+all_dups\$num_doub <- all_scrub[all_dups\$V1,"V2"]
+all_dups\$doub_perc <- all_scrub[all_dups\$V1,"V3"]
+all_dups\$num_doub[is.na(all_dups\$num_doub)] <- "Fail"
+all_dups\$doub_perc[is.na(all_dups\$doub_perc)] <- "Fail"
+
+row.names(all_dups) <- all_dups\$V1
+names(all_dups) <- c("Sample", "Total_reads",
+                     "Total_UMIs",
+                     "Duplication_rate",
+                     "Cells_100_UMIs",
+                     "Cells_1000_UMIs", 
+                     "Doublet_Number", 
+                     "Doublet_Percent")
+all_dup_lst <- apply(all_dups, 1, as.list)
+sample_list <- as.character(all_dups\$Sample)[order(as.character(all_dups\$Sample))]
+
+if("Sentinel" %in% sample_list) {
+  sample_list <- c("Sentinel", setdiff(sample_list, c("Sentinel")))
+}
+barn_collision <- NA
+if("Barnyard" %in% sample_list) {
+  sample_list <- c("Barnyard", setdiff(sample_list, c("Barnyard")))
+  barn_collision <- readLines("$barn_col")
+}
+
+json_info <- list("run_name" = project_name,
+                  "cell_counts" = c(sum(all_dups\$Cells_100_UMIs), sum(all_dups\$Cells_1000_UMIs)),
+                  "sample_list" = sample_list,
+                  "barn_collision" = barn_collision,
+                  "sample_stats" = all_dup_lst)
+                  
+fileConn<-file("data.js")
+writeLines(c("const run_data =", toJSON(json_info, pretty=TRUE, auto_unbox=TRUE)), fileConn)
+close(fileConn)
+
+"""
+}
+
 process exp_dash {
     module 'java/latest:modules:modules-init:modules-gs:gcc/8.1.0:R/3.6.1'
-    memory '8 GB'
+    memory '1 GB'
 
     publishDir path: "${params.output_dir}/", pattern: "exp_dash", mode: 'copy'
 
 
     input:
-        file cds_file from cdss.collect()
-        file dups from all_dups
-        file counts from cell_counts
+        file plots from qc_plots.collect()
+        file run_data
+        file scrub_png from scrub_pngs.collect()
+
     output:
         file exp_dash
 
     """
     mkdir exp_dash
-    mkdir exp_dash/img
-    cp $baseDir/bin/bbi_icon.png exp_dash/img/
-    generate_exp_dash.R \
-        "$params.output_dir" --all_dups "$dups" --counts "$counts"
+    cp -R $baseDir/bin/skeleton_dash/* exp_dash/
+    mv *.png exp_dash/img/
 
+    mv $run_data exp_dash/js/
+    
     """
 }
 
@@ -839,3 +969,7 @@ workflow.onComplete {
     """
 }
 */
+
+
+    
+
