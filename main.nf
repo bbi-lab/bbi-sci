@@ -440,12 +440,12 @@ process umi_by_sample {
     """
 }
 
-save_dup = {params.output_dir + "/" + it - ~/.duplication_rate_stats.txt/ + "/duplication_stats.txt"}
+//save_dup = {params.output_dir + "/" + it - ~/.duplication_rate_stats.txt/ + "/duplication_stats.txt"}
 
 process summarize_duplication {
     cache 'lenient'
     memory '8 GB'
-    publishDir = [path: "${params.output_dir}/", saveAs: save_dup, pattern: "*duplication_rate_stats.txt", mode: 'copy']
+   // publishDir = [path: "${params.output_dir}/", saveAs: save_dup, pattern: "*duplication_rate_stats.txt", mode: 'copy']
 
     input:
         set key, file(umi_count_file), file(read_count_file) from for_summarize_dup
@@ -456,10 +456,7 @@ process summarize_duplication {
     """
     cat $umi_count_file \
         | join - "$read_count_file" \
-        | awk 'BEGIN {{ 
-            printf "%-18s    %10s    %10s    %8s\\n",
-                "sample", "n.reads", "n.UMI", "dup.rate"
-        }} {{ 
+        | awk '{{ 
                 printf "%-18s   %10d    %10d    %7.1f%\\n",
                     \$1, \$3, \$2, 100 * (1 - \$2/\$3);
         }}' \
