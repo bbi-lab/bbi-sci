@@ -86,8 +86,7 @@ process trim_fastqs {
     output:
         file "trim_out" into trim_output
         set file("trim_out/*.fq.gz"), val("${input_fastq.baseName - ~/.fastq/}") into trimmed_fastqs mode flatten
-        file input_fastq into sample_fastqs
-	stdout trim_stdout
+	    stdout trim_stdout
     
     when:
 	!((input_fastq.name - ~/-L00\d.fastq.gz/) in "Undetermined") && (!params.samples || ((input_fastq.name - ~/-L00\d.fastq.gz/) in params.samples) || ((input_fastq.name  - ~/-L00\d.fastq.gz/) in params.samples.collect{"$it".replaceAll(/\s/, ".").replaceAll(/_/, ".").replaceAll(/-/, ".").replaceAll(/\\//, ".")})) 
@@ -102,33 +101,6 @@ process trim_fastqs {
         
     """
 }
-/*
-sample_fastqs
-    .map { file ->
-         def key = file.name.toString().tokenize('-').get(0)
-         return tuple(key, file) 
-    }
-    .groupTuple()
-    .set { fastqs_to_merge }
-
-save_fq = {params.output_dir + "/" + it - ~/.fq.gz/ + "/" + it}
-
-process save_sample_fastqs {
-    cache = 'lenient'
-    publishDir = [path: "${params.output_dir}/", saveAs: save_fq, pattern: "*.fq.gz", mode: 'move' ]
-
-    input:
-       set key, file(fastqs) from fastqs_to_merge
-
-    output:
-       file "*.fq.gz" into fqs
-
-    """
-    cat *.fastq.gz > "${key}.fq.gz"
-
-    """
-}
-*/
 
 if (params.max_cores < 8) {
     cores_align = params.max_cores
@@ -311,7 +283,7 @@ process prep_assign {
         set key, file(sample_bed), file(merged_bam) from for_prep_assign
 
     output:
-        set key, file(sample_bed), file('info.txt') into assign_prepped
+        set key, file(sample_bed), file('info.txt'), file(merged_bam) into assign_prepped
 
     """
 #!/usr/bin/env python
@@ -379,10 +351,10 @@ process assign_genes {
     module 'java/latest:modules:modules-init:modules-gs:bedtools/2.26.0:coreutils/8.24'
 
     input:
-        set key, file(input_bed), file(info) from assign_prepped
+        set key, file(input_bed), file(info), file(merged_bam) from assign_prepped
 
     output:
-        set key, file("*.txt") into assign_genes_out
+        set key, file("*.txt"), file(input_bed), file(merged_bam) into assign_genes_out
 
     """
     exon_index=`head -n 1 $info`
@@ -407,66 +379,6 @@ process assign_genes {
 
 }
 
-process umi_by_sample {
-    cache 'lenient'
-    memory '20 GB'    
-    module 'java/latest:modules:modules-init:modules-gs:samtools/1.4:coreutils/8.24'
-
-    input:
-        set key, file(input_bed), file(filtered_bam) from for_umi_by_sample
-
-    output:
-        set key, file("*.UMI_count.txt"), file("*.read_count.txt") into for_summarize_dup
-
-    """
-    awk '{{ split(\$4, arr, "|")
-            if (!seen[arr[1]]) {{
-                seen[arr[1]] = 1; count[arr[2]]++;
-            }}
-            }} END {{
-                for (sample in count) {{
-                print sample "\\t" count[sample]
-                }}
-            }}' "$input_bed" \
-    | sort -k1,1 -S 5G\
-    >"${key}.UMI_count.txt"
-
-    samtools view "$filtered_bam" \
-    | cut -d '|' -f 2 \
-    | datamash -g 1 count 1 \
-    | sort -k1,1 -S 5G \
-    | datamash -g 1 sum 2 \
-    > "${key}.read_count.txt"
-    """
-}
-
-//save_dup = {params.output_dir + "/" + it - ~/.duplication_rate_stats.txt/ + "/duplication_stats.txt"}
-
-process summarize_duplication {
-    cache 'lenient'
-    memory '8 GB'
-   // publishDir = [path: "${params.output_dir}/", saveAs: save_dup, pattern: "*duplication_rate_stats.txt", mode: 'copy']
-
-    input:
-        set key, file(umi_count_file), file(read_count_file) from for_summarize_dup
-
-    output:
-        file("*duplication_rate_stats.txt") into duplication_rate_out
-
-    """
-    cat $umi_count_file \
-        | join - "$read_count_file" \
-        | awk '{{ 
-                printf "%-18s   %10d    %10d    %7.1f%\\n",
-                    \$1, \$3, \$2, 100 * (1 - \$2/\$3);
-        }}' \
-        >"${key}.duplication_rate_stats.txt"
-    
-    """
-
-}
-
-assign_genes_out.into { for_umi_rollup; for_umi_by_sample_summary }
 
 /**
 make cell, gene table for each read
@@ -482,10 +394,10 @@ process umi_rollup {
     module 'java/latest:modules:modules-init:modules-gs:coreutils/8.24'
 
     input:
-        set key, file(gene_assignments_file) from for_umi_rollup
+        set key, file(gene_assignments_file), file(input_bed), file(merged_bam) from assign_genes_out
 
     output:
-        set key, file("*.gz"), file(gene_assignments_file) into umi_rollup_out
+        set key, file("*.gz"), file(gene_assignments_file), file(input_bed), file(merged_bam) into umi_rollup_out
 
 
     """
@@ -516,10 +428,10 @@ process umi_by_sample_summary {
     publishDir path: "${params.output_dir}/", saveAs: save_umi_per_cell, pattern: "*barcode.txt", mode: 'copy'  
   
     input:
-        set key, file(umi_rollup), file(gene_assignments_file) from umi_rollup_out        
+        set key, file(umi_rollup), file(gene_assignments_file), file(input_bed), file(merged_bam) from umi_rollup_out        
 
     output:
-        set key, file(umi_rollup), file(gene_assignments_file) into ubss_out
+        set key, file(umi_rollup), file(gene_assignments_file), file(input_bed), file(merged_bam) into ubss_out
         set key, file("*UMIs.per.cell.barcode.txt") into umis_per_cell_barcode
         file "*UMIs.per.cell.barcode.intronic.txt" into umi_per_cell_intronic
 //        file "*.knee_plot.png" into knee_plots
@@ -538,10 +450,10 @@ process prep_make_matrix {
     
     input:
         file sample_sheet_file
-        set key, file(umi_rollup), file(gene_assignments_file) from ubss_out
+        set key, file(umi_rollup), file(gene_assignments_file), file(input_bed), file(merged_bam) from ubss_out
 
     output:
-        set key, file(umi_rollup), file(gene_assignments_file), stdout, file("*_info.txt") into make_matrix_prepped
+        set key, file(umi_rollup), file(gene_assignments_file), stdout, file("*_info.txt"), file(input_bed), file(merged_bam) into make_matrix_prepped
 
     """
 #!/usr/bin/env python
@@ -596,10 +508,10 @@ process make_matrix {
     publishDir path: "${params.output_dir}/", saveAs: save_gene_anno, pattern: "*gene_annotations.txt", mode: 'copy'
 
     input:
-        set key, file(umi_rollup_file), file(gene_assignments_file), val(annotations_path), file(gene_bed) from make_matrix_prepped
+        set key, file(umi_rollup_file), file(gene_assignments_file), val(annotations_path), file(gene_bed), file(input_bed), file(merged_bam) from make_matrix_prepped
 
     output:
-        set key, file("*cell_annotations.txt"), file("*umi_counts.matrix"), file("*gene_annotations.txt"), file(gene_bed) into mat_output
+        set key, file("*cell_annotations.txt"), file("*umi_counts.matrix"), file("*gene_annotations.txt"), file(gene_bed), file(input_bed), file(merged_bam) into mat_output
 
     """
     output="${key}.cell_annotations.txt"
@@ -629,19 +541,15 @@ process make_matrix {
 
 }
 
-save_cds = {params.output_dir + "/" + it - ~/_cds.RDS/ - ~/temp_fold/ + "/" + it - ~/temp_fold/}
-save_cell_qc = {params.output_dir + "/" + it - ~/_cell_qc.csv/ - ~/temp_fold/ + "/" + it - ~/temp_fold/}
 process make_cds {
     module 'java/latest:modules:modules-init:modules-gs:python/3.6.4:gcc/8.1.0:R/3.6.1'
-//#    publishDir path: "${params.output_dir}/", saveAs: save_cds, pattern: "*cds.RDS", mode: 'copy'
-//#    publishDir path: "${params.output_dir}/", saveAs: save_cell_qc, pattern: "*cell_qc.csv", mode: 'copy'
     memory '15 GB'
  
     input:
-        set key, file(cell_data), file(umi_matrix), file(gene_data), file(gene_bed) from mat_output
+        set key, file(cell_data), file(umi_matrix), file(gene_data), file(gene_bed), file(input_bed), file(merged_bam) from mat_output
 
     output:
-        set key, file("*for_scrub.mtx"), file("*.RDS"), file("*cell_qc.csv") into for_scrub
+        set key, file("*for_scrub.mtx"), file("*.RDS"), file("*cell_qc.csv"), file(input_bed), file(merged_bam) into for_scrub
         file("*cell_qc.csv") into cell_qcs
 
 """
@@ -657,15 +565,16 @@ process make_cds {
 }
 
 save_hist = {params.output_dir + "/" + it - ~/_scrublet_hist.png/ + "/" + it}
+
 process run_scrublet {
     publishDir path: "${params.output_dir}/", saveAs: save_hist, pattern: "*png", mode: 'copy'
 
     module 'modules:java/latest:modules-init:modules-gs:python/3.6.4'
     memory '10 GB'
     input:
-        set key, file(scrub_mat), file(cds), file(cell_qc) from for_scrub
+        set key, file(scrub_mat), file(cds), file(cell_qc), file(input_bed), file(merged_bam) from for_scrub
     output:
-        set key, file("*scrublet_out.csv"), file(cds), file(cell_qc) into scrublet_out
+        set key, file("*scrublet_out.csv"), file(cds), file(cell_qc), file(input_bed), file(merged_bam) into scrublet_out
         file ("*.png") into scrub_pngs
 
 
@@ -709,17 +618,66 @@ except (AttributeError):
 
 }
 
+process umi_by_sample {
+    cache 'lenient'
+    memory '20 GB'    
+    module 'java/latest:modules:modules-init:modules-gs:samtools/1.4:coreutils/8.24'
+
+    input:
+        set key, file(scrublet_outs), file(cds), file(cell_qc), file(input_bed), file(filtered_bam) from scrublet_out
+
+    output:
+        set file("*.UMI_count.txt"), file("*.read_count.txt") into summarize_dup_out
+        set key, file(scrublet_outs), file(cds), file(cell_qc), file("*duplication_rate_stats.txt") into duplication_rate_out
+
+    """
+    awk '{{ split(\$4, arr, "|")
+            if (!seen[arr[1]]) {{
+                seen[arr[1]] = 1; count[arr[2]]++;
+            }}
+            }} END {{
+                for (sample in count) {{
+                print sample "\\t" count[sample]
+                }}
+            }}' "$input_bed" \
+    | sort -k1,1 -S 5G\
+    >"${key}.UMI_count.txt"
+
+    samtools view "$filtered_bam" \
+    | cut -d '|' -f 2 \
+    | datamash -g 1 count 1 \
+    | sort -k1,1 -S 5G \
+    | datamash -g 1 sum 2 \
+    > "${key}.read_count.txt"
+
+    cat ${key}.UMI_count.txt \
+    | join - "${key}.read_count.txt" \
+    | awk '{{ 
+            printf "%-18s   %10d    %10d    %7.1f%\\n",
+                \$1, \$3, \$2, 100 * (1 - \$2/\$3);
+    }}' \
+    >"${key}.duplication_rate_stats.txt"
+    
+    """
+}
+
+save_cds = {params.output_dir + "/" + it - ~/_cds.RDS/ - ~/temp_fold/ + "/" + it - ~/temp_fold/}
+save_cell_qc = {params.output_dir + "/" + it - ~/_cell_qc.csv/ - ~/temp_fold/ + "/" + it - ~/temp_fold/}
+save_samp_stats = {params.output_dir + "/" + it - ~/_sample_stats.csv/ + "/" + it}
+
 process reformat_scrub {
     module 'java/latest:modules:modules-init:modules-gs:python/3.6.4:gcc/8.1.0:R/3.6.1' 
     memory '10 GB'
     publishDir path: "${params.output_dir}/", saveAs: save_cds, pattern: "temp_fold/*cds.RDS", mode: 'copy'
     publishDir path: "${params.output_dir}/", saveAs: save_cell_qc, pattern: "temp_fold/*cell_qc.csv", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_samp_stats, pattern: "*sample_stats.csv", mode: 'copy'
 
     input:
-        set key, file(scrublet_outs), file(cds), file(cell_qc) from scrublet_out
+        set key, file(scrublet_outs), file(cds), file(cell_qc), file(dup_stats) from duplication_rate_out
+
     output: 
         set key, file("temp_fold/*.RDS"),  file("temp_fold/*.csv") into rscrub_out
-        file("*scrublet_stats.csv") into scrub_stats
+        file("*sample_stats.csv") into sample_stats
         file("*collision.txt") optional true into barn_collision
 
 """
@@ -738,9 +696,15 @@ cell_qc\$scrublet_score <- scrublet_out\$V1
 cell_qc\$scrublet_call <- ifelse(scrublet_out\$V2 == 1, "Doublet", "Singlet")
 }
 write.csv(cell_qc, quote=FALSE, file="temp_fold/$cell_qc")
-df <- data.frame(sample="$key", doublet_count = sum(cell_qc\$scrublet_call == "Doublet", na.rm=TRUE), doublet_perc = paste0(round(sum(cell_qc\$scrublet_call == "Doublet", na.rm=TRUE)/nrow(cell_qc) * 100, 1), "%"),
-                 NAs=sum(is.na(cell_qc\$scrublet_call)))
-write.csv(df, file=paste0("$key", "_scrublet_stats.csv"), quote=FALSE, row.names=FALSE)
+
+dup_stats <- read.table(paste0("$key", ".duplication_rate_stats.txt"))
+
+df <- data.frame(sample="$key", n.reads = dup_stats\$V2, n.umi = dup_stats\$V3, duplication_rate = dup_stats\$V4,
+                 doublet_count = sum(cell_qc\$scrublet_call == "Doublet", na.rm=TRUE),
+                 doublet_perc = paste0(round(sum(cell_qc\$scrublet_call == "Doublet", na.rm=TRUE)/nrow(cell_qc) * 100, 1), "%"),
+                 doublet_NAs=sum(is.na(cell_qc\$scrublet_call)))
+
+write.csv(df, file=paste0("$key", "_sample_stats.csv"), quote=FALSE, row.names=FALSE)
 saveRDS(cds, file="temp_fold/$cds")
 
 if ("$key" == "Barnyard") {
@@ -753,8 +717,6 @@ if ("$key" == "Barnyard") {
   pData(cds)\$human_perc <- pData(cds)\$human_reads/pData(cds)\$total_reads
   pData(cds)\$mouse_perc <- pData(cds)\$mouse_reads/pData(cds)\$total_reads
   pData(cds)\$collision <- ifelse(pData(cds)\$human_perc >= .9 | pData(cds)\$mouse_perc >= .9, FALSE, TRUE)
-
-
 
   collision_rate <- round(sum(pData(cds)\$collision/nrow(pData(cds))) * 200, 1)
   fileConn<-file("Barn_collision.txt")
@@ -795,17 +757,14 @@ generate_qc.R\
 
 process zip_up_duplication {
     cache 'lenient'
-    publishDir = [path: "${params.output_dir}/", pattern: "all_duplication_rate.txt", mode: 'copy']
+    publishDir = [path: "${params.output_dir}/", pattern: "all_sample_stats.csv", mode: 'copy']
 
     input:
-        file files from duplication_rate_out.collect()
-        file scrub_stat from scrub_stats.collect()
+        file files from sample_stats.collect()
     output:
-        file "*ll_duplication_rate.txt" into all_dups
-        file "*ll_scrub_stats.csv" into all_scrub
+        file "*ll_sample_stats.csv" into all_dups
     """
-     sed -s 1d $files > all_duplication_rate.txt
-     sed -s 1d $scrub_stat > all_scrub_stats.csv
+     sed -s 1d $files > all_sample_stats.csv
     """      
 }
 
@@ -837,7 +796,6 @@ process generate_dash_info {
     input:
         file(dup_file) from all_dups
         file(cell_counts) from cell_counts
-        file(scrub_file) from all_scrub
         file(barn_col) from barn_collision       
     output:
         file("*.js") into run_data
@@ -847,8 +805,7 @@ process generate_dash_info {
 
 library(jsonlite)
 
-all_dups <- read.table("$dup_file", stringsAsFactors=FALSE)
-all_scrub <- read.csv("$scrub_file", header=F, stringsAsFactors=FALSE)
+all_dups <- read.csv("$dup_file", header=FALSE, stringsAsFactors=FALSE)
 output_folder <- "$params.output_dir"
 count_info <- read.table("$cell_counts", stringsAsFactors=FALSE)
 
@@ -873,24 +830,25 @@ all_dups\$V1 <- as.character(all_dups\$V1)
 all_dups\$c100 <- ct100[all_dups\$V1,"V3"]
 all_dups\$c1000 <- ct1000[all_dups\$V1,"V3"]
 
-all_scrub\$V2[all_scrub\$V4 > 0] <- "Fail"
-all_scrub\$V3[all_scrub\$V4 > 0] <-  "Fail"
-all_scrub\$V3[all_scrub\$V3 == "NaN%"] <-  "Fail"
-
-row.names(all_scrub) <- all_scrub\$V1
-all_dups\$num_doub <- all_scrub[all_dups\$V1,"V2"]
-all_dups\$doub_perc <- all_scrub[all_dups\$V1,"V3"]
-all_dups\$num_doub[is.na(all_dups\$num_doub)] <- "Fail"
-all_dups\$doub_perc[is.na(all_dups\$doub_perc)] <- "Fail"
+all_dups\$V5[all_dups\$V7 > 0] <- "Fail"
+all_dups\$V6[all_dups\$V7 > 0] <-  "Fail"
+all_dups\$V6[all_dups\$V6 == "NaN%"] <-  "Fail"
 
 row.names(all_dups) <- all_dups\$V1
 names(all_dups) <- c("Sample", "Total_reads",
                      "Total_UMIs",
                      "Duplication_rate",
-                     "Cells_100_UMIs",
-                     "Cells_1000_UMIs", 
                      "Doublet_Number", 
-                     "Doublet_Percent")
+                     "Doublet_Percent",
+                     "Doublet_NAs",
+                     "Cells_100_UMIs",
+                     "Cells_1000_UMIs" 
+                     )
+
+all_dups\$Doublet_Number[is.na(all_dups\$Doublet_Number)] <- "Fail"
+all_dups\$Doublet_Percent[is.na(all_dups\$Doublet_Percent)] <- "Fail"
+
+
 all_dup_lst <- apply(all_dups, 1, as.list)
 sample_list <- as.character(all_dups\$Sample)[order(as.character(all_dups\$Sample))]
 
@@ -969,4 +927,5 @@ workflow.onComplete {
 
 
     
+
 
