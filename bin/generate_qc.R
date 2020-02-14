@@ -264,7 +264,7 @@ gen_plots <- function(sample_name, sample_path) {
     lims(x=c(0, 100)) +
     labs(x="# of UMIs", y="Percent of UMIs from mitochondrial genome") +
     geom_rug(size=0.1) +
-    scale_x_log10()
+    scale_x_log10() + geom_density(aes(n.umi, (..density.. * max(pData(samp_cds)$perc_mitochondrial_umis))))
     ggsave(paste0( sample_name, '_cell_qc.png'), plot = plot, units = "in", width = 3.5*1.3, height = 3.5)
   
     samp_cds
