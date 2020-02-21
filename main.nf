@@ -66,8 +66,6 @@ process check_sample_sheet {
     """
 
     printf "BBI bbi-sci Pipeline Log\n\n" > start.log
-    printf "Nextflow version: $nextflow.version\n" >> start.log
-    printf "Pipeline ID: $workflow.scriptId\n" >> start.log
     printf "Git Version: $workflow.revision, $workflow.commitId\n" >> start.log
     printf "Run started at: \$(date)\n\n" >> start.log
     printf "Command:\n$workflow.commandLine\n\n" >> start.log
