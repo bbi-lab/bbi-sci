@@ -5,7 +5,6 @@ params.samples = false
 params.star_file = "$baseDir/bin/star_file.txt"
 params.gene_file = "$baseDir/bin/gene_file.txt"
 params.umi_cutoff = 100
-params.level = 3
 params.align_mem = 80
 params.rt_barcode_file="default"
 
@@ -26,11 +25,8 @@ if (params.help) {
     log.info '    --help                              Show this message and exit.'
     log.info ''
     log.info 'Required parameters (specify in your config file):'
-    log.info '    params.run_dir = RUN_DIRECTORY             Path to the sequencer output.'
-    log.info '    params.output_dir OUTPUT DIRECTORY         Output directory.'
+    log.info '    params.output_dir = OUTPUT DIRECTORY       Output directory.'
     log.info '    params.sample_sheet = SAMPLE_SHEET_PATH    Sample sheet of the format described in the README.'
-    log.info '    params.p7_rows = "A B C"                   The PCR rows used - must match order of params.p5_cols.'
-    log.info '    params.p5_cols = "1 2 3"                   The PCR columns used - must match order of params.p7_rows.'
     log.info '    params.demux_out = DEMUX OUTPUT DIR        Path to the demux_out folder from the bbi-dmux run.'
     log.info '    params.level = 3                           2 or 3 level sci?'
     log.info ''
@@ -50,8 +46,8 @@ if (params.help) {
 }
 
 // check required options
-if (!params.run_dir || !params.output_dir || !params.sample_sheet || !params.p7_rows || !params.p5_cols) {
-    exit 1, "Must include config file using -c CONFIG_FILE.config that includes output_dir, sample_sheet, run_dir, p7_rows and p5_cols"
+if (!params.output_dir || !params.sample_sheet || !params.level || !params.demux_out) {
+    exit 1, "Must include config file using -c CONFIG_FILE.config that includes output_dir, sample_sheet, level and demux_out"
 }
 
 star_file = file(params.star_file)
