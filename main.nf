@@ -5,8 +5,8 @@ params.samples = false
 params.star_file = "$baseDir/bin/star_file.txt"
 params.gene_file = "$baseDir/bin/gene_file.txt"
 params.umi_cutoff = 100
-params.level = 3
 params.align_mem = 80
+params.rt_barcode_file="default"
 
 //print usage
 if (params.help) {
@@ -89,7 +89,7 @@ process check_sample_sheet {
     printf "    Process versions: \$(python --version)\n" >> start.log
     printf "    Process command: check_sample_sheet.py --sample_sheet $params.sample_sheet --star_file $star_file --level $params.level\n" >> start.log
 
-    check_sample_sheet.py --sample_sheet $params.sample_sheet --star_file $star_file --level $params.level
+    check_sample_sheet.py --sample_sheet $params.sample_sheet --star_file $star_file --level $params.level --rt_barcode_file $params.rt_barcode_file
 
     printf "** End process 'check_sample_sheet' at: \$(date)\n\n" >> start.log
     """
@@ -128,8 +128,6 @@ process trim_fastqs {
         -o ./trim_out/
     cat trim_out/*trimming_report.txt >> trim.log
     printf "** End process 'trim_fastqs' at: \$(date)\n\n" >> trim.log
-    cutadapt --version &> tool_2.txt
-    trim_galore --version &> tool_3.txt
     """
 }
 
@@ -199,8 +197,6 @@ process align_reads {
     output:
         file "align_out" into align_output
         set file("align_out/*Aligned.out.bam"), val(orig_name), file('*.log') into aligned_bams mode flatten
-        file 'v_star.txt' into tool_ch4
-        file 'align_out/*Log.final.out' into star_results
 
     """
     cat ${logfile} > align.log
@@ -229,8 +225,6 @@ process align_reads {
 
     printf "** End process 'align_reads' at: \$(date)\n\n" >> align.log
 
-    STAR --version &> v_star.txt
-
     """
 
 }
@@ -253,7 +247,6 @@ process sort_and_filter {
 
     output:
         file "*.bam" into sorted_bams
-        file 'v_samtools.txt' into tool_ch5
         file '*.log' into log_sort_and_filter
 
     """
@@ -268,7 +261,6 @@ process sort_and_filter {
         > "${orig_name}.bam" >> ${orig_name}.log
 
     printf "** End process 'sort_and_filter' at: \$(date)\n\n" >> ${orig_name}.log
-    samtools --version &> v_samtools.txt
     """
 }
 
@@ -327,7 +319,6 @@ process remove_dups {
 
     output:
         set key, file("*.bed"), file(merged_bam), file("*.log") into remove_dup_out
-        file 'v_bedtools.txt' into tool_ch6
 
     """
     cat ${logfile} > remove_dups.log
@@ -350,7 +341,6 @@ process remove_dups {
             > "${key}.bed"
 
     printf "** End process 'remove_dups' at: \$(date)\n\n" >> remove_dups.log
-    bedtools --version &> v_bedtools.txt
     """
 }
 
@@ -621,7 +611,6 @@ process umi_by_sample_summary {
         file "*UMIs.per.cell.barcode.txt" into umis_per_cell_barcode
         file "*UMIs.per.cell.barcode.intronic.txt" into umi_per_cell_intronic
         file "*.knee_plot.png" into knee_plots
-        file 'v_R.txt' into tool_ch7
 
     """
     cat ${logfile} > umi_by_sample_summary.log
@@ -651,7 +640,6 @@ process umi_by_sample_summary {
         --umi_count_threshold_file "${key}.umi_cutoff.txt"
 
     printf "** End process 'umi_rollup' at: \$(date)\n\n" >> umi_rollup.log
-    R --version &> v_R.txt
     """
 }
 
@@ -716,7 +704,7 @@ process make_matrix {
         set key, file(umi_rollup_file), file(gene_assignments_file), val(annotations_path), file(gene_bed), file(logfile) from make_matrix_prepped
 
     output:
-        set key, file("*cell_annotations.txt"), file("*umi_counts.matrix"), file("*gene_annotations.txt"), file(gene_bed), file("*.log") into mat_output
+        set key, file("*cell_annotations.txt"), file("*umi_counts.matrix"), file("*gene_annotations.txt"), file(gene_bed), file(logfile) into mat_output
 
     """
     output="${key}.cell_annotations.txt"
@@ -747,6 +735,7 @@ process make_matrix {
 
 save_cds = {params.output_dir + "/" + it - ~/_cds.RDS/ - ~/temp_fold/ + "/" + it - ~/temp_fold/}
 save_cell_qc = {params.output_dir + "/" + it - ~/_cell_qc.csv/ - ~/temp_fold/ + "/" + it - ~/temp_fold/}
+
 process make_cds {
     module 'java/latest:modules:modules-init:modules-gs:python/3.6.4:gcc/8.1.0:R/3.6.1'
 //#    publishDir path: "${params.output_dir}/", saveAs: save_cds, pattern: "*cds.RDS", mode: 'copy'
@@ -754,10 +743,10 @@ process make_cds {
     memory '15 GB'
 
     input:
-        set key, file(cell_data), file(umi_matrix), file(gene_data), file(gene_bed) from mat_output
+        set key, file(cell_data), file(umi_matrix), file(gene_data), file(gene_bed), file(logfile) from mat_output
 
     output:
-        set key, file("*for_scrub.mtx"), file("*.RDS"), file("*cell_qc.csv") into for_scrub
+        set key, file("*for_scrub.mtx"), file("*.RDS"), file("*cell_qc.csv"), file(logfile) into for_scrub
 
 """
     make_cds.R \
@@ -777,10 +766,10 @@ process run_scrublet {
     module 'modules:java/latest:modules-init:modules-gs:python/3.6.4'
     memory '10 GB'
     input:
-        set key, file(scrub_mat), file(cds), file(cell_qc) from for_scrub
+        set key, file(scrub_mat), file(cds), file(cell_qc), file(logfile) from for_scrub
     output:
         file "*.png" into scrublet_png
-        set file("*scrublet_out.csv"), file(cds), file(cell_qc) into scrublet_out
+        set file("*scrublet_out.csv"), file(cds), file(cell_qc), file(logfile) into scrublet_out
 
 
 
@@ -827,10 +816,11 @@ process reformat_scrub {
     publishDir path: "${params.output_dir}/", saveAs: save_cell_qc, pattern: "temp_fold/*cell_qc.csv", mode: 'copy'
 
     input:
-        set file(scrublet_outs), file(cds), file(cell_qc) from scrublet_out
+        set file(scrublet_outs), file(cds), file(cell_qc), file(logfile) from scrublet_out
     output:
         file "temp_fold/*.RDS" into cdss
         file "temp_fold/*.csv" into cell_qcs
+        file(logfile) into pipe_log
 """
 #!/usr/bin/env Rscript
 library(monocle3)
@@ -894,78 +884,22 @@ process exp_dash {
     """
 }
 
-/*
-process get_software_versions {
+process output_pipeline_log {
     cache 'lenient'
-    publishDir = [path: "${params.output_dir}/", pattern: "software_versions.txt", mode: 'copy']
+    publishDir = [path: "${params.output_dir}/", pattern: "pipeline_log.txt", mode: 'copy']
 
     input:
-        file "v_python.txt" from tool_ch1
-        file "v_cutadapt.txt" from tool_ch2
-        file "v_trim_galore.txt" from tool_ch3
-        file "v_star.txt" from tool_ch4
-        file "v_samtools.txt" from tool_ch5
-        file "v_bedtools.txt" from tool_ch6
-        file "v_R.txt" from tool_ch7
+        file(logfile) from pipe_log
 
     output:
-        file 'software_versions.txt' into software_versions
+        file("*.log") into final_log
 
     """
-    cat v_python.txt v_cutadapt.txt v_trim_galore.txt v_star.txt v_samtools.txt v_bedtools.txt v_R.txt > software_versions.txt
-    """
-}
-
-process trim_log {
-    cache 'lenient'
-    publishDir = [path: "${params.output_dir}/", pattern: "all_trimming.txt", mode: 'copy']
-
-    input:
-        file files from trimgalore_results.collect()
-
-    output:
-        file 'all_trimming.txt' into all_trim
-
-    """
-    cat files *trimming_report.txt > all_trimming.txt
+    cat ${logfile} > pipeline_log.txt
     """
 
 }
 
-process align_log {
-    cache 'lenient'
-    publishDir = [path: "${params.output_dir}/", pattern: "all_alignment.txt", mode: 'copy']
-
-    input:
-        file files from star_results.collect()
-
-    output:
-        file 'all_alignment.txt' into all_align
-
-    """
-    cat files *Log.final.out > all_alignment.txt
-    """
-
-}
-
-process zip_up_logs {
-    cache 'lenient'
-    memory '8 GB'
-    publishDir = [path: "${params.output_dir}/", pattern: "pipeline_logs.txt", mode: 'copy']
-
-    input:
-        file "all_trimming.txt" from all_trim
-        file "all_alignment.txt" from all_align
-
-    output:
-        file 'pipeline_logs.txt' into pipeline_logs
-
-    """
-    cat all_trimming.txt all_alignment.txt > pipeline_logs.txt
-    """
-}
-
-*/
 workflow.onComplete {
 	println ( workflow.success ? "Done! Saving output" : "Oops .. something went wrong" )
 }
