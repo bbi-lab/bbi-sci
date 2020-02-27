@@ -21,7 +21,7 @@ if (params.help) {
     log.info '    nextflow run bbi-sci -c CONFIG_FILE'
     log.info ''
     log.info 'Help: '
-    log.info '    --help                              Show this message and exit.'
+    log.info '    --help                                     Show this message and exit.'
     log.info ''
     log.info 'Required parameters (specify in your config file):'
     log.info '    params.output_dir = OUTPUT DIRECTORY       Output directory.'
@@ -62,6 +62,7 @@ process check_sample_sheet {
     output:
         file "*.csv" into good_sample_sheet
         file '*.log' into log_check_sample
+        file 'start.txt' into log_piece1
 
     """
 
@@ -91,6 +92,7 @@ process check_sample_sheet {
     check_sample_sheet.py --sample_sheet $params.sample_sheet --star_file $star_file --level $params.level --rt_barcode_file $params.rt_barcode_file
 
     printf "** End process 'check_sample_sheet' at: \$(date)\n\n" >> start.log
+    cp start.log start.txt
     """
 }
 
@@ -108,25 +110,26 @@ process trim_fastqs {
     output:
         file "trim_out" into trim_output
         set file("trim_out/*.fq.gz"), val("${input_fastq.baseName - ~/.fastq/}"), file('*.log') into trimmed_fastqs mode flatten
-        file input_fastq into sample_fastqs
-        file 'trim_out/*trimming_report.txt' into trimgalore_results
-	stdout trim_stdout
+        file '*trim.txt' into log_piece2
 
     when:
 	!((input_fastq.name - ~/-L00\d.fastq.gz/) in "Undetermined") && (!params.samples || ((input_fastq.name - ~/-L00\d.fastq.gz/) in params.samples) || ((input_fastq.name  - ~/-L00\d.fastq.gz/) in params.samples.collect{"$it".replaceAll(/\s/, ".").replaceAll(/_/, ".").replaceAll(/-/, ".").replaceAll(/\\//, ".")}))
+
     """
     cat ${logfile} > trim.log
-    printf "** Start process 'trim_fastqs' at: \$(date)\n" >> trim.log
-    printf "    Process command: trim_galore $input_fastq -a AAAAAAAA --three_prime_clip_R1 1 \
-        --gzip -o ./trim_out/" >> trim.log
+    printf "** Start process 'trim_fastqs' at: \$(date)\n" >> piece.log
+    printf "    Process command: trim_galore $input_fastq -a AAAAAAAA --three_prime_clip_R1 1 
+                    --gzip -o ./trim_out/" >> piece.log
     mkdir trim_out
     trim_galore $input_fastq \
         -a AAAAAAAA \
         --three_prime_clip_R1 1 \
         --gzip \
         -o ./trim_out/
-    cat trim_out/*trimming_report.txt >> trim.log
-    printf "** End process 'trim_fastqs' at: \$(date)\n\n" >> trim.log
+    cat trim_out/*trimming_report.txt >> piece.log
+    printf "** End process 'trim_fastqs' at: \$(date)\n\n" >> piece.log
+    cp piece.log ${input_fastq.baseName - ~/.fastq/}_trim.txt
+    cat piece.log >> trim.log
     """
 }
 
@@ -145,7 +148,7 @@ process prep_align {
         set file(trimmed_fastq), val(name), file(logfile) from trimmed_fastqs
 
     output:
-        set file(trimmed_fastq), file('info.txt'), val(name), file(logfile), stdout  into align_prepped
+        set file(trimmed_fastq), file('info.txt'), val(name), file(logfile), stdout into align_prepped
 
     """
 #!/usr/bin/env python
@@ -196,19 +199,20 @@ process align_reads {
     output:
         file "align_out" into align_output
         set file("align_out/*Aligned.out.bam"), val(orig_name), file('*.log') into aligned_bams mode flatten
+        file "*align.txt" into log_piece3
 
     """
     cat ${logfile} > align.log
-    printf "** Start process 'align_reads' at: \$(date)\n" >> align.log
-    printf "    Process versions: \$(STAR --version)\n" >> align.log
+    printf "** Start process 'align_reads' at: \$(date)\n" >> piece.log
+    printf "    Process versions: \$(STAR --version)\n" >> piece.log
 
     mkdir align_out
     info1=`head -n 1 $info`
     info2=`head -2 $info | tail -1`
 
-    printf "    Process command: STAR --runThreadN $cores_align --genomeDir \$info1 \
-        --readFilesIn $input_file --readFilesCommand zcat --outFileNamePrefix \$info2 \
-        --outSAMtype BAM Unsorted --outSAMmultNmax 2 --outSAMstrandField intronMotif" >> align.log
+    printf "    Process command: STAR --runThreadN $cores_align --genomeDir \$info1 
+        --readFilesIn $input_file --readFilesCommand zcat --outFileNamePrefix \$info2 
+        --outSAMtype BAM Unsorted --outSAMmultNmax 2 --outSAMstrandField intronMotif" >> piece.log
 
     STAR \
         --runThreadN $cores_align \
@@ -220,9 +224,12 @@ process align_reads {
         --outSAMmultNmax 2 \
         --outSAMstrandField intronMotif
 
-    cat align_out/*Log.final.out >> align.log
+    cat align_out/*Log.final.out >> piece.log
 
-    printf "** End process 'align_reads' at: \$(date)\n\n" >> align.log
+    printf "** End process 'align_reads' at: \$(date)\n\n" >> piece.log
+
+    cp piece.log ${orig_name}_align.txt
+    cat piece.log >> align.log
 
     """
 
@@ -247,21 +254,47 @@ process sort_and_filter {
     output:
         file "*.bam" into sorted_bams
         file '*.log' into log_sort_and_filter
+        file "*.txt" into log_piece4
 
     """
-    cat ${logfile} > ${orig_name}.log
-    printf "** Start process 'sort_and_filter' at: \$(date)\n" >> ${orig_name}.log
-    printf "    Process versions: \$(samtools --version)\n" >> ${orig_name}.log
-    printf "    Process command: samtools view -bh -q 30 -F 4 '$aligned_bam' \
-        | samtools sort -@ $cores_sf - > '${orig_name}.bam'" >> ${orig_name}.log
+    printf "** Start process 'sort_and_filter' at: \$(date)\n" >> ${orig_name}_piece.log
+    printf "    Process versions: \$(samtools --version | tr '\n' ' ')\n" >> ${orig_name}_piece.log
+    printf "    Process command: samtools view -bh -q 30 -F 4 '$aligned_bam' 
+        | samtools sort -@ $cores_sf - > '${orig_name}.bam'" >> ${orig_name}_piece.log
 
     samtools view -bh -q 30 -F 4 "$aligned_bam" \
         | samtools sort -@ $cores_sf - \
         > "${orig_name}.bam"
 
-    printf "** End process 'sort_and_filter' at: \$(date)\n\n" >> ${orig_name}.log
+    printf "** End process 'sort_and_filter' at: \$(date)\n\n" >> ${orig_name}_piece.log
+
+    cp ${orig_name}_piece.log ${orig_name}.txt
+    cat ${logfile} > ${orig_name}.log
+    cat ${orig_name}_piece.log >> ${orig_name}.log
+
     """
 }
+
+process combine_logs {
+    cache 'lenient'
+    module 'java/latest:modules:modules-init:modules-gs:samtools/1.4'
+    memory '1 GB'
+
+    input:
+        log1 from log_piece1.collect()
+        log2 from log_piece2.collect()
+        log3 from log_piece3.collect()
+        log4 from log_piece4.collect()
+
+    output:
+        file "*.log" into log_premerge
+
+    """
+    cat $log1 $log2 $log3 $log4 > all_log.log
+
+    """
+}
+
 
 sorted_bams
     .map { file ->
@@ -289,7 +322,7 @@ process merge_bams {
     publishDir = [path: "${params.output_dir}/", saveAs: save_bam, pattern: "*.bam", mode: 'copy' ]
 
     input:
-        set key, file(logfile), file(bam_set) from for_merge_bams
+        set key, file(log_premerge), file(bam_set) from for_merge_bams
 
     output:
         set key, file("*.bam"), file("*.log") into sample_bams
