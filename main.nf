@@ -106,18 +106,18 @@ process trim_fastqs {
     input:
         file input_fastq from Channel.fromPath("${params.demux_out}/*.fastq.gz")
         file logfile from log_check_sample
+        file start from log_piece1
 
     output:
         file "trim_out" into trim_output
-        set file("trim_out/*.fq.gz"), val("${input_fastq.baseName - ~/.fastq/}"), file('*.log') into trimmed_fastqs
-        file '*trim.txt' into log_piece2
+        set file("trim_out/*.fq.gz"), val("${input_fastq.baseName - ~/.fastq/}"), file('*.log'), file(log_piece1), file('*trim.txt') into trimmed_fastqs
 
     when:
 	!((input_fastq.name - ~/-L00\d.fastq.gz/) in "Undetermined") && (!params.samples || ((input_fastq.name - ~/-L00\d.fastq.gz/) in params.samples) || ((input_fastq.name  - ~/-L00\d.fastq.gz/) in params.samples.collect{"$it".replaceAll(/\s/, ".").replaceAll(/_/, ".").replaceAll(/-/, ".").replaceAll(/\\//, ".")}))
 
     """
     cat ${logfile} > trim.log
-    printf "** Start process 'trim_fastqs' at: \$(date)\n" >> piece.log
+    printf "** Start process 'trim_fastqs' for $input_fastq at: \$(date)\n" > piece.log
     printf "    Process command: trim_galore $input_fastq -a AAAAAAAA --three_prime_clip_R1 1 
                     --gzip -o ./trim_out/" >> piece.log
     mkdir trim_out
@@ -145,10 +145,10 @@ process prep_align {
 
     input:
         file sample_sheet_file1
-        set file(trimmed_fastq), val(name), file(logfile) from trimmed_fastqs
+        set file(trimmed_fastq), val(name), file(logfile), file(log_piece1), file(log_piece2) from trimmed_fastqs
 
     output:
-        set file(trimmed_fastq), file('info.txt'), val(name), file(logfile), stdout into align_prepped
+        set file(trimmed_fastq), file('info.txt'), val(name), file(logfile), file(log_piece1), file(log_piece2), stdout into align_prepped
 
     """
 #!/usr/bin/env python
@@ -193,17 +193,18 @@ process align_reads {
     penv 'serial'
     cpus cores_align
 
+set file(trimmed_fastq), file('info.txt'), val(name), file(logfile), file(log_piece1), file(log_piece2), stdout into align_prepped
+
     input:
-        set file(input_file), file(info), val(orig_name), file(logfile), val(mem) from align_prepped
+        set file(input_file), file(info), val(orig_name), file(logfile), file(log_piece1), file(log_piece2), val(mem) from align_prepped
 
     output:
         file "align_out" into align_output
-        set file("align_out/*Aligned.out.bam"), val(orig_name), file('*.log') into aligned_bams mode flatten
-        file "*align.txt" into log_piece3
+        set file("align_out/*Aligned.out.bam"), val(orig_name), file('*.log'), file(log_piece1), file(log_piece2), file("*align.txt") into aligned_bams
 
     """
     cat ${logfile} > align.log
-    printf "** Start process 'align_reads' at: \$(date)\n" >> piece.log
+    printf "** Start process 'align_reads' for $input_file at: \$(date)\n" > piece.log
     printf "    Process versions: \$(STAR --version)\n" >> piece.log
 
     mkdir align_out
@@ -226,7 +227,7 @@ process align_reads {
 
     cat align_out/*Log.final.out >> piece.log
 
-    printf "** End process 'align_reads' at: \$(date)\n\n" >> piece.log
+    printf "\n** End process 'align_reads' at: \$(date)\n\n" >> piece.log
 
     cp piece.log ${orig_name}_align.txt
     cat piece.log >> align.log
@@ -249,15 +250,15 @@ process sort_and_filter {
     cpus cores_sf
 
     input:
-        set file(aligned_bam), val(orig_name), file(logfile) from aligned_bams
-
+        set file(aligned_bam), val(orig_name), file(logfile), file(log_piece1), file(log_piece2), file(log_piece3) from aligned_bams
+    
     output:
         file "*.bam" into sorted_bams
-        file '*.log' into log_sort_and_filter
-        file "*.txt" into log_piece4
+        file logfile into bam_logs
+        set val(orig_name.split(/-L[0-9]{3}/)[0]), file(log_piece1), file(log_piece2), file(log_piece3), file("*_sf.txt") into log_pieces
 
     """
-    printf "** Start process 'sort_and_filter' at: \$(date)\n" >> ${orig_name}_piece.log
+    printf "** Start process 'sort_and_filter' for $aligned_bam at: \$(date)\n" > ${orig_name}_piece.log
     printf "    Process versions: \$(samtools --version | tr '\n' ' ')\n" >> ${orig_name}_piece.log
     printf "    Process command: samtools view -bh -q 30 -F 4 '$aligned_bam' 
         | samtools sort -@ $cores_sf - > '${orig_name}.bam'" >> ${orig_name}_piece.log
@@ -266,14 +267,18 @@ process sort_and_filter {
         | samtools sort -@ $cores_sf - \
         > "${orig_name}.bam"
 
-    printf "** End process 'sort_and_filter' at: \$(date)\n\n" >> ${orig_name}_piece.log
+    printf "\n\n** End process 'sort_and_filter' at: \$(date)\n\n" >> ${orig_name}_piece.log
 
-    cp ${orig_name}_piece.log ${orig_name}.txt
+    cp ${orig_name}_piece.log ${orig_name}_sf.txt
     cat ${logfile} > ${orig_name}.log
     cat ${orig_name}_piece.log >> ${orig_name}.log
 
     """
 }
+
+log_pieces
+    .groupTuple()
+    .set { logs_to_combine }
 
 process combine_logs {
     cache 'lenient'
@@ -281,20 +286,16 @@ process combine_logs {
     memory '1 GB'
 
     input:
-        file log1 from log_piece1.collect()
-        file log2 from log_piece2.collect()
-        file log3 from log_piece3.collect()
-        file log4 from log_piece4.collect()
+        set val(key), file(log1), file(log2), file(log3), file(log4) from logs_to_combine
 
     output:
-        file "*.log" into log_premerge
+        set val(key), file("*.log") into log_premerge
 
     """
-    cat $log1 $log2 $log3 $log4 > all_log.log
+    cat $log1 $log2 $log3 $log4 > ${key}.log
 
     """
 }
-
 
 sorted_bams
     .map { file ->
@@ -303,16 +304,8 @@ sorted_bams
     }
     .groupTuple()
     .set { bams_to_merge }
-
-log_sort_and_filter
-    .map { file ->
-        def key = file.name.toString().split(/-L[0-9]{3}/)[0]
-        return tuple(key, file)
-    }
-    .groupTuple()
-    .set { logs_to_merge }
-
-logs_to_merge.join(bams_to_merge).set{for_merge_bams}
+    
+log_premerge.join(bams_to_merge).set{for_merge_bams}
 
 save_bam = {params.output_dir + "/" + it - ~/.bam/ + "/" + it}
 
@@ -322,7 +315,7 @@ process merge_bams {
     publishDir = [path: "${params.output_dir}/", saveAs: save_bam, pattern: "*.bam", mode: 'copy' ]
 
     input:
-        set key, file(log_premerge), file(bam_set) from for_merge_bams
+        set key, file(logfile), file(bam_set) from for_merge_bams
 
     output:
         set key, file("*.bam"), file("*.log") into sample_bams
