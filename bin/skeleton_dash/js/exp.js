@@ -37,10 +37,12 @@ function Header(props) {
 }
 
 function Sample(props) {
+  var safe_name = "hp" + props.sample_id.replace(".", "");
+  console.log(safe_name);
   return React.createElement(
     "div",
-    { className: "tab-pane fade", id: props.sample_id, role: "tabpanel",
-      "aria-labelledby": props.sample_id },
+    { className: "tab-pane fade", id: safe_name, role: "tabpanel",
+      "aria-labelledby": safe_name },
     React.createElement(
       "div",
       { className: "d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom" },
@@ -55,14 +57,14 @@ function Sample(props) {
       null,
       React.createElement(
         "div",
-        { className: "nav nav-tabs", id: "nav" + props.sample_id + "-tab", role: "tablist" },
+        { className: "nav nav-tabs", id: "nav" + safe_name + "-tab", role: "tablist" },
         props.sample_id == "Barnyard" && React.createElement(
           "a",
           {
             className: "nav-item nav-link active",
-            id: "nav" + props.sample_id + "-barn-tab",
-            "data-toggle": "tab", href: "#nav" + props.sample_id + "-barn",
-            role: "tab", "aria-controls": "nav" + props.sample_id + "-barn",
+            id: "nav" + safe_name + "-barn-tab",
+            "data-toggle": "tab", href: "#nav" + safe_name + "-barn",
+            role: "tab", "aria-controls": "nav" + safe_name + "-barn",
             "aria-selected": "true" },
           "Barnyard"
         ),
@@ -70,18 +72,18 @@ function Sample(props) {
           "a",
           {
             className: "nav-item nav-link",
-            id: "nav" + props.sample_id + "-knee-tab",
-            "data-toggle": "tab", href: "#nav" + props.sample_id + "-knee",
-            role: "tab", "aria-controls": "nav" + props.sample_id + "-knee",
+            id: "nav" + safe_name + "-knee-tab",
+            "data-toggle": "tab", href: "#nav" + safe_name + "-knee",
+            role: "tab", "aria-controls": "nav" + safe_name + "-knee",
             "aria-selected": "true" },
           "Knee plot"
         ) : React.createElement(
           "a",
           {
             className: "nav-item nav-link active",
-            id: "nav" + props.sample_id + "-knee-tab",
-            "data-toggle": "tab", href: "#nav" + props.sample_id + "-knee",
-            role: "tab", "aria-controls": "nav" + props.sample_id + "-knee",
+            id: "nav" + safe_name + "-knee-tab",
+            "data-toggle": "tab", href: "#nav" + safe_name + "-knee",
+            role: "tab", "aria-controls": "nav" + safe_name + "-knee",
             "aria-selected": "true" },
           "Knee plot"
         ),
@@ -89,9 +91,9 @@ function Sample(props) {
           "a",
           {
             className: "nav-item nav-link",
-            id: "nav" + props.sample_id + "-scrub-tab",
-            "data-toggle": "tab", href: "#nav" + props.sample_id + "-scrub",
-            role: "tab", "aria-controls": "nav" + props.sample_id + "-scrub",
+            id: "nav" + safe_name + "-scrub-tab",
+            "data-toggle": "tab", href: "#nav" + safe_name + "-scrub",
+            role: "tab", "aria-controls": "nav" + safe_name + "-scrub",
             "aria-selected": "false" },
           "Scrublet"
         ),
@@ -99,9 +101,9 @@ function Sample(props) {
           "a",
           {
             className: "nav-item nav-link",
-            id: "nav" + props.sample_id + "-cellqc-tab",
-            "data-toggle": "tab", href: "#nav" + props.sample_id + "-cellqc",
-            role: "tab", "aria-controls": "nav" + props.sample_id + "-cellqc",
+            id: "nav" + safe_name + "-cellqc-tab",
+            "data-toggle": "tab", href: "#nav" + safe_name + "-cellqc",
+            role: "tab", "aria-controls": "nav" + safe_name + "-cellqc",
             "aria-selected": "false" },
           "Cell QC"
         ),
@@ -109,9 +111,9 @@ function Sample(props) {
           "a",
           {
             className: "nav-item nav-link",
-            id: "nav" + props.sample_id + "-umap-tab",
-            "data-toggle": "tab", href: "#nav" + props.sample_id + "-umap",
-            role: "tab", "aria-controls": "nav" + props.sample_id + "-umap",
+            id: "nav" + safe_name + "-umap-tab",
+            "data-toggle": "tab", href: "#nav" + safe_name + "-umap",
+            role: "tab", "aria-controls": "nav" + safe_name + "-umap",
             "aria-selected": "false" },
           "UMAP"
         ),
@@ -119,9 +121,9 @@ function Sample(props) {
           "a",
           {
             className: "nav-item nav-link",
-            id: "nav" + props.sample_id + "-stats-tab",
-            "data-toggle": "tab", href: "#nav" + props.sample_id + "-stats",
-            role: "tab", "aria-controls": "nav" + props.sample_id + "-stats",
+            id: "nav" + safe_name + "-stats-tab",
+            "data-toggle": "tab", href: "#nav" + safe_name + "-stats",
+            role: "tab", "aria-controls": "nav" + safe_name + "-stats",
             "aria-selected": "false" },
           "Sample Stats"
         )
@@ -182,9 +184,10 @@ function RegRow(props) {
 function StatsPane(props) {
   var sample_stat = props.sample_stats[props.sample_id];
   var stats_list = ["Total Reads", "Total UMIs", "Duplication Rate", "Cells with >100 UMIs", "Cells with >1000 UMIs"];
+  var safe_name = "hp" + props.sample_id.replace(".", "");
   return React.createElement(
     "div",
-    { className: "tab-pane fade", id: "nav" + props.sample_id + "-stats", role: "tabpanel", "aria-labelledby": "nav" + props.sample_id + "-stats-tab" },
+    { className: "tab-pane fade", id: "nav" + safe_name + "-stats", role: "tabpanel", "aria-labelledby": "nav" + safe_name + "-stats-tab" },
     React.createElement(
       "table",
       { className: "table table-hover" },
@@ -223,57 +226,63 @@ function StatsPane(props) {
 }
 
 function BarnyardPane(props) {
+  var safe_name = "hp" + props.sample_id.replace(".", "");
   return React.createElement(Pane, {
     className: props.className,
-    id: "nav" + props.sample_id + "-barn",
-    tag: "nav" + props.sample_id + "-barn-tab",
+    id: "nav" + safe_name + "-barn",
+    tag: "nav" + safe_name + "-barn-tab",
     text: ["Collision rate: " + run_data.barn_collision],
     plot: "img/Barnyard_plot.png"
   });
 }
 function QCPane(props) {
+  var safe_name = "hp" + props.sample_id.replace(".", "");
   return React.createElement(Pane, {
     className: "tab-pane fade",
-    id: "nav" + props.sample_id + "-cellqc",
-    tag: "nav" + props.sample_id + "-cellqc-tab",
+    id: "nav" + safe_name + "-cellqc",
+    tag: "nav" + safe_name + "-cellqc-tab",
     text: [''],
     plot: "img/" + props.sample_id + "_cell_qc.png"
   });
 }
 function ScrubPane(props) {
   var sample_stat = props.sample_stats[props.sample_id];
+  var safe_name = "hp" + props.sample_id.replace(".", "");
   return React.createElement(Pane, {
     className: "tab-pane fade",
-    id: "nav" + props.sample_id + "-scrub",
-    tag: "nav" + props.sample_id + "-scrub-tab",
+    id: "nav" + safe_name + "-scrub",
+    tag: "nav" + safe_name + "-scrub-tab",
     text: ['Doublet count: ' + sample_stat.Doublet_Number + "\n\nDoublet rate: " + sample_stat.Doublet_Percent],
     plot: "img/" + props.sample_id + "_scrublet_hist.png"
   });
 }
 function KneePane(props) {
+  var safe_name = "hp" + props.sample_id.replace(".", "");
   return React.createElement(Pane, {
     className: props.className,
-    id: "nav" + props.sample_id + "-knee",
-    tag: "nav" + props.sample_id + "-knee-tab",
+    id: "nav" + safe_name + "-knee",
+    tag: "nav" + safe_name + "-knee-tab",
     text: [''],
     plot: "img/" + props.sample_id + "_knee_plot.png"
   });
 }
 function UMAPPane(props) {
+  var safe_name = "hp" + props.sample_id.replace(".", "");
   return React.createElement(Pane, {
     className: "tab-pane fade",
-    id: "nav" + props.sample_id + "-umap",
-    tag: "nav" + props.sample_id + "-umap-tab",
+    id: "nav" + safe_name + "-umap",
+    tag: "nav" + safe_name + "-umap-tab",
     text: [''],
     plot: "img/" + props.sample_id + "_UMAP.png"
   });
 }
 
 function SamplePill(props) {
+  var safe_name = "hp" + props.sample_id.replace(".", "");
   return React.createElement(
     "a",
-    { className: "nav-link", id: props.sample_id + "-tab", "data-toggle": "pill", href: "#" + props.sample_id, role: "tab",
-      "aria-controls": props.sample_id, "aria-selected": "false" },
+    { className: "nav-link", id: safe_name + "-tab", "data-toggle": "pill", href: "#" + safe_name, role: "tab",
+      "aria-controls": safe_name, "aria-selected": "false" },
     props.sample_id
   );
 }
@@ -281,7 +290,6 @@ function SamplePill(props) {
 //https://www.florin-pop.com/blog/2019/07/sort-table-data-with-react/
 
 var tableData = Object.values(run_data['sample_stats']);
-console.log(tableData);
 
 var sortTypes = {
   reads_up: {
@@ -574,10 +582,10 @@ var Table = function (_React$Component) {
           React.createElement(
             "tbody",
             null,
-            [].concat(_toConsumableArray(data)).sort(sortTypes[currentSort].fn).map(function (p) {
+            [].concat(_toConsumableArray(data)).sort(sortTypes[currentSort].fn).map(function (p, index) {
               return React.createElement(
                 "tr",
-                null,
+                { key: index },
                 React.createElement(
                   "td",
                   null,
