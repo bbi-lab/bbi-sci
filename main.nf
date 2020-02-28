@@ -109,7 +109,7 @@ process trim_fastqs {
 
     output:
         file "trim_out" into trim_output
-        set file("trim_out/*.fq.gz"), val("${input_fastq.baseName - ~/.fastq/}"), file('*.log') into trimmed_fastqs mode flatten
+        set file("trim_out/*.fq.gz"), val("${input_fastq.baseName - ~/.fastq/}"), file('*.log') into trimmed_fastqs
         file '*trim.txt' into log_piece2
 
     when:
