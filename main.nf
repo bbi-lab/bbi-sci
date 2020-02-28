@@ -281,10 +281,10 @@ process combine_logs {
     memory '1 GB'
 
     input:
-        log1 from log_piece1.collect()
-        log2 from log_piece2.collect()
-        log3 from log_piece3.collect()
-        log4 from log_piece4.collect()
+        file log1 from log_piece1.collect()
+        file log2 from log_piece2.collect()
+        file log3 from log_piece3.collect()
+        file log4 from log_piece4.collect()
 
     output:
         file "*.log" into log_premerge
