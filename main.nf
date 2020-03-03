@@ -106,11 +106,10 @@ process trim_fastqs {
     input:
         file input_fastq from Channel.fromPath("${params.demux_out}/*.fastq.gz")
         file logfile from log_check_sample
-        file start from log_piece1
 
     output:
         file "trim_out" into trim_output
-        set file("trim_out/*.fq.gz"), val("${input_fastq.baseName - ~/.fastq/}"), file('*.log'), file(log_piece1), file('*trim.txt') into trimmed_fastqs
+        set file("trim_out/*.fq.gz"), val("${input_fastq.baseName - ~/.fastq/}"), file('*.log'), file('*trim.txt') into trimmed_fastqs
 
     when:
 	!((input_fastq.name - ~/-L00\d.fastq.gz/) in "Undetermined") && (!params.samples || ((input_fastq.name - ~/-L00\d.fastq.gz/) in params.samples) || ((input_fastq.name  - ~/-L00\d.fastq.gz/) in params.samples.collect{"$it".replaceAll(/\s/, ".").replaceAll(/_/, ".").replaceAll(/-/, ".").replaceAll(/\\//, ".")}))
@@ -145,10 +144,10 @@ process prep_align {
 
     input:
         file sample_sheet_file1
-        set file(trimmed_fastq), val(name), file(logfile), file(log_piece1), file(log_piece2) from trimmed_fastqs
+        set file(trimmed_fastq), val(name), file(logfile), file(log_piece2) from trimmed_fastqs
 
     output:
-        set file(trimmed_fastq), file('info.txt'), val(name), file(logfile), file(log_piece1), file(log_piece2), stdout into align_prepped
+        set file(trimmed_fastq), file('info.txt'), val(name), file(logfile), file(log_piece2), stdout into align_prepped
 
     """
 #!/usr/bin/env python
@@ -193,14 +192,12 @@ process align_reads {
     penv 'serial'
     cpus cores_align
 
-set file(trimmed_fastq), file('info.txt'), val(name), file(logfile), file(log_piece1), file(log_piece2), stdout into align_prepped
-
     input:
-        set file(input_file), file(info), val(orig_name), file(logfile), file(log_piece1), file(log_piece2), val(mem) from align_prepped
+        set file(input_file), file(info), val(orig_name), file(logfile), file(log_piece2), val(mem) from align_prepped
 
     output:
         file "align_out" into align_output
-        set file("align_out/*Aligned.out.bam"), val(orig_name), file('*.log'), file(log_piece1), file(log_piece2), file("*align.txt") into aligned_bams
+        set file("align_out/*Aligned.out.bam"), val(orig_name), file('*.log'), file(log_piece2), file("*align.txt") into aligned_bams
 
     """
     cat ${logfile} > align.log
@@ -250,12 +247,15 @@ process sort_and_filter {
     cpus cores_sf
 
     input:
-        set file(aligned_bam), val(orig_name), file(logfile), file(log_piece1), file(log_piece2), file(log_piece3) from aligned_bams
+        set file(aligned_bam), val(orig_name), file(logfile), file(log_piece2), file(log_piece3) from aligned_bams
     
     output:
         file "*.bam" into sorted_bams
         file logfile into bam_logs
-        set val(orig_name.split(/-L[0-9]{3}/)[0]), file(log_piece1), file(log_piece2), file(log_piece3), file("*_sf.txt") into log_pieces
+        set val(key), file(log_piece2), file(log_piece3), file("*_sf.txt") into log_pieces
+
+    script:
+    key = orig_name.split(/-L[0-9]{3}/)[0]
 
     """
     printf "** Start process 'sort_and_filter' for $aligned_bam at: \$(date)\n" > ${orig_name}_piece.log
@@ -286,7 +286,8 @@ process combine_logs {
     memory '1 GB'
 
     input:
-        set val(key), file(log1), file(log2), file(log3), file(log4) from logs_to_combine
+        file log1 from log_piece1
+        set val(key), file(log2), file(log3), file(log4) from logs_to_combine
 
     output:
         set val(key), file("*.log") into log_premerge
