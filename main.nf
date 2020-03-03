@@ -127,7 +127,8 @@ process trim_fastqs {
 
     printf "    Process command: 
         trim_galore $input_fastq -a AAAAAAAA --three_prime_clip_R1 1 
-            --gzip -o ./trim_out/\n\n" >> piece.log
+            --gzip -o ./trim_out/\n
+    Process output:\n" >> piece.log
     mkdir trim_out
     trim_galore $input_fastq \
         -a AAAAAAAA \
@@ -221,7 +222,8 @@ process align_reads {
     printf "    Process command: 
         STAR --runThreadN $cores_align --genomeDir \$info1 
             --readFilesIn $input_file --readFilesCommand zcat --outFileNamePrefix \$info2 
-            --outSAMtype BAM Unsorted --outSAMmultNmax 2 --outSAMstrandField intronMotif\n\n" >> piece.log
+            --outSAMtype BAM Unsorted --outSAMmultNmax 2 --outSAMstrandField intronMotif\n
+    Process output:\n" >> piece.log
 
     STAR \
         --runThreadN $cores_align \
@@ -558,7 +560,7 @@ save_umi_per_cell = {params.output_dir + "/" + it - ~/.UMIs.per.cell.barcode.txt
 save_umi_per_int = {params.output_dir + "/" + it - ~/.UMIs.per.cell.barcode.intronic.txt/ + "/intronic_umis_per_cell_barcode.txt"}
 
 /**
-Count intronic and total umis per cell and plot knee plot
+Count intronic and total umis per cell
 **/
 
 process umi_by_sample_summary {
@@ -587,14 +589,7 @@ process umi_by_sample_summary {
         tabulate_per_cell_counts.py 
             --gene_assignment_files "$gene_assignments_file" 
             --all_counts_file "${key}.UMIs.per.cell.barcode.txt" 
-            --intron_counts_file "${key}.UMIs.per.cell.barcode.intronic.txt"
-
-        knee-plot.R 
-            "${key}.UMIs.per.cell.barcode.txt" 
-            --knee_plot "${key}.knee_plot.png" 
-            --specify_cutoff 100
-            --umi_count_threshold_file "${key}.umi_cutoff.txt"\n\n"      >> umi_by_sample_summary.log
-
+            --intron_counts_file "${key}.UMIs.per.cell.barcode.intronic.txt"\n\n"      >> umi_by_sample_summary.log
 
     tabulate_per_cell_counts.py \
         --gene_assignment_files "$gene_assignments_file" \
