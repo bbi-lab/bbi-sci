@@ -122,7 +122,7 @@ process trim_fastqs {
     printf "** Start process 'trim_fastqs' for $input_fastq at: \$(date)\n\n" > piece.log
     printf "    Process versions: 
         \$(python --version)
-        trim_galore \$(trim_galore -v | grep version | awk '{$1=$1;print})
+        trim_galore \$(trim_galore -v | grep version | awk '{\$1=\$1;print}')
         cutadapt version \$(cutadapt --version)\n\n" >> piece.log
 
     printf "    Process command: 
