@@ -340,7 +340,7 @@ process merge_bams {
     cat ${logfile} > merge_bams.log
     printf "** Start process 'merge_bams' at: \$(date)\n\n" >> merge_bams.log
     printf "    Process versions: 
-        \$(samtools --version)\n\n" >> merge_bams.log
+        \$(samtools --version | tr '\n' ' ')\n\n" >> merge_bams.log
     printf "    Process command: 
         samtools merge ${key}.bam $bam_set\n\n" >> merge_bams.log
 
@@ -368,7 +368,7 @@ process remove_dups {
     printf "** Start process 'remove_dups' at: \$(date)\n" >> remove_dups.log
     printf "    Process versions: 
         \$(bedtools --version)
-        \$(samtools --version) 
+        \$(samtools --version | tr '\n' ' ')
         \$(python --version)\n\n" >> remove_dups.log
     printf "    Process command:     
         samtools view -h "$merged_bam" 
@@ -386,6 +386,10 @@ process remove_dups {
             | bedtools bamtobed -i - -split \
             | sort -k1,1 -k2,2n -k3,3n -S 5G \
             > "${key}.bed"
+
+    printf "    Process stats:
+        remove_dups starting reads: \$(samtools view -c $merged_bam)
+        remove_dups ending reads: \$(wc -l ${key}.bed\n\n" >> remove_dups.log
 
     printf "** End process 'remove_dups' at: \$(date)\n\n" >> remove_dups.log
     """
