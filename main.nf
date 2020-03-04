@@ -691,22 +691,22 @@ process make_matrix {
         UMI_PER_CELL_CUTOFF=$params.umi_cutoff
         gunzip < "$umi_rollup_file" 
         | datamash -g 1 sum 3 
-        | tr '|' '\t' 
-        | awk '\$3 >= int( \$UMI_PER_CELL_CUTOFF ) {
+        | tr "|" "\t" 
+        | awk "\$3 >= int( \$UMI_PER_CELL_CUTOFF ) {
             print \$2
-        }'  - 
+        }"  - 
         | sort -k1,1 -S 5G 
         > "\$output"
         gunzip < "$umi_rollup_file" 
-        | tr '|' '\t' 
-        | awk '{ if (ARGIND == 1) {
+        | tr "|" "\t" 
+        | awk "{ if (ARGIND == 1) {
                     gene_idx[\$1] = FNR
                 } else if (ARGIND == 2) {
                     cell_idx[\$1] = FNR
                 } else if (\$2 in cell_idx) {
                     printf "%d\t%d\t%d\\n", gene_idx[\$3], cell_idx[\$2], \$4
                 }
-        }' $annotations_path "\$output" - 
+        }" $annotations_path "\$output" - 
         > "${key}.umi_counts.matrix"' >> make_matrix.log
     
     output="${key}.cell_annotations.txt"
@@ -753,7 +753,7 @@ process make_cds {
     printf "** Start process 'make_cds' at: \$(date)\n\n" >> make_cds.log
     printf "    Process versions: 
         \$(R --version | grep 'R version')
-            monocle3 version \$(Rscript -e 'packageVersion("monocle3")'\n\n" >> make_cds.log
+            monocle3 version \$(Rscript -e 'packageVersion("monocle3")')\n\n" >> make_cds.log
     echo '    Process command:  
         make_cds.R \
             "$umi_matrix"\
