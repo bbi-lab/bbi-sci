@@ -121,8 +121,9 @@ process trim_fastqs {
     cat ${logfile} > trim.log
     printf "** Start process 'trim_fastqs' for $input_fastq at: \$(date)\n\n" > piece.log
     printf "    Process versions: 
-        \$(python --version)
-        trim_galore \$(trim_galore -v | grep version | awk '{\$1=\$1;print}')
+        " >> piece.log
+    python --version &>> piece.log
+    printf "        trim_galore \$(trim_galore -v | grep version | awk '{\$1=\$1;print}')
         cutadapt version \$(cutadapt --version)\n\n" >> piece.log
 
     printf "    Process command: 
@@ -135,7 +136,7 @@ process trim_fastqs {
         --three_prime_clip_R1 1 \
         --gzip \
         -o ./trim_out/
-    cat trim_out/*trimming_report.txt >> piece.log
+    cat trim_out/*trimming_report.txt | sed '/Overview of/,+102 d' >> piece.log
     printf "** End process 'trim_fastqs' at: \$(date)\n\n" >> piece.log
     cp piece.log ${input_fastq.baseName - ~/.fastq/}_trim.txt
     cat piece.log >> trim.log
@@ -282,6 +283,9 @@ process sort_and_filter {
         | samtools sort -@ $cores_sf - \
         > "${orig_name}.bam"
 
+    printf "    Process stats:
+        Starting reads: \$(samtools view -c $aligned_bam)
+        Ending reads: \$(samtools view -c ${orig_name}.bam)\n\n" >> ${orig_name}_piece.log
     printf "** End process 'sort_and_filter' at: \$(date)\n\n" >> ${orig_name}_piece.log
 
     cp ${orig_name}_piece.log ${orig_name}_sf.txt
