@@ -121,9 +121,10 @@ process trim_fastqs {
     cat ${logfile} > trim.log
     printf "** Start process 'trim_fastqs' for $input_fastq at: \$(date)\n\n" > piece.log
     printf "    Process versions: 
-        \$(python --version)\n &>> piece.log
-    printf "        trim_galore \$(trim_galore -v | grep version | awk '{$1=$1;print})
-        cutadapt version \$(cutadapt --version)\n\n" &>> piece.log
+        " >> piece.log
+    python --version &>> piece.log
+    printf "        trim_galore \$(trim_galore -v | grep version | awk '{\$1=\$1;print}')
+        cutadapt version \$(cutadapt --version)\n\n" >> piece.log
 
     printf "    Process command: 
         trim_galore $input_fastq -a AAAAAAAA --three_prime_clip_R1 1 
@@ -282,6 +283,9 @@ process sort_and_filter {
         | samtools sort -@ $cores_sf - \
         > "${orig_name}.bam"
 
+    printf "    Process stats:
+        Starting reads: \$(samtools view -c $aligned_bam)
+        Ending reads: \$(samtools view -c ${orig_name}.bam)\n\n" >> ${orig_name}_piece.log
     printf "** End process 'sort_and_filter' at: \$(date)\n\n" >> ${orig_name}_piece.log
 
     cp ${orig_name}_piece.log ${orig_name}_sf.txt
