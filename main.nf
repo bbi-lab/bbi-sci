@@ -393,7 +393,7 @@ process remove_dups {
 
     printf "    Process stats:
         remove_dups starting reads: \$(samtools view -c $merged_bam)
-        remove_dups ending reads  : \$(wc -l ${key}.bed\n\n" >> remove_dups.log
+        remove_dups ending reads  : \$(wc -l ${key}.bed)\n\n" >> remove_dups.log
 
     printf "** End process 'remove_dups' at: \$(date)\n\n" >> remove_dups.log
     """
@@ -514,7 +514,7 @@ process assign_genes {
     if [[ ! -s \$prefix ]]; then echo "File is empty"; exit 125; fi
 
     printf "    Process stats:
-        Read assignments:\n\$(awk '{count[$3]++} END {for (word in count) { printf "            %-20s %10i\n", word, count[word]}}' \$prefix)
+        Read assignments:\n\$(awk '{count[\$3]++} END {for (word in count) { printf "            %-20s %10i\n", word, count[word]}}' \$prefix)
         Total assigned reads  : \$prefix\n\n" >> assign_genes.log
 
      printf "** End process 'assign_genes' at: \$(date)\n\n" >> assign_genes.log
@@ -611,8 +611,8 @@ process umi_by_sample_summary {
 
     printf "    Process stats:
         Total cells             : \$(wc -l ${key}.UMIs.per.cell.barcode.intronic.txt)
-        Total cells > 100 reads : \$(awk '$3>100{c++} END{print c+0}' ${key}.UMIs.per.cell.barcode.intronic.txt)
-        Total cells > 1000 reads: \$(awk '$3>1000{c++} END{print c+0}' ${key}.UMIs.per.cell.barcode.intronic.txt)\n\n" >> umi_by_sample_summary.log
+        Total cells > 100 reads : \$(awk '\$3>100{c++} END{print c+0}' ${key}.UMIs.per.cell.barcode.intronic.txt)
+        Total cells > 1000 reads: \$(awk '\$3>1000{c++} END{print c+0}' ${key}.UMIs.per.cell.barcode.intronic.txt)\n\n" >> umi_by_sample_summary.log
 
 
     printf "** End process 'umi_rollup' at: \$(date)\n\n" >> umi_by_sample_summary.log
@@ -689,24 +689,24 @@ process make_matrix {
     echo '    Process command:  
         output="${key}.cell_annotations.txt"
         UMI_PER_CELL_CUTOFF=$params.umi_cutoff
-        gunzip < "$umi_rollup_file" \
-        | datamash -g 1 sum 3 \
-        | tr '|' '\t' \
-        | awk '\$3 >= int( \$UMI_PER_CELL_CUTOFF ) {
+        gunzip < "$umi_rollup_file" 
+        | datamash -g 1 sum 3 
+        | tr "|" "\t" 
+        | awk "\$3 >= int( \$UMI_PER_CELL_CUTOFF ) {
             print \$2
-        }'  - \
-        | sort -k1,1 -S 5G \
+        }"  - 
+        | sort -k1,1 -S 5G 
         > "\$output"
-        gunzip < "$umi_rollup_file" \
-        | tr '|' '\t' \
-        | awk '{ if (ARGIND == 1) {
+        gunzip < "$umi_rollup_file" 
+        | tr "|" "\t" \
+        | awk "{ if (ARGIND == 1) {
                     gene_idx[\$1] = FNR
                 } else if (ARGIND == 2) {
                     cell_idx[\$1] = FNR
                 } else if (\$2 in cell_idx) {
                     printf "%d\t%d\t%d\\n", gene_idx[\$3], cell_idx[\$2], \$4
                 }
-        }' $annotations_path "\$output" - \
+        }" $annotations_path "\$output" - \
         > "${key}.umi_counts.matrix"' >> make_matrix.log
     
     output="${key}.cell_annotations.txt"
