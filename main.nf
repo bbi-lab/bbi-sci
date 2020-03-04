@@ -238,7 +238,7 @@ process align_reads {
 
     cat align_out/*Log.final.out >> piece.log
 
-    printf "** End process 'align_reads' at: \$(date)\n\n" >> piece.log
+    printf "\n** End process 'align_reads' at: \$(date)\n\n" >> piece.log
 
     cp piece.log ${orig_name}_align.txt
     cat piece.log >> align.log
@@ -393,7 +393,7 @@ process remove_dups {
 
     printf "    Process stats:
         remove_dups starting reads: \$(samtools view -c $merged_bam)
-        remove_dups ending reads  : \$(wc -l ${key}.bed\n\n" >> remove_dups.log
+        remove_dups ending reads  : \$(wc -l ${key}.bed | awk '{print $1;}')\n\n" >> remove_dups.log
 
     printf "** End process 'remove_dups' at: \$(date)\n\n" >> remove_dups.log
     """
@@ -483,8 +483,9 @@ process assign_genes {
     cat ${logfile} > assign_genes.log
     printf "** Start process 'assign_genes' at: \$(date)\n\n" >> assign_genes.log
     printf "    Process versions: 
-        \$(bedtools --version)\n\n" >> assign_genes.log
-    printf "    Process command: 
+        \$(bedtools --version)\n        " >> assign_genes.log
+    python --version &>> assign_genes.log
+    printf "\n\n    Process command: 
         bedtools map 
                 -a '$input_bed' 
                 -b \$exon_index 
@@ -514,8 +515,8 @@ process assign_genes {
     if [[ ! -s \$prefix ]]; then echo "File is empty"; exit 125; fi
 
     printf "    Process stats:
-        Read assignments:\n\$(awk '{count[$3]++} END {for (word in count) { printf "            %-20s %10i\n", word, count[word]}}' \$prefix)
-        Total assigned reads  : \$prefix\n\n" >> assign_genes.log
+        Read assignments:\n\$(awk '{count[$3]++} END {for (word in count) { printf "            %-20s %10i\\n", word, count[word]}}' \$prefix)
+        Total assigned reads  : \$(wc -l \$prefix | awk '{print $1;}') \n\n" >> assign_genes.log
 
      printf "** End process 'assign_genes' at: \$(date)\n\n" >> assign_genes.log
     """
@@ -576,7 +577,7 @@ Count intronic and total umis per cell
 **/
 
 process umi_by_sample_summary {
-    module 'java/latest:modules:modules-init:modules-gs:python/3.6.4:gcc/8.1.0:R/3.6.1'
+    module 'java/latest:modules:modules-init:modules-gs:python/3.6.4'
     cache 'lenient'
     memory '8 GB'
 
@@ -595,8 +596,7 @@ process umi_by_sample_summary {
     cat ${logfile} > umi_by_sample_summary.log
     printf "** Start process 'umi_by_sample_summary' at: \$(date)\n\n" >> umi_by_sample_summary.log
     printf "    Process versions: 
-        \$(python --version)
-        \$(R --version | grep 'R version')\n\n" >> umi_by_sample_summary.log
+        \$(python --version)\n\n" >> umi_by_sample_summary.log
     printf "    Process command:  
         tabulate_per_cell_counts.py 
             --gene_assignment_files "$gene_assignments_file" 
@@ -610,9 +610,9 @@ process umi_by_sample_summary {
 
 
     printf "    Process stats:
-        Total cells             : \$(wc -l ${key}.UMIs.per.cell.barcode.intronic.txt)
-        Total cells > 100 reads : \$(awk '$3>100{c++} END{print c+0}' ${key}.UMIs.per.cell.barcode.intronic.txt)
-        Total cells > 1000 reads: \$(awk '$3>1000{c++} END{print c+0}' ${key}.UMIs.per.cell.barcode.intronic.txt)\n\n" >> umi_by_sample_summary.log
+        Total cells               : \$(wc -l ${key}.UMIs.per.cell.barcode.intronic.txt | awk '{print $1;}')
+        Total cells > 100 reads   : \$(awk '$3>100{c++} END{print c+0}' ${key}.UMIs.per.cell.barcode.intronic.txt)
+        Total cells > 1000 reads  : \$(awk '$3>1000{c++} END{print c+0}' ${key}.UMIs.per.cell.barcode.intronic.txt)\n\n" >> umi_by_sample_summary.log
 
 
     printf "** End process 'umi_rollup' at: \$(date)\n\n" >> umi_by_sample_summary.log
@@ -689,16 +689,16 @@ process make_matrix {
     echo '    Process command:  
         output="${key}.cell_annotations.txt"
         UMI_PER_CELL_CUTOFF=$params.umi_cutoff
-        gunzip < "$umi_rollup_file" \
-        | datamash -g 1 sum 3 \
-        | tr '|' '\t' \
+        gunzip < "$umi_rollup_file" 
+        | datamash -g 1 sum 3 
+        | tr '|' '\t' 
         | awk '\$3 >= int( \$UMI_PER_CELL_CUTOFF ) {
             print \$2
-        }'  - \
-        | sort -k1,1 -S 5G \
+        }'  - 
+        | sort -k1,1 -S 5G 
         > "\$output"
-        gunzip < "$umi_rollup_file" \
-        | tr '|' '\t' \
+        gunzip < "$umi_rollup_file" 
+        | tr '|' '\t' 
         | awk '{ if (ARGIND == 1) {
                     gene_idx[\$1] = FNR
                 } else if (ARGIND == 2) {
@@ -706,7 +706,7 @@ process make_matrix {
                 } else if (\$2 in cell_idx) {
                     printf "%d\t%d\t%d\\n", gene_idx[\$3], cell_idx[\$2], \$4
                 }
-        }' $annotations_path "\$output" - \
+        }' $annotations_path "\$output" - 
         > "${key}.umi_counts.matrix"' >> make_matrix.log
     
     output="${key}.cell_annotations.txt"
@@ -752,7 +752,8 @@ process make_cds {
     cat ${logfile} > make_cds.log
     printf "** Start process 'make_cds' at: \$(date)\n\n" >> make_cds.log
     printf "    Process versions: 
-        \$(R --version | grep 'R version')\n\n" >> make_cds.log
+        \$(R --version | grep 'R version')
+            monocle3 version \$(Rscript -e 'packageVersion("monocle3")'\n\n" >> make_cds.log
     echo '    Process command:  
         make_cds.R \
             "$umi_matrix"\
@@ -783,42 +784,22 @@ process run_scrublet {
     input:
         set key, file(scrub_mat), file(cds), file(cell_qc), file(input_bed), file(merged_bam), file(logfile) from for_scrub
     output:
-        set key, file("*scrublet_out.csv"), file(cds), file(cell_qc), file(input_bed), file(merged_bam), file(logfile) into scrublet_out
+        set key, file("*scrublet_out.csv"), file(cds), file(cell_qc), file(input_bed), file(merged_bam), file("run_scrublet.log") into scrublet_out
         file ("*.png") into scrub_pngs
 
 
 """
-#!/usr/bin/env python
-import scrublet as scr
-import scipy.io
-import numpy
-import numpy.ma
-from PIL import Image, ImageDraw, ImageFont
-import os
-counts_matrix = scipy.io.mmread("$scrub_mat").T.tocsc()
-scrub = scr.Scrublet(counts_matrix)
-try:
-    doublet_scores, predicted_doublets = scrub.scrub_doublets()
-    scrub.plot_histogram()[0].savefig("$key" + "_scrublet_hist.png")
-    all_scores = numpy.vstack((doublet_scores, predicted_doublets))
-    all_scores = numpy.transpose(all_scores)
-    numpy.savetxt("$key" + "_scrublet_out.csv", all_scores, delimiter=",")
-except (ZeroDivisionError, ValueError):
-    temp = numpy.array(["NA"] * numpy.size(counts_matrix, 0))
-    all_scores = numpy.vstack((temp, temp))
-    all_scores = numpy.transpose(all_scores)
-    filename = "$key" + "_scrublet_hist.png"
-    image = Image.new(mode = "RGB", size = (250,50), color = "white")
-    draw = ImageDraw.Draw(image)
-    draw.text((10,10), "Scrublet failed. This is generally \\nbecause there aren't enough cells.", fill = "black")
-    image.save(filename)
-    numpy.savetxt("$key" + "_scrublet_out.csv", all_scores, fmt="%s", delimiter=",")
-except (AttributeError):
-    predicted_doublets = scrub.call_doublets(threshold=0.15)
-    scrub.plot_histogram()[0].savefig("$key" + "_scrublet_hist.png")
-    all_scores = numpy.vstack((doublet_scores, predicted_doublets))
-    all_scores = numpy.transpose(all_scores)
-    numpy.savetxt("$key" + "_scrublet_out.csv", all_scores, delimiter=",")
+    cat ${logfile} > run_scrublet.log
+    printf "** Start process 'run_scrublet' at: \$(date)\n\n" >> run_scrublet.log
+    printf "    Process versions: 
+        \$(python --version)
+            \$(pip freeze | grep scrublet | tr '==' ' ')\n\n" >> run_scrublet.log
+    echo '    Process command:  
+        run_scrublet.py --key $key --mat $scrub_mat'  >> run_scrublet.log
+
+    run_scrublet.py --key $key --mat $scrub_mat
+
+    printf "** End process 'run_scrublet' at: \$(date)\n\n" >> run_scrublet.log
 """
 
 }
@@ -833,10 +814,44 @@ process umi_by_sample {
 
     output:
         set file("*.UMI_count.txt"), file("*.read_count.txt") into summarize_dup_out
-        set key, file(scrublet_outs), file(cds), file(cell_qc), file("*duplication_rate_stats.txt"), file(logfile) into duplication_rate_out
+        set key, file(scrublet_outs), file(cds), file(cell_qc), file("*duplication_rate_stats.txt"), file("umi_by_sample.log") into duplication_rate_out
 
     """
-    awk '{{ split(\$4, arr, "|")
+
+    cat ${logfile} > umi_by_sample.log
+    printf "** Start process 'umi_by_sample' at: \$(date)\n\n" >> umi_by_sample.log
+    printf "    Process versions: 
+        \$(samtools --version | tr '\n' ' ')\n\n" >> umi_by_sample.log
+    echo '    Process command:      
+    awk "{{ split(\$4, arr, "|")
+            if (!seen[arr[1]]) {{
+                seen[arr[1]] = 1; count[arr[2]]++;
+            }}
+            }} END {{
+                for (sample in count) {{
+                print sample "\\t" count[sample]
+                }}
+            }}" "$input_bed" \
+    | sort -k1,1 -S 5G\
+    >"${key}.UMI_count.txt"
+
+    samtools view "$filtered_bam" \
+    | cut -d "|" -f 2 \
+    | datamash -g 1 count 1 \
+    | sort -k1,1 -S 5G \
+    | datamash -g 1 sum 2 \
+    > "${key}.read_count.txt"
+
+    cat ${key}.UMI_count.txt \
+    | join - "${key}.read_count.txt" \
+    | awk "{{ 
+            printf "%-18s   %10d    %10d    %7.1f%\\n",
+                \$1, \$3, \$2, 100 * (1 - \$2/\$3);
+    }}" \
+    >"${key}.duplication_rate_stats.txt" '  >> umi_by_sample.log
+
+
+       awk '{{ split(\$4, arr, "|")
             if (!seen[arr[1]]) {{
                 seen[arr[1]] = 1; count[arr[2]]++;
             }}
@@ -862,6 +877,9 @@ process umi_by_sample {
                 \$1, \$3, \$2, 100 * (1 - \$2/\$3);
     }}' \
     >"${key}.duplication_rate_stats.txt"
+
+    printf "** End process 'umi_by_sample' at: \$(date)\n\n" >> umi_by_sample.log
+
     
     """
 }
