@@ -284,8 +284,8 @@ process sort_and_filter {
         > "${orig_name}.bam"
 
     printf "    Process stats:
-        Starting reads: \$(samtools view -c $aligned_bam)
-        Ending reads: \$(samtools view -c ${orig_name}.bam)\n\n" >> ${orig_name}_piece.log
+        sort_and_filter starting reads: \$(samtools view -c $aligned_bam)
+        sort_and_filter ending reads  : \$(samtools view -c ${orig_name}.bam)\n\n" >> ${orig_name}_piece.log
     printf "** End process 'sort_and_filter' at: \$(date)\n\n" >> ${orig_name}_piece.log
 
     cp ${orig_name}_piece.log ${orig_name}_sf.txt
@@ -369,7 +369,7 @@ process remove_dups {
 
     """
     cat ${logfile} > remove_dups.log
-    printf "** Start process 'remove_dups' at: \$(date)\n" >> remove_dups.log
+    printf "** Start process 'remove_dups' at: \$(date)\n\n" >> remove_dups.log
     printf "    Process versions: 
         \$(bedtools --version)
         \$(samtools --version | tr '\n' ' ')
@@ -393,7 +393,7 @@ process remove_dups {
 
     printf "    Process stats:
         remove_dups starting reads: \$(samtools view -c $merged_bam)
-        remove_dups ending reads: \$(wc -l ${key}.bed\n\n" >> remove_dups.log
+        remove_dups ending reads  : \$(wc -l ${key}.bed\n\n" >> remove_dups.log
 
     printf "** End process 'remove_dups' at: \$(date)\n\n" >> remove_dups.log
     """
@@ -513,6 +513,10 @@ process assign_genes {
     > "\$prefix"
     if [[ ! -s \$prefix ]]; then echo "File is empty"; exit 125; fi
 
+    printf "    Process stats:
+        Read assignments:\n\$(awk '{count[$3]++} END {for (word in count) { printf "            %-20s %10i\n", word, count[word]}}' \$prefix)
+        Total assigned reads  : \$prefix\n\n" >> assign_genes.log
+
      printf "** End process 'assign_genes' at: \$(date)\n\n" >> assign_genes.log
     """
 
@@ -539,10 +543,10 @@ process umi_rollup {
 
     """
     cat ${logfile} > umi_rollup.log
-    printf "** Start process 'umi_rollup' at: \$(date)\n" >> umi_rollup.log
+    printf "** Start process 'umi_rollup' at: \$(date)\n\n" >> umi_rollup.log
     printf "    Process versions: 
             None\n\n" >> umi_rollup.log
-    printf '    Process command:  
+    echo '    Process command:  
         awk "\$ == "exonic" || \$ == "intronic" {{
             split(\$1, arr, "|")
             printf "%s|%s_%s_%s\t%s\\n", arr[2], arr[3], arr[4], arr[5], \$2
@@ -589,7 +593,7 @@ process umi_by_sample_summary {
 
     """
     cat ${logfile} > umi_by_sample_summary.log
-    printf "** Start process 'umi_by_sample_summary' at: \$(date)\n" >> umi_by_sample_summary.log
+    printf "** Start process 'umi_by_sample_summary' at: \$(date)\n\n" >> umi_by_sample_summary.log
     printf "    Process versions: 
         \$(python --version)
         \$(R --version | grep 'R version')\n\n" >> umi_by_sample_summary.log
@@ -603,6 +607,13 @@ process umi_by_sample_summary {
         --gene_assignment_files "$gene_assignments_file" \
         --all_counts_file "${key}.UMIs.per.cell.barcode.txt" \
         --intron_counts_file "${key}.UMIs.per.cell.barcode.intronic.txt"
+
+
+    printf "    Process stats:
+        Total cells             : \$(wc -l ${key}.UMIs.per.cell.barcode.intronic.txt)
+        Total cells > 100 reads : \$(awk '$3>100{c++} END{print c+0}' ${key}.UMIs.per.cell.barcode.intronic.txt)
+        Total cells > 1000 reads: \$(awk '$3>1000{c++} END{print c+0}' ${key}.UMIs.per.cell.barcode.intronic.txt)\n\n" >> umi_by_sample_summary.log
+
 
     printf "** End process 'umi_rollup' at: \$(date)\n\n" >> umi_by_sample_summary.log
     """
@@ -673,6 +684,31 @@ process make_matrix {
 
     """
     cat ${logfile} > make_matrix.log
+    printf "** Start process 'make_matrix' at: \$(date)\n\n" >> make_matrix.log
+
+    echo '    Process command:  
+        output="${key}.cell_annotations.txt"
+        UMI_PER_CELL_CUTOFF=$params.umi_cutoff
+        gunzip < "$umi_rollup_file" \
+        | datamash -g 1 sum 3 \
+        | tr '|' '\t' \
+        | awk '\$3 >= int( \$UMI_PER_CELL_CUTOFF ) {
+            print \$2
+        }'  - \
+        | sort -k1,1 -S 5G \
+        > "\$output"
+        gunzip < "$umi_rollup_file" \
+        | tr '|' '\t' \
+        | awk '{ if (ARGIND == 1) {
+                    gene_idx[\$1] = FNR
+                } else if (ARGIND == 2) {
+                    cell_idx[\$1] = FNR
+                } else if (\$2 in cell_idx) {
+                    printf "%d\t%d\t%d\\n", gene_idx[\$3], cell_idx[\$2], \$4
+                }
+        }' $annotations_path "\$output" - \
+        > "${key}.umi_counts.matrix"' >> make_matrix.log
+    
     output="${key}.cell_annotations.txt"
     UMI_PER_CELL_CUTOFF=$params.umi_cutoff
     gunzip < "$umi_rollup_file" \
@@ -695,28 +731,44 @@ process make_matrix {
     }' $annotations_path "\$output" - \
     > "${key}.umi_counts.matrix"
     cat $annotations_path > "${key}.gene_annotations.txt"
+
+        printf "** End process 'make_matrix' at: \$(date)\n\n" >> make_matrix.log
     """
 
 }
 
 process make_cds {
-    module 'java/latest:modules:modules-init:modules-gs:python/3.6.4:gcc/8.1.0:R/3.6.1'
+    module 'java/latest:modules:modules-init:modules-gs:gcc/8.1.0:R/3.6.1'
     memory '15 GB'
 
     input:
         set key, file(cell_data), file(umi_matrix), file(gene_data), file(gene_bed), file(input_bed), file(merged_bam), file(logfile) from mat_output
 
     output:
-        set key, file("*for_scrub.mtx"), file("*.RDS"), file("*cell_qc.csv"), file(input_bed), file(merged_bam), file(logfile) into for_scrub
+        set key, file("*for_scrub.mtx"), file("*.RDS"), file("*cell_qc.csv"), file(input_bed), file(merged_bam), file("make_cds.log") into for_scrub
         file("*cell_qc.csv") into cell_qcs
 
 """
+    cat ${logfile} > make_cds.log
+    printf "** Start process 'make_cds' at: \$(date)\n\n" >> make_cds.log
+    printf "    Process versions: 
+        \$(R --version | grep 'R version')\n\n" >> make_cds.log
+    echo '    Process command:  
+        make_cds.R \
+            "$umi_matrix"\
+            "$cell_data"\
+            "$gene_data"\
+            "$gene_bed"\
+            "$key" ' >> make_cds
+
     make_cds.R \
         "$umi_matrix"\
         "$cell_data"\
         "$gene_data"\
         "$gene_bed"\
         "$key"
+
+    printf "** End process 'make_cds' at: \$(date)\n\n" >> make_cds.log
 """
 
 }
