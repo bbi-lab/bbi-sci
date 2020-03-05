@@ -554,7 +554,7 @@ process umi_rollup {
             }}" "$gene_assignments_file" 
         | sort -k1,1 -k2,2 -S 5G 
         | datamash -g 1,2 count 2 
-        | gzip > \"${key}.gz\"\n\n'      >> umi_rollup.log
+        | gzip > \"${key}.gz\"\n'      >> umi_rollup.log
 
     awk '\$3 == "exonic" || \$3 == "intronic" {{
             split(\$1, arr, "|")
@@ -563,7 +563,6 @@ process umi_rollup {
     | sort -k1,1 -k2,2 -S 5G \
     | datamash -g 1,2 count 2 \
     | gzip > "${key}.gz"
-
 
      printf "** End process 'umi_rollup' at: \$(date)\n\n" >> umi_rollup.log
     """
@@ -732,7 +731,7 @@ process make_matrix {
     > "${key}.umi_counts.matrix"
     cat $annotations_path > "${key}.gene_annotations.txt"
 
-        printf "** End process 'make_matrix' at: \$(date)\n\n" >> make_matrix.log
+        printf "\n** End process 'make_matrix' at: \$(date)\n\n" >> make_matrix.log
     """
 
 }
@@ -799,7 +798,7 @@ process run_scrublet {
 
     run_scrublet.py --key $key --mat $scrub_mat
 
-    printf "** End process 'run_scrublet' at: \$(date)\n\n" >> run_scrublet.log
+    printf "\n** End process 'run_scrublet' at: \$(date)\n\n" >> run_scrublet.log
 """
 
 }
@@ -878,9 +877,9 @@ process umi_by_sample {
     }}' \
     >"${key}.duplication_rate_stats.txt"
 
-    printf "** End process 'umi_by_sample' at: \$(date)\n\n" >> umi_by_sample.log
+    printf "\n** End process 'umi_by_sample' at: \$(date)\n\n" >> umi_by_sample.log
 
-    
+    printf "** Start processes to generate dashboards at: \$(date)\n\n" >> umi_by_sample.log
     """
 }
 
@@ -969,6 +968,9 @@ process generate_qc_metrics {
         file("*.png") into qc_plots
         file("*.txt") into cutoff
 """
+    cat ${logfile} > umi_by_sample.log
+    printf "** Start process 'umi_by_sample' at: \$(date)\n\n" >> umi_by_sample.log
+    
 mkdir temp2
 generate_qc.R\
     $cds $umis_per_cell $key \
@@ -1123,19 +1125,43 @@ process exp_dash {
 
 process output_pipeline_log {
     cache 'lenient'
-    publishDir = [path: "${params.output_dir}/", pattern: "*.log", mode: 'copy']
+    //publishDir = [path: "${params.output_dir}/", pattern: "*.log", mode: 'copy']
 
     input:
         set key, file(logfile) from pipe_log
 
     output:
-        file("*.log") into final_log
+        set key, file("*.log") into final_log
 
     """
-    cat ${logfile} > ${key}_full.log
+    cat ${logfile} > ${key}.log
+    printf "\n** End processes generating dashboards at: \$(date)\n\n" >> ${key}.log
+    printf "***** END PIPELINE *****: \n\n" >> ${key}.log
     """
 
 }
+
+save_logs = {params.output_dir + "/" + it - ~/_summary.log/ - ~/_full.log/ + it}
+process generate_summary_log {
+    cache 'lenient'
+    publishDir = [path: "${params.output_dir}/", saveAs: save_logs, pattern: "*.log", mode: 'copy']
+    input:
+        set key, file(logfile) from final_log
+
+    output:
+        file("*_full.log") into full_log
+        file("*_summary.log") into sum_log
+
+    """
+    cat ${logfile} > ${key}_full.log
+
+    cat ${logfile} > ${key}_sum.log
+
+    printf "***** END PIPELINE *****: \n\n" >> ${key}_full.log
+    """
+
+}
+
 
 workflow.onComplete {
 	println ( workflow.success ? "Done! Saving output" : "Oops .. something went wrong" )
