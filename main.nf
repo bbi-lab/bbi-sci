@@ -1143,23 +1143,16 @@ process generate_summary_log {
     cache 'lenient'
     publishDir = [path: "${params.output_dir}/", saveAs: save_logs, pattern: "*.log", mode: 'copy']
     input:
-        set key, file(logfile) from final_log
+        set val(key), file(logfile) from final_log
 
     output:
         file("*_full.log") into full_log
-        file("*_summary.log") into sum_log
+        file("*_read_metrics.log") into sum_log
 
     """
-    cat ${logfile} > "${key}_full.log"
+    cat ${logfile} > ${key}_full.log
 
-    cat XD14.log | grep 'sequences processed in total' | awk -F ' ' '{sum += $1} END {print sum}'
-
-    trim_fastqs lost
-    cat XD14.log | grep 'Sequences removed because they became shorter' | awk -F ' ' '{sum += $14} END {print sum}'
-
-
-
-    cat ${logfile} > "${key}_read_metrics.log"
+    cat ${logfile} > ${key}_read_metrics.log
 
     printf "***** PIPELINE SUMMARY STATS *****: \n\n" >> ${key}_full.log
     """
