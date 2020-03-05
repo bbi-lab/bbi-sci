@@ -1150,7 +1150,7 @@ process generate_summary_log {
         file("*_summary.log") into sum_log
 
     """
-    cat ${logfile} > ${key}_full.log
+    cat ${logfile} > "${key}_full.log"
 
     cat XD14.log | grep 'sequences processed in total' | awk -F ' ' '{sum += $1} END {print sum}'
 
@@ -1159,7 +1159,7 @@ process generate_summary_log {
 
 
 
-    cat ${logfile} > ${key}_read_metrics.log
+    cat ${logfile} > "${key}_read_metrics.log"
 
     printf "***** PIPELINE SUMMARY STATS *****: \n\n" >> ${key}_full.log
     """
