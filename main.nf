@@ -794,7 +794,7 @@ process run_scrublet {
         \$(python --version)
             \$(pip freeze | grep scrublet | tr '==' ' ')\n\n" >> run_scrublet.log
     echo '    Process command:  
-        run_scrublet.py --key $key --mat $scrub_mat'  >> run_scrublet.log
+        run_scrublet.py --key $key --mat $scrub_mat\n'  >> run_scrublet.log
 
     run_scrublet.py --key $key --mat $scrub_mat
 
@@ -847,7 +847,7 @@ process umi_by_sample {
             printf "%-18s   %10d    %10d    %7.1f%\\n",
                 \$1, \$3, \$2, 100 * (1 - \$2/\$3);
     }}" \
-    >"${key}.duplication_rate_stats.txt" '  >> umi_by_sample.log
+    >"${key}.duplication_rate_stats.txt" \n'  >> umi_by_sample.log
 
 
        awk '{{ split(\$4, arr, "|")
