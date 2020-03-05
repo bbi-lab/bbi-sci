@@ -944,6 +944,10 @@ if ("$key" == "Barnyard") {
   writeLines(paste0(collision_rate, "%"), fileConn)
   close(fileConn)
 
+} else {
+  fileConn<-file("no_collision.txt")
+  writeLines("NA", fileConn)
+  close(fileConn)
 }
 """
 
