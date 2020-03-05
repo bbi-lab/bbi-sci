@@ -1120,31 +1120,13 @@ process exp_dash {
     """
 }
 
-process output_pipeline_log {
-    cache 'lenient'
-    //publishDir = [path: "${params.output_dir}/", pattern: "*.log", mode: 'copy']
-
-    input:
-        set key, file(logfile) from pipe_log
-        file exp_dash from exp_dash_out
-
-    output:
-        set key, file("*.log") into final_log
-
-    """
-    cat ${logfile} > ${key}.log
-    printf "\n** End processes generating dashboards at: \$(date)\n\n" >> ${key}.log
-    printf "***** END PIPELINE *****: \n\n" >> ${key}.log
-    """
-
-}
-
 save_logs = {params.output_dir + "/" + it - ~/_read_metrics.log/ - ~/_full.log/ + it}
 process generate_summary_log {
     cache 'lenient'
     publishDir = [path: "${params.output_dir}/", saveAs: save_logs, pattern: "*.log", mode: 'copy']
     input:
-        set val(key), file(logfile) from final_log
+        set key, file(logfile) from pipe_log
+        file exp_dash from exp_dash_out
 
     output:
         file("*_full.log") into full_log
@@ -1152,6 +1134,8 @@ process generate_summary_log {
 
     """
     cat ${logfile} > ${key}_full.log
+    printf "\n** End processes generating dashboards at: \$(date)\n\n" >> ${key}_full.log
+    printf "***** END PIPELINE *****: \n\n" >> ${key}_full.log
 
     cat ${logfile} > ${key}_read_metrics.log
 
