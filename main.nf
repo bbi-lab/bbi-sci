@@ -516,7 +516,7 @@ process assign_genes {
 
     printf "    Process stats:
         Read assignments:\n\$(awk '{count[\$3]++} END {for (word in count) { printf "            %-20s %10i\\n", word, count[word]}}' \$prefix)
-        Total assigned reads  : \$(wc -l \$prefix | awk '{print \$1;}') \n\n" >> assign_genes.log
+        Total assigned reads:     \$(wc -l \$prefix | awk '{print \$1;}') \n\n" >> assign_genes.log
 
      printf "** End process 'assign_genes' at: \$(date)\n\n" >> assign_genes.log
     """
@@ -554,7 +554,7 @@ process umi_rollup {
             }}" "$gene_assignments_file" 
         | sort -k1,1 -k2,2 -S 5G 
         | datamash -g 1,2 count 2 
-        | gzip > \"${key}.gz\"\n'      >> umi_rollup.log
+        | gzip > \"${key}.gz\"'      >> umi_rollup.log
 
     awk '\$3 == "exonic" || \$3 == "intronic" {{
             split(\$1, arr, "|")
@@ -1108,7 +1108,7 @@ process exp_dash {
         file scrub_png from scrub_pngs.collect()
 
     output:
-        file exp_dash
+        file exp_dash into exp_dash_out
 
     """
     mkdir exp_dash
@@ -1126,6 +1126,7 @@ process output_pipeline_log {
 
     input:
         set key, file(logfile) from pipe_log
+        file exp_dash from exp_dash_out
 
     output:
         set key, file("*.log") into final_log
@@ -1143,14 +1144,14 @@ process generate_summary_log {
     cache 'lenient'
     publishDir = [path: "${params.output_dir}/", saveAs: save_logs, pattern: "*.log", mode: 'copy']
     input:
-        set key, file(logfile) from final_log
+        set val(key), file(logfile) from final_log
 
     output:
         file("*_full.log") into full_log
         file("*_summary.log") into sum_log
 
     """
-    cat ${logfile} > "${key}_full.log"
+    cat ${logfile} > ${key}_full.log
 
     cat XD14.log | grep 'sequences processed in total' | awk -F ' ' '{sum += $1} END {print sum}'
 
