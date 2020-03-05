@@ -968,9 +968,6 @@ process generate_qc_metrics {
         file("*.png") into qc_plots
         file("*.txt") into cutoff
 """
-    cat ${logfile} > umi_by_sample.log
-    printf "** Start process 'umi_by_sample' at: \$(date)\n\n" >> umi_by_sample.log
-    
 mkdir temp2
 generate_qc.R\
     $cds $umis_per_cell $key \
@@ -1141,7 +1138,7 @@ process output_pipeline_log {
 
 }
 
-save_logs = {params.output_dir + "/" + it - ~/_summary.log/ - ~/_full.log/ + it}
+save_logs = {params.output_dir + "/" + it - ~/_read_metrics.log/ - ~/_full.log/ + it}
 process generate_summary_log {
     cache 'lenient'
     publishDir = [path: "${params.output_dir}/", saveAs: save_logs, pattern: "*.log", mode: 'copy']
@@ -1155,9 +1152,16 @@ process generate_summary_log {
     """
     cat ${logfile} > ${key}_full.log
 
-    cat ${logfile} > ${key}_sum.log
+    cat XD14.log | grep 'sequences processed in total' | awk -F ' ' '{sum += $1} END {print sum}'
 
-    printf "***** END PIPELINE *****: \n\n" >> ${key}_full.log
+    trim_fastqs lost
+    cat XD14.log | grep 'Sequences removed because they became shorter' | awk -F ' ' '{sum += $14} END {print sum}'
+
+
+
+    cat ${logfile} > ${key}_read_metrics.log
+
+    printf "***** PIPELINE SUMMARY STATS *****: \n\n" >> ${key}_full.log
     """
 
 }
