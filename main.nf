@@ -233,7 +233,7 @@ process align_reads {
         --readFilesCommand zcat \
         --outFileNamePrefix \$info2 \
         --outSAMtype BAM Unsorted \
-        --outSAMmultNmax 2 \
+        --outSAMmultNmax 1 \
         --outSAMstrandField intronMotif
 
     cat align_out/*Log.final.out >> piece.log
@@ -515,7 +515,7 @@ process assign_genes {
     if [[ ! -s \$prefix ]]; then echo "File is empty"; exit 125; fi
 
     printf "    Process stats:
-        Read assignments:\n\$(awk '{count[\$3]++} END {for (word in count) { printf "            %-20s %10i\\n", word, count[word]}}' \$prefix)
+        Read assignments:\n\$(awk '{count[\$3]++} END {for (word in count) { printf "            %-20s %10i\\n", word, count[word]}}' \$prefix)\n\n" >> assign_genes.log
 
      printf "** End process 'assign_genes' at: \$(date)\n\n" >> assign_genes.log
     """
@@ -583,7 +583,7 @@ process umi_by_sample_summary {
     publishDir path: "${params.output_dir}/", saveAs: save_umi_per_cell, pattern: "*barcode.txt", mode: 'copy'  
   
     input:
-        set key, file(umi_rollup), file(gene_assignments_file), file(input_bed), file(merged_bam), file(logfile) from umi_rollup_out  
+        set val(key), file(umi_rollup), file(gene_assignments_file), file(input_bed), file(merged_bam), file(logfile) from umi_rollup_out  
 
     output:
         set key, file(umi_rollup), file(gene_assignments_file), file(input_bed), file(merged_bam), file("*.log") into ubss_out
@@ -611,7 +611,7 @@ process umi_by_sample_summary {
         Total cells                            : \$(wc -l ${key}.UMIs.per.cell.barcode.txt | awk '{print \$1;}')
         Total cells > 100 reads                : \$(awk '\$3>100{c++} END{print c+0}' ${key}.UMIs.per.cell.barcode.txt)
         Total cells > 1000 reads               : \$(awk '\$3>1000{c++} END{print c+0}' ${key}.UMIs.per.cell.barcode.txt)
-        Total reads in cells with > 100 reads  : \$(awk '\$3>100{c=c+$3} END{print c+0}' ${key}.UMIs.per.cell.barcode.txt\n\n" >> umi_by_sample_summary.log
+        Total reads in cells with > 100 reads  : \$(awk '\$3>100{c=c+\$3} END{print c+0}' ${key}.UMIs.per.cell.barcode.txt)\n\n" >> umi_by_sample_summary.log
 
     printf "** End process 'umi_rollup' at: \$(date)\n\n" >> umi_by_sample_summary.log
     """
@@ -1127,8 +1127,8 @@ save_logs = {params.output_dir + "/" + it - ~/_read_metrics.log/ - ~/_full.log/ 
 save_json = {params.output_dir + "/" + it - ~/_log_data.json/ + "/" + it}
 process generate_summary_log {
     cache 'lenient'
-    publishDir = [path: "${params.output_dir}/", saveAs: save_logs, pattern: "*.log", mode: 'copy']
-    publishDir = [path: "${params.output_dir}/", saveAs: save_json, pattern: "*.json", mode: 'copy']
+    publishDir path: "${params.output_dir}/", saveAs: save_logs, pattern: "*.log", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_json, pattern: "*.json", mode: 'copy'
     
     input:
         set key, file(logfile) from pipe_log
@@ -1157,9 +1157,9 @@ process generate_summary_log {
     align_multimapped=`cat \$filename | grep 'Number of reads mapped to multiple loci' |  awk -F '|' '{sum += \$2} END {print sum}'`
     align_too_short_arr=(\$(cat \$filename | grep 'unmapped: too short' | cut -d "|" -f 2 | tr '%' ' ' | awk '{\$1=\$1/100;print}'))
     align_too_short=`a=0
-    for i in \${align_too_short[@]}
+    for i in \${align_too_short_arr[@]}
     do
-        echo "\${align_too_short[\$a]} * \${align_totals[\$a]}" | bc 
+        echo "\${align_too_short_arr[\$a]} * \${align_totals[\$a]}" | bc 
         a=\$((a+1))
     done | awk '{sum += \$1} END {print sum}'`
 
@@ -1200,7 +1200,7 @@ process generate_summary_log {
     printf "%20s %20s %20s %20s %20s\n" "Process" "Starting reads" "Ending reads" "% lost" "% of total lost" >> ${key}_read_metrics.log
     printf "========================================================================================================\n" >> ${key}_read_metrics.log
     printf "%20s %20s %20s %20.2f %20.2f\n" "Trimming" \$trim_start \$trim_end \$(echo "(\$trim_start - \$trim_end)/\$trim_start * 100" | bc -l ) \$(echo "(\$trim_start - \$trim_end)/\$trim_start * 100" | bc -l ) >> ${key}_read_metrics.log
-    printf "%20s %20s %20s %20.2f %20.2f\n" "Alignment" \$align_start \$align_mapped \$(echo "(\$align_start - \$align_mapped)/\$align_start * 100" | bc -l ) $(echo "(\$align_start - \$align_mapped)/\$trim_start * 100" | bc -l ) >> ${key}_read_metrics.log
+    printf "%20s %20s %20s %20.2f %20.2f\n" "Alignment" \$align_start \$sf_start \$(echo "(\$align_start - \$sf_start)/\$align_start * 100" | bc -l ) \$(echo "(\$align_start - \$sf_start)/\$trim_start * 100" | bc -l ) >> ${key}_read_metrics.log
     printf "%20s %20s %20s %20.2f %20.2f\n" "Filtering" \$sf_start \$sf_end \$(echo "(\$sf_start - \$sf_end)/\$sf_start * 100" | bc -l ) \$(echo "(\$sf_start - \$sf_end)/\$trim_start * 100" | bc -l ) >> ${key}_read_metrics.log
     printf "%20s %20s %20s %20.2f %20.2f\n" "Deduplication" \$dup_start \$dup_end \$(echo "(\$dup_start - \$dup_end)/\$dup_start * 100" | bc -l ) \$(echo "(\$dup_start - \$dup_end)/\$trim_start * 100" | bc -l ) >> ${key}_read_metrics.log
     printf "%20s %20s %20s %20.2f %20.2f\n" "Gene assignment" \$dup_end \$assigned_end \$(echo "(\$dup_end - \$assigned_end)/\$dup_end * 100" | bc -l ) \$(echo "(\$dup_end - \$assigned_end)/\$trim_start * 100" | bc -l ) >> ${key}_read_metrics.log
