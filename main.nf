@@ -223,7 +223,7 @@ process align_reads {
     printf "    Process command: 
         STAR --runThreadN $cores_align --genomeDir \$info1 
             --readFilesIn $input_file --readFilesCommand zcat --outFileNamePrefix \$info2 
-            --outSAMtype BAM Unsorted --outSAMmultNmax 2 --outSAMstrandField intronMotif\n
+            --outSAMtype BAM Unsorted --outSAMmultNmax 1 --outSAMstrandField intronMotif\n
     Process output:\n" >> piece.log
 
     STAR \
@@ -516,7 +516,6 @@ process assign_genes {
 
     printf "    Process stats:
         Read assignments:\n\$(awk '{count[\$3]++} END {for (word in count) { printf "            %-20s %10i\\n", word, count[word]}}' \$prefix)
-        Total assigned reads:     \$(wc -l \$prefix | awk '{print \$1;}') \n\n" >> assign_genes.log
 
      printf "** End process 'assign_genes' at: \$(date)\n\n" >> assign_genes.log
     """
@@ -564,7 +563,7 @@ process umi_rollup {
     | datamash -g 1,2 count 2 \
     | gzip > "${key}.gz"
 
-     printf "** End process 'umi_rollup' at: \$(date)\n\n" >> umi_rollup.log
+     printf "\n** End process 'umi_rollup' at: \$(date)\n\n" >> umi_rollup.log
     """
 }
 
@@ -609,10 +608,10 @@ process umi_by_sample_summary {
 
 
     printf "    Process stats:
-        Total cells               : \$(wc -l ${key}.UMIs.per.cell.barcode.intronic.txt | awk '{print \$1;}')
-        Total cells > 100 reads   : \$(awk '\$3>100{c++} END{print c+0}' ${key}.UMIs.per.cell.barcode.intronic.txt)
-        Total cells > 1000 reads  : \$(awk '\$3>1000{c++} END{print c+0}' ${key}.UMIs.per.cell.barcode.intronic.txt)\n\n" >> umi_by_sample_summary.log
-
+        Total cells                            : \$(wc -l ${key}.UMIs.per.cell.barcode.txt | awk '{print \$1;}')
+        Total cells > 100 reads                : \$(awk '\$3>100{c++} END{print c+0}' ${key}.UMIs.per.cell.barcode.txt)
+        Total cells > 1000 reads               : \$(awk '\$3>1000{c++} END{print c+0}' ${key}.UMIs.per.cell.barcode.txt)
+        Total reads in cells with > 100 reads  : \$(awk '\$3>100{c=c+$3} END{print c+0}' ${key}.UMIs.per.cell.barcode.txt\n\n" >> umi_by_sample_summary.log
 
     printf "** End process 'umi_rollup' at: \$(date)\n\n" >> umi_by_sample_summary.log
     """
@@ -879,7 +878,7 @@ process umi_by_sample {
 
     printf "\n** End process 'umi_by_sample' at: \$(date)\n\n" >> umi_by_sample.log
 
-    printf "** Start processes to generate dashboards at: \$(date)\n\n" >> umi_by_sample.log
+    printf "** Start processes to generate cds, qc metrics and dashboard at: \$(date)\n\n" >> umi_by_sample.log
     """
 }
 
@@ -1124,10 +1123,13 @@ process exp_dash {
     """
 }
 
-save_logs = {params.output_dir + "/" + it - ~/_read_metrics.log/ - ~/_full.log/ + it}
+save_logs = {params.output_dir + "/" + it - ~/_read_metrics.log/ - ~/_full.log/ + "/" + it}
+save_json = {params.output_dir + "/" + it - ~/_log_data.json/ + "/" + it}
 process generate_summary_log {
     cache 'lenient'
     publishDir = [path: "${params.output_dir}/", saveAs: save_logs, pattern: "*.log", mode: 'copy']
+    publishDir = [path: "${params.output_dir}/", saveAs: save_json, pattern: "*.json", mode: 'copy']
+    
     input:
         set key, file(logfile) from pipe_log
         file exp_dash from exp_dash_out
@@ -1135,19 +1137,88 @@ process generate_summary_log {
     output:
         file("*_full.log") into full_log
         file("*_read_metrics.log") into sum_log
+        file("*log_data.json") into log_json
 
     """
     cat ${logfile} > ${key}_full.log
-    printf "\n** End processes generating dashboards at: \$(date)\n\n" >> ${key}_full.log
+    printf "\n** End processes generate cds, qc metrics and dashboard at: \$(date)\n\n" >> ${key}_full.log
     printf "***** END PIPELINE *****: \n\n" >> ${key}_full.log
+    filename=${key}_full.log
 
-    cat ${logfile} > ${key}_read_metrics.log
+    # Trimming:
+    trim_start=`cat \$filename | grep 'sequences processed in total' | awk -F ' ' '{sum += \$1} END {print sum}'`
+    trim_lost=`cat \$filename | grep 'Sequences removed because they became shorter' | awk -F ' ' '{sum += \$14} END {print sum}'`
+    trim_end=\$((\$trim_start - \$trim_lost))
 
-    printf "***** PIPELINE SUMMARY STATS *****: \n\n" >> ${key}_full.log
+    # Alignment:
+    align_start=`cat \$filename | grep 'Number of input reads' | awk -F '|' '{sum += \$2} END {print sum}'`
+    align_mapped=`cat \$filename | grep 'Uniquely mapped reads number' | awk -F '|' '{sum += \$2} END {print sum}'`
+    align_totals=(\$(cat \$filename | grep 'Number of input reads' | cut -d "|" -f 2 | awk '{print \$1}'))
+    align_multimapped=`cat \$filename | grep 'Number of reads mapped to multiple loci' |  awk -F '|' '{sum += \$2} END {print sum}'`
+    align_too_short_arr=(\$(cat \$filename | grep 'unmapped: too short' | cut -d "|" -f 2 | tr '%' ' ' | awk '{\$1=\$1/100;print}'))
+    align_too_short=`a=0
+    for i in \${align_too_short[@]}
+    do
+        echo "\${align_too_short[\$a]} * \${align_totals[\$a]}" | bc 
+        a=\$((a+1))
+    done | awk '{sum += \$1} END {print sum}'`
+
+    # Sort and Filter:
+    sf_start=`cat \$filename | grep 'sort_and_filter starting reads' | awk -F ':' '{sum += \$2} END {print sum}'`
+    sf_end=`cat \$filename | grep 'sort_and_filter ending reads' | awk -F ':' '{sum += \$2} END {print sum}'`
+
+    # Dups:
+    dup_start=`cat \$filename | grep 'remove_dups starting reads' | awk -F ':' '{sum += \$2} END {print sum}'`
+    dup_end=`cat \$filename | grep 'remove_dups ending reads' | awk -F ':' '{sum += \$2} END {print sum}'`
+
+    # Assignment:
+    assigned_exonic=`cat \$filename | grep '    exonic     ' | awk -F ' ' '{sum += \$2} END {print sum}'`
+    assigned_intronic=`cat \$filename | grep '    intronic     ' | awk -F ' ' '{sum += \$2} END {print sum}'`
+    assigned_end=\$((\$assigned_exonic + \$assigned_intronic))
+
+    # In real cells:
+    reads_in_cells=`cat \$filename | grep 'Total reads in cells with > 100 reads' | awk -F ':' '{sum += \$2} END {print sum}'`
+    
+    printf "
+        const log_data = { 
+            "alignment_start" : \$align_start,
+            "alignment_mapped" : \$align_mapped,
+            "align_multimapped" : \$align_multimapped,
+            "align_too_short" : \$align_too_short,
+            "sf_start" : \$sf_start,
+            "sf_end" : \$sf_end,
+            "dup_start" : \$dup_start,
+            "dup_end" : \$dup_end,
+            "assigned_exonic" : \$assigned_exonic,
+            "assigned_intronic" : \$assigned_intronic,
+            "reads_in_cells" : \$reads_in_cells }
+    " > ${key}_log_data.json
+
+
+    printf "***** PIPELINE READ STATS *****: \n\n" >> ${key}_read_metrics.log
+
+    printf "%20s %20s %20s %20s %20s\n" "Process" "Starting reads" "Ending reads" "% lost" "% of total lost" >> ${key}_read_metrics.log
+    printf "========================================================================================================\n" >> ${key}_read_metrics.log
+    printf "%20s %20s %20s %20.2f %20.2f\n" "Trimming" \$trim_start \$trim_end \$(echo "(\$trim_start - \$trim_end)/\$trim_start * 100" | bc -l ) \$(echo "(\$trim_start - \$trim_end)/\$trim_start * 100" | bc -l ) >> ${key}_read_metrics.log
+    printf "%20s %20s %20s %20.2f %20.2f\n" "Alignment" \$align_start \$align_mapped \$(echo "(\$align_start - \$align_mapped)/\$align_start * 100" | bc -l ) $(echo "(\$align_start - \$align_mapped)/\$trim_start * 100" | bc -l ) >> ${key}_read_metrics.log
+    printf "%20s %20s %20s %20.2f %20.2f\n" "Filtering" \$sf_start \$sf_end \$(echo "(\$sf_start - \$sf_end)/\$sf_start * 100" | bc -l ) \$(echo "(\$sf_start - \$sf_end)/\$trim_start * 100" | bc -l ) >> ${key}_read_metrics.log
+    printf "%20s %20s %20s %20.2f %20.2f\n" "Deduplication" \$dup_start \$dup_end \$(echo "(\$dup_start - \$dup_end)/\$dup_start * 100" | bc -l ) \$(echo "(\$dup_start - \$dup_end)/\$trim_start * 100" | bc -l ) >> ${key}_read_metrics.log
+    printf "%20s %20s %20s %20.2f %20.2f\n" "Gene assignment" \$dup_end \$assigned_end \$(echo "(\$dup_end - \$assigned_end)/\$dup_end * 100" | bc -l ) \$(echo "(\$dup_end - \$assigned_end)/\$trim_start * 100" | bc -l ) >> ${key}_read_metrics.log
+ 
+    printf "\nAlignment details: \n" >> ${key}_read_metrics.log
+    printf "%25s %20s %20s\n" "" "Count" "Percent"  >> ${key}_read_metrics.log
+    printf "========================================================================================================\n" >> ${key}_read_metrics.log
+    printf "%25s %20s %20s\n" "Total reads processed:" \$align_start "" >> ${key}_read_metrics.log
+    printf "%25s %20s %20.2f\n" "Reads uniquely mapped:" \$align_mapped \$(echo "(\$align_mapped)/\$align_start * 100" | bc -l ) >> ${key}_read_metrics.log
+    printf "%25s %20s %20.2f\n" "Reads multi-mapped:" \$align_multimapped \$(echo "(\$align_multimapped)/\$align_start * 100" | bc -l )  >> ${key}_read_metrics.log
+    printf "%25s %20s %20.2f\n" "Reads too short:" \$align_too_short \$(echo "(\$align_too_short)/\$align_start * 100" | bc -l ) >> ${key}_read_metrics.log
+
+ 
+    cat ${key}_read_metrics.log >> ${key}_full.log
+
     """
 
 }
-
 
 workflow.onComplete {
 	println ( workflow.success ? "Done! Saving output" : "Oops .. something went wrong" )
