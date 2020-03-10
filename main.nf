@@ -1124,11 +1124,11 @@ process exp_dash {
 }
 
 save_logs = {params.output_dir + "/" + it - ~/_read_metrics.log/ - ~/_full.log/ + "/" + it}
-save_json = {params.output_dir + "/" + it - ~/_log_data.json/ + "/" + it}
+save_json = {params.output_dir + "/" + it - ~/_log_data.js/ + "/" + it}
 process generate_summary_log {
     cache 'lenient'
     publishDir path: "${params.output_dir}/", saveAs: save_logs, pattern: "*.log", mode: 'copy'
-    publishDir path: "${params.output_dir}/", saveAs: save_json, pattern: "*.json", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_json, pattern: "*.js", mode: 'copy'
     
     input:
         set key, file(logfile) from pipe_log
@@ -1137,7 +1137,7 @@ process generate_summary_log {
     output:
         file("*_full.log") into full_log
         file("*_read_metrics.log") into sum_log
-        file("*log_data.json") into log_json
+        file("*log_data.js") into log_json
 
     """
     cat ${logfile} > ${key}_full.log
@@ -1192,7 +1192,7 @@ process generate_summary_log {
             "assigned_exonic" : \$assigned_exonic,
             "assigned_intronic" : \$assigned_intronic,
             "reads_in_cells" : \$reads_in_cells }
-    " > ${key}_log_data.json
+    " > ${key}_log_data.js
 
 
     printf "***** PIPELINE READ STATS *****: \n\n" >> ${key}_read_metrics.log
