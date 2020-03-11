@@ -29,7 +29,7 @@ if __name__ == '__main__':
         filename = args.key + "_scrublet_hist.png"
         image = Image.new(mode = "RGB", size = (250,50), color = "white")
         draw = ImageDraw.Draw(image)
-        draw.text((10,10), "Scrublet failed. This is generally \\nbecause there aren't enough cells.", fill = "black")
+        draw.text((10,10), "Scrublet failed. This is generally \nbecause there aren't enough cells.", fill = "black")
         image.save(filename)
         numpy.savetxt(args.key + "_scrublet_out.csv", all_scores, fmt="%s", delimiter=",")
     except (AttributeError):
