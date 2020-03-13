@@ -20,10 +20,13 @@ if __name__ == '__main__':
     if args.rt_barcode_file == "default":
         if args.level == "3":
             rtfile = RT3_FILE
+            fix = 3
         else:
             rtfile = RT_FILE
+            fix = 2
     else:
         rtfile = args.rt_barcode_file
+        fix = 0
     rtdict = {}
     with open(rtfile) as rt_file:
         for line in enumerate(rt_file):
@@ -47,6 +50,27 @@ if __name__ == '__main__':
             sys.stderr.write("Sample sheet error at line " + str(line_num) + ". Reference Genome '" + line[2] + "' not valid.\n")
             error_flag = 1
         return error_flag
+
+    def fix_line(line, fix):
+        orig_line = line
+        line = line.split(",")
+        if fix == 0:
+            return orig_line
+        if fix == 2:
+            p1 = line[0].split("-")[0]
+            p2 = line[0].split("-")[1]
+            p1 = p1[0:2] + "{0:0=2d}".format(int(p1[2:]))
+            p2 = p2[0:1] + "{0:0=2d}".format(int(p2[1:]))
+            line[0] = p1 + "-" + p2
+            return ",".join(line)
+        if fix == 3:
+            p1 = line[0].split("-")[0]
+            p2 = line[0].split("-")[1]
+            p1 = p1[0:1] + "{0:0=2d}".format(int(p1[1:]))
+            p2 = p2[0:1] + "{0:0=2d}".format(int(p2[1:]))
+            line[0] = p1 + "-" + p2
+            return ",".join(line)
+
     sheet = open(args.sample_sheet)
 
     # check for header
@@ -55,19 +79,21 @@ if __name__ == '__main__':
     line_num = 1
     num_cols = len(topline)
     if num_cols == 3:
-        if topline[1] =='Sample ID': # and topline[2] == 'Reference Genome':
+        if topline[1] =='Sample ID' and topline[2] == 'Reference Genome':
             sample_out = 'RT Barcode,Sample ID,Reference Genome\n'
         else:
             sample_out = 'RT Barcode,Sample ID,Reference Genome\n'
+            topline_orig = fix_line(topline_orig, fix)
             check_line(topline_orig, line_num)
             sample_out = sample_out + topline_orig
     else:
-        if topline[0] == 'RT Barcode': # and topline[1] =='Sample ID' and topline[2] == 'Reference Genome':
+        if topline[1] =='Sample ID' and topline[2] == 'Reference Genome':
             sample_out = topline_orig
         else:
             sample_out = 'RT Barcode,Sample ID,Reference Genome'
             for i in range(3, len(topline)):
                 sample_out = sample_out + ",Column" + str(i)
+            topline_orig = fix_line(topline_orig, fix)
             check_line(topline_orig, line_num)
             sample_out = sample_out + "\n" +  topline_orig
     # Check RT and Genomes against possible
@@ -75,6 +101,7 @@ if __name__ == '__main__':
 
     line_num = 1
     for line in sheet:
+        line = fix_line(line, fix)
         line_num += 1
         linesp = line.strip().split(",")
         if linesp[0] in (None, "") and linesp[1] in (None, "") and linesp[2] in (None, ""):
