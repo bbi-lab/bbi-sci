@@ -309,10 +309,10 @@ process combine_logs {
         set val(key), file(log2), file(log3), file(log4) from logs_to_combine
 
     output:
-        set val(key), file("*.log") into log_premerge
+        set val(key), file("*_pre.log") into log_premerge
 
     """
-    cat $log1 $log2 $log3 $log4 > ${key}.log
+    cat $log1 $log2 $log3 $log4 > ${key}_pre.log
 
     """
 }
@@ -338,7 +338,7 @@ process merge_bams {
         set key, file(logfile), file(bam_set) from for_merge_bams
 
     output:
-        set key, file("*.bam"), file("*.log") into sample_bams
+        set key, file("*.bam"), file("merge_bams.log") into sample_bams
 
     """
     cat ${logfile} > merge_bams.log
@@ -365,7 +365,7 @@ process remove_dups {
 
 
     output:
-        set key, file("*.bed"), file(merged_bam), file("*.log") into remove_dup_out
+        set key, file("*.bed"), file(merged_bam), file("remove_dups.log") into remove_dup_out
 
     """
     cat ${logfile} > remove_dups.log
@@ -473,7 +473,7 @@ process assign_genes {
         set key, file(input_bed), file(info), file(merged_bam), file(logfile) from assign_prepped
 
     output:
-        set key, file("*.txt"), file(input_bed), file(merged_bam), file("*.log") into assign_genes_out
+        set key, file("*.txt"), file(input_bed), file(merged_bam), file("assign_genes.log") into assign_genes_out
 
     """
     exon_index=`head -n 1 $info`
@@ -538,7 +538,7 @@ process umi_rollup {
         set key, file(gene_assignments_file), file(input_bed), file(merged_bam), file(logfile) from assign_genes_out
 
     output:
-        set key, file("*.gz"), file(gene_assignments_file), file(input_bed), file(merged_bam), file("*.log") into umi_rollup_out
+        set key, file("*.gz"), file(gene_assignments_file), file(input_bed), file(merged_bam), file("umi_rollup.log") into umi_rollup_out
 
 
     """
@@ -549,7 +549,7 @@ process umi_rollup {
     echo '    Process command:  
         awk "\$ == "exonic" || \$ == "intronic" {{
             split(\$1, arr, "|")
-            printf "%s|%s_%s_%s\t%s\\n", arr[2], arr[3], arr[4], arr[5], \$2
+            printf "%s_%s_%s\t%s\\n", arr[3], arr[4], arr[5], \$2
             }}" "$gene_assignments_file" 
         | sort -k1,1 -k2,2 -S 5G 
         | datamash -g 1,2 count 2 
@@ -557,7 +557,7 @@ process umi_rollup {
 
     awk '\$3 == "exonic" || \$3 == "intronic" {{
             split(\$1, arr, "|")
-            printf "%s|%s_%s_%s\t%s\\n", arr[2], arr[3], arr[4], arr[5], \$2
+            printf "%s_%s_%s\t%s\\n", arr[3], arr[4], arr[5], \$2
     }}' "$gene_assignments_file" \
     | sort -k1,1 -k2,2 -S 5G \
     | datamash -g 1,2 count 2 \
@@ -586,7 +586,7 @@ process umi_by_sample_summary {
         set val(key), file(umi_rollup), file(gene_assignments_file), file(input_bed), file(merged_bam), file(logfile) from umi_rollup_out  
 
     output:
-        set key, file(umi_rollup), file(gene_assignments_file), file(input_bed), file(merged_bam), file("*.log") into ubss_out
+        set key, file(umi_rollup), file(gene_assignments_file), file(input_bed), file(merged_bam), file("umi_by_sample_summary.log") into ubss_out
         set key, file("*UMIs.per.cell.barcode.txt") into umis_per_cell_barcode
         file "*UMIs.per.cell.barcode.intronic.txt" into umi_per_cell_intronic
 
@@ -613,7 +613,7 @@ process umi_by_sample_summary {
         Total cells > 1000 reads               : \$(awk '\$3>1000{c++} END{print c+0}' ${key}.UMIs.per.cell.barcode.txt)
         Total reads in cells with > 100 reads  : \$(awk '\$3>100{c=c+\$3} END{print c+0}' ${key}.UMIs.per.cell.barcode.txt)\n\n" >> umi_by_sample_summary.log
 
-    printf "** End process 'umi_rollup' at: \$(date)\n\n" >> umi_by_sample_summary.log
+    printf "** End process 'umi_by_sample_summary' at: \$(date)\n\n" >> umi_by_sample_summary.log
     """
 }
 
@@ -657,7 +657,7 @@ with open("bed_info.txt", 'w') as f:
     """
 }
 
-save_umi = {params.output_dir + "/" + it - ~/.umi_counts.matrix/ + "/umi_counts.matrix"}
+save_umi = {params.output_dir + "/" + it - ~/.umi_counts.mtx/ + "/umi_counts.mtx"}
 save_cell_anno = {params.output_dir + "/" + it - ~/.cell_annotations.txt/ + "/cell_annotations.txt"}
 save_gene_anno = {params.output_dir + "/" + it - ~/.gene_annotations.txt/ + "/gene_annotations.txt"}
 
@@ -670,7 +670,7 @@ make the number matrix
 process make_matrix {
     cache 'lenient'
     memory '15 GB'
-    publishDir path: "${params.output_dir}/", saveAs: save_umi, pattern: "*umi_counts.matrix", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_umi, pattern: "*umi_counts.mtx", mode: 'copy'
     publishDir path: "${params.output_dir}/", saveAs: save_cell_anno, pattern: "*cell_annotations.txt", mode: 'copy'
     publishDir path: "${params.output_dir}/", saveAs: save_gene_anno, pattern: "*gene_annotations.txt", mode: 'copy'
 
@@ -678,64 +678,26 @@ process make_matrix {
         set key, file(umi_rollup_file), file(gene_assignments_file), val(annotations_path), file(gene_bed), file(input_bed), file(merged_bam), file(logfile) from make_matrix_prepped
 
     output:
-        set key, file("*cell_annotations.txt"), file("*umi_counts.matrix"), file("*gene_annotations.txt"), file(gene_bed), file(input_bed), file(merged_bam), file("make_matrix.log") into mat_output
+        set key, file("*cell_annotations.txt"), file("*umi_counts.mtx"), file("*gene_annotations.txt"), file(gene_bed), file(input_bed), file(merged_bam), file("make_matrix.log") into mat_output
 
     """
     cat ${logfile} > make_matrix.log
     printf "** Start process 'make_matrix' at: \$(date)\n\n" >> make_matrix.log
 
-    echo '    Process command:  
-        output="${key}.cell_annotations.txt"
-        UMI_PER_CELL_CUTOFF=$params.umi_cutoff
-        gunzip < "$umi_rollup_file" 
-        | datamash -g 1 sum 3 
-        | tr "|" "\t" 
-        | awk "\$3 >= int( \$UMI_PER_CELL_CUTOFF ) {
-            print \$2
-        }"  - 
-        | sort -k1,1 -S 5G 
-        > "\$output"
-        gunzip < "$umi_rollup_file" 
-        | tr "|" "\t" 
-        | awk "{ if (ARGIND == 1) {
-                    gene_idx[\$1] = FNR
-                } else if (ARGIND == 2) {
-                    cell_idx[\$1] = FNR
-                } else if (\$2 in cell_idx) {
-                    printf "%d\t%d\t%d\\n", gene_idx[\$3], cell_idx[\$2], \$4
-                }
-        }" $annotations_path "\$output" - 
-        > "${key}.umi_counts.matrix"' >> make_matrix.log
-    
-    output="${key}.cell_annotations.txt"
-    UMI_PER_CELL_CUTOFF=$params.umi_cutoff
-    gunzip < "$umi_rollup_file" \
-    | datamash -g 1 sum 3 \
-    | tr '|' '\t' \
-    | awk '\$3 >= int( \$UMI_PER_CELL_CUTOFF ) {
-        print \$2
-    }'  - \
-    | sort -k1,1 -S 5G \
-    > "\$output"
-    gunzip < "$umi_rollup_file" \
-    | tr '|' '\t' \
-    | awk '{ if (ARGIND == 1) {
-                gene_idx[\$1] = FNR
-            } else if (ARGIND == 2) {
-                cell_idx[\$1] = FNR
-            } else if (\$2 in cell_idx) {
-                printf "%d\t%d\t%d\\n", gene_idx[\$3], cell_idx[\$2], \$4
-            }
-    }' $annotations_path "\$output" - \
-    > "${key}.umi_counts.matrix"
+    echo '    Process command:
+        make_matrix.py <(zcat $umi_rollup_file) --gene_annotation $annotations_path --key "$key"   
+        cat $annotations_path > "${key}.gene_annotations.txt"  ' >> make_matrix.log
+   
+    make_matrix.py <(zcat $umi_rollup_file) --gene_annotation $annotations_path --key "$key" 
     cat $annotations_path > "${key}.gene_annotations.txt"
 
-        printf "\n** End process 'make_matrix' at: \$(date)\n\n" >> make_matrix.log
+    printf "\n** End process 'make_matrix' at: \$(date)\n\n" >> make_matrix.log
     """
 
 }
 
 process make_cds {
+    cache 'lenient'
     module 'java/latest:modules:modules-init:modules-gs:gcc/8.1.0:R/3.6.1'
     memory '15 GB'
 
@@ -776,7 +738,7 @@ save_hist = {params.output_dir + "/" + it - ~/_scrublet_hist.png/ + "/" + it}
 
 process run_scrublet {
     publishDir path: "${params.output_dir}/", saveAs: save_hist, pattern: "*png", mode: 'copy'
-
+    cache 'lenient'
     module 'modules:java/latest:modules-init:modules-gs:python/3.6.4'
     memory '10 GB'
     input:
@@ -887,6 +849,7 @@ save_cell_qc = {params.output_dir + "/" + it - ~/_cell_qc.csv/ - ~/temp_fold/ + 
 save_samp_stats = {params.output_dir + "/" + it - ~/_sample_stats.csv/ + "/" + it}
 
 process reformat_scrub {
+    cache 'lenient'
     module 'java/latest:modules:modules-init:modules-gs:python/3.6.4:gcc/8.1.0:R/3.6.1'
     memory '10 GB'
     publishDir path: "${params.output_dir}/", saveAs: save_cds, pattern: "temp_fold/*cds.RDS", mode: 'copy'
@@ -960,6 +923,7 @@ save_cellqc = {params.output_dir + "/" + it - ~/_cell_qc.png/ + "/" + it}
 process generate_qc_metrics {
     module 'java/latest:modules:modules-init:modules-gs:gcc/8.1.0:R/3.6.1'
     memory '10 GB'
+    cache 'lenient'
     publishDir path: "${params.output_dir}/", saveAs: save_umap, pattern: "*UMAP.png", mode: 'copy'
     publishDir path: "${params.output_dir}/", saveAs: save_knee, pattern: "*knee_plot.png", mode: 'copy'
     publishDir path: "${params.output_dir}/", saveAs: save_cellqc, pattern: "*cell_qc.png", mode: 'copy'
@@ -974,7 +938,7 @@ process generate_qc_metrics {
 mkdir temp2
 generate_qc.R\
     $cds $umis_per_cell $key \
-    --specify_cutoff 100\
+    --specify_cutoff $params.umi_cutoff\
 """
 
 }
@@ -995,6 +959,7 @@ process zip_up_duplication {
 process calc_cell_totals {
     module 'java/latest:modules:modules-init:modules-gs'
     memory '1 GB'
+    cache 'lenient'
 
     input:
         file cell_qcs from cell_qcs.collect()
@@ -1015,6 +980,7 @@ process calc_cell_totals {
 
 process generate_dash_info {
     module 'java/latest:modules:modules-init:modules-gs:gcc/8.1.0:R/3.6.1'
+    cache 'lenient'
     memory '1 GB'
 
     input:
@@ -1099,6 +1065,7 @@ close(fileConn)
 }
 
 process exp_dash {
+    cache 'lenient'
     module 'java/latest:modules:modules-init:modules-gs:gcc/8.1.0:R/3.6.1'
     memory '1 GB'
 

@@ -16,14 +16,16 @@ args = parser$parse_args()
 
 sample_name <- args$key
 
-cds <- load_mtx_data(mat_path = args$matrix, gene_anno_path = args$gene_data, cell_anno_path = args$cell_data, umi_cutoff=100)
+cds <- load_mm_data(mat_path = args$matrix, feature_anno_path = args$gene_data, 
+                    cell_anno_path = args$cell_data, umi_cutoff=100,
+                    feature_metadata_column_names=c('gene_short_name'))
 gene_bed_path <- suppressWarnings(readLines(args$gene_bed))
 gene_bed <- read.table(gene_bed_path)
 row.names(gene_bed) <- gene_bed$V4
 names(gene_bed) <- c("chromosome", "bp1", "bp2", "id", "x", "strand")
 
 temp <- gene_bed[row.names(fData(cds)),]
-fData(cds)[,c("chromosome", "bp1", "bp2", "gene_strand")] <- temp[,c("chromosome", "bp1", "bp2", "strand")]
+fData(cds)[,c("id", "chromosome", "bp1", "bp2", "gene_strand")] <- temp[,c("id", "chromosome", "bp1", "bp2", "strand")]
 #fData(cds)$gene_biotype <- gene_bed[row.names(fData(cds)),"gene_biotype"]
 
 mt <- row.names(fData(cds)[!is.na(fData(cds)$chromosome) & (fData(cds)$chromosome %in% c("MT", "MtDNA", "Mt", "HUMAN_MT", "MOUSE_MT", "mitochondrion_genome")),])
