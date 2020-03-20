@@ -43,7 +43,7 @@ if __name__ == '__main__':
     def check_line(line, line_num, rtdict = rtdict, genomes = genomes):
         error_flag = 0
         line = line.strip().split(",")
-        if not line[0] in rtdict.keys():
+        if not line[0] in rtdict:
             sys.stderr.write("Sample sheet error at line " + str(line_num) + ". RT Barcode '" + line[0] + "' not valid.\n")
             error_flag = 1
         if not line[2] in genomes:
