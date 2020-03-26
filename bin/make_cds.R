@@ -18,7 +18,7 @@ sample_name <- args$key
 
 cds <- load_mm_data(mat_path = args$matrix, feature_anno_path = args$gene_data, 
                     cell_anno_path = args$cell_data, umi_cutoff=100,
-                    feature_metadata_column_names=c('gene_short_name'))
+                    feature_metadata_column_names=c('gene_short_name'), sep="")
 gene_bed_path <- suppressWarnings(readLines(args$gene_bed))
 gene_bed <- read.table(gene_bed_path)
 row.names(gene_bed) <- gene_bed$V4

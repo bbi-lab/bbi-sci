@@ -52,8 +52,6 @@ if (!params.output_dir || !params.sample_sheet || !params.level || !params.demux
 star_file = file(params.star_file)
 gene_file = file(params.gene_file)
 
-//    printf "Git Version: $workflow.revision, $workflow.commitId\n" >> start.log
-
 process check_sample_sheet {
     cache 'lenient'
     module 'modules:java/latest:modules-init:modules-gs:python/3.6.4'
@@ -68,21 +66,6 @@ process check_sample_sheet {
 
     printf "BBI bbi-sci Pipeline Log\n\n" > start.log
     printf "Run started at: \$(date)\n\n" >> start.log
-    printf "Command:\n$workflow.commandLine\n\n" >> start.log
-    printf "***** PARAMETERS *****: \n\n" >> start.log
-    printf "    params.run_dir:      $params.run_dir\n" >> start.log
-    printf "    params.output_dir:   $params.output_dir\n" >> start.log
-    printf "    params.sample_sheet: $params.sample_sheet\n" >> start.log
-    printf "    params.p7_rows:      $params.p7_rows\n" >> start.log
-    printf "    params.p5_cols:      $params.p5_cols\n" >> start.log
-    printf "    params.demux_out:    $params.demux_out\n" >> start.log
-    printf "    params.level:        $params.level\n" >> start.log
-    printf "    params.max_cores:    $params.max_cores\n" >> start.log
-    printf "    params.samples:      $params.samples\n" >> start.log
-    printf "    params.star_file:    $params.star_file\n" >> start.log
-    printf "    params.gene_file:    $params.gene_file\n" >> start.log
-    printf "    params.umi_cutoff:   $params.umi_cutoff\n" >> start.log
-    printf "    params.align_mem:    $params.align_mem\n\n" >> start.log
 
     printf "***** BEGIN PIPELINE *****: \n\n" >> start.log
     printf "** Start process 'check_sample_sheet' at: \$(date)\n\n" >> start.log
@@ -1107,7 +1090,25 @@ process generate_summary_log {
         file("*log_data.js") into log_json
 
     """
-    cat ${logfile} > ${key}_full.log
+    head -n 2 ${logfile} > ${key}_full.log
+    printf "Git Version: $workflow.revision, $workflow.commitId\n" >> ${key}_full.log
+    printf "Command:\n$workflow.commandLine\n\n" >> ${key}_full.log
+    printf "***** PARAMETERS *****: \n\n" >> ${key}_full.log
+    printf "    params.run_dir:      $params.run_dir\n" >> ${key}_full.log
+    printf "    params.output_dir:   $params.output_dir\n" >> ${key}_full.log
+    printf "    params.sample_sheet: $params.sample_sheet\n" >> ${key}_full.log
+    printf "    params.p7_rows:      $params.p7_rows\n" >> ${key}_full.log
+    printf "    params.p5_cols:      $params.p5_cols\n" >> ${key}_full.log
+    printf "    params.demux_out:    $params.demux_out\n" >> ${key}_full.log
+    printf "    params.level:        $params.level\n" >> ${key}_full.log
+    printf "    params.max_cores:    $params.max_cores\n" >> ${key}_full.log
+    printf "    params.samples:      $params.samples\n" >> ${key}_full.log
+    printf "    params.star_file:    $params.star_file\n" >> ${key}_full.log
+    printf "    params.gene_file:    $params.gene_file\n" >> ${key}_full.log
+    printf "    params.umi_cutoff:   $params.umi_cutoff\n" >> ${key}_full.log
+    printf "    params.align_mem:    $params.align_mem\n\n" >> ${key}_full.log
+
+    tail -n +2 ${logfile} >> ${key}_full.log
     printf "\n** End processes generate cds, qc metrics and dashboard at: \$(date)\n\n" >> ${key}_full.log
     printf "***** END PIPELINE *****: \n\n" >> ${key}_full.log
     filename=${key}_full.log
