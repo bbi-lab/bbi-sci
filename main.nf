@@ -7,6 +7,9 @@ params.gene_file = "$baseDir/bin/gene_file.txt"
 params.umi_cutoff = 100
 params.align_mem = 80
 params.rt_barcode_file="default"
+process.maxForks = 20
+process.queue = "trapnell-short.q" 
+params.max_cores = 16
 
 //print usage
 if (params.help) {
