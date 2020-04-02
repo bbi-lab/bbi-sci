@@ -2,6 +2,7 @@
 from __future__ import print_function
 import argparse
 import sys
+import pysam
 from copy import copy
 
 BASES = ['A', 'T', 'G', 'C', 'N']
@@ -21,26 +22,23 @@ def generate_1bp_mismatches(sequence):
 
 if __name__ == '__main__':
 
-    parser = argparse.ArgumentParser(description='Script to deduplicate sciRNA data given stdin of sorted BAM file. BAM printed to STDOUT. Tolerates 1bp mismatches in UMIs.')
-    parser.add_argument('--bam', nargs='?', type=argparse.FileType('r'), default=sys.stdin, required=True, help='Text piped in from stdin for R1.') 
+    parser = argparse.ArgumentParser(description='Script to deduplicate sciRNA data given sorted BAM file. BAM printed to STDOUT. Tolerates 1bp mismatches in UMIs.')
+    parser.add_argument('--bam', help='Input BAM file to be deduplicated.', required=True) 
+    parser.add_argument('--output_bam', help='Output BAM file, deduplicated.', required=True)
     args = parser.parse_args()
 
     cell_umis_at_position = set() # (cell, umi)
     current_position = None
 
-    for line_number,line in enumerate(args.bam):
-        if line.startswith('@'):
-            print(line, end='')
-            continue
+    readsin = pysam.AlignmentFile(args.bam, "rb")
+    readsout = pysam.AlignmentFile(args.output_bam, "wb", template=readsin)
 
-        entries = line.strip().split('\t')
-        position = entries[3]
-
+    for read_number,read in enumerate(readsin):
+        position = read.reference_start
         if not current_position or current_position != position:
             cell_umis_at_position = set()
-            current_position = position
-        
-        read_name_parts = entries[0].split('|')
+            current_position = position    
+        read_name_parts = read.query_name.split('|')
         cell_barcode = f'{read_name_parts[2]}_{read_name_parts[3]}_{read_name_parts[4]}'
         umi = read_name_parts[5]
 
@@ -55,4 +53,4 @@ if __name__ == '__main__':
             for mismatch in generate_1bp_mismatches(umi):
                 cell_umis_at_position.add((cell_barcode, mismatch))
             
-            print(line, end='')
+            readsout.write(read)

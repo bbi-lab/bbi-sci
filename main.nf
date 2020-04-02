@@ -8,6 +8,8 @@ params.umi_cutoff = 100
 params.align_mem = 80
 params.rt_barcode_file="default"
 params.max_cores = 16
+params.hash_list = false
+params.max_wells_per_sample = 20
 
 //print usage
 if (params.help) {
@@ -40,6 +42,8 @@ if (params.help) {
     log.info '    params.gene_file = PATH/TO/FILE            File with the genome to gene model maps, similar to the one included with the package.'
     log.info '    params.umi_cutoff = 100                    The umi cutoff to be called a cell in matrix output.'
     log.info '    params.align_mem = 80                      Gigs of memory to use for alignment. Default is 80.'
+    log.info '    params.hash_list = false                   Path to a tab-delimited file with at least two columns, first the hash name and second the hash barcode sequence. Default is false to indicate no hashing.'
+    log.info '    params.max_wells_per_sample = 20           The maximum number of wells per sample - if a sample is in more wells, the fastqs will be split then reassembled for efficiency.'
     log.info ''
     log.info 'Issues? Contact hpliner@uw.edu'
     exit 1
@@ -76,7 +80,7 @@ process check_sample_sheet {
         check_sample_sheet.py --sample_sheet $params.sample_sheet 
             --star_file $star_file --level $params.level\n\n" >> start.log
 
-    check_sample_sheet.py --sample_sheet $params.sample_sheet --star_file $star_file --level $params.level --rt_barcode_file $params.rt_barcode_file
+    check_sample_sheet.py --sample_sheet $params.sample_sheet --star_file $star_file --level $params.level --rt_barcode_file $params.rt_barcode_file --max_wells_per_samp $params.max_wells_per_sample
 
     printf "** End process 'check_sample_sheet' at: \$(date)\n\n" >> start.log
     cp start.log start.txt
@@ -96,7 +100,8 @@ process trim_fastqs {
 
     output:
         file "trim_out" into trim_output
-        set file("trim_out/*.fq.gz"), val("${input_fastq.baseName - ~/.fastq/}"), file('*.log'), file('*trim.txt') into trimmed_fastqs
+        set file("trim_out/*.fq.gz"), val("${input_fastq.baseName - ~/.fastq/}"), file('trim.log'), file('*trim.txt') into trimmed_fastqs
+        file input_fastq into fastqs_out
 
     when:
 	!((input_fastq.name - ~/-L00\d.fastq.gz/) in "Undetermined") && (!params.samples || ((input_fastq.name - ~/-L00\d.fastq.gz/) in params.samples) || ((input_fastq.name  - ~/-L00\d.fastq.gz/) in params.samples.collect{"$it".replaceAll(/\s/, ".").replaceAll(/_/, ".").replaceAll(/-/, ".").replaceAll(/\\//, ".")}))
@@ -126,6 +131,46 @@ process trim_fastqs {
     cat piece.log >> trim.log
     """
 }
+
+fastqs_out
+    .map { file ->
+        def key = file.name.toString().split(/-L[0-9]{3}/)[0].split(/\.fq.part/)[0]
+        return tuple(key, file)
+    }
+    .groupTuple()
+    .set { for_hash }
+
+save_hash_cell = {params.output_dir + "/" + it - ~/.hashumis_cells.txt/ + "/" + it}
+save_hash_hash = {params.output_dir + "/" + it - ~/.hashumis_hashes.txt/ + "/" + it}
+save_hash_mtx = {params.output_dir + "/" + it - ~/.hashumis.mtx/ + "/" + it}
+
+
+process process_hashes {
+    cache 'lenient'
+    memory '12G'
+    module 'java/latest:modules:modules-init:modules-gs:python/3.6.4'
+    publishDir path: "${params.output_dir}/", saveAs: save_hash_cell, pattern: "*hashumis_cells.txt", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_hash_hash, pattern: "*hashumis_hashes.txt", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_hash_mtx, pattern: "*.mtx", mode: 'copy'
+
+    input:
+        set key, file(fqs) from for_hash
+
+    output:
+        file("*hash.log") into hash_logs
+        set file("*mtx"), file("*hashumis_cells.txt"), file("*hashumis_hashes.txt") into hash_mats
+
+    when:
+        params.hash_list != false
+
+    """
+     process_hashes.py --hash_sheet $params.hash_list \
+         --fastq <(zcat $fqs) --key $key 
+
+    """
+
+}
+
 
 if (params.max_cores < 8) {
     cores_align = params.max_cores
@@ -192,7 +237,7 @@ process align_reads {
 
     output:
         file "align_out" into align_output
-        set file("align_out/*Aligned.out.bam"), val(orig_name), file('*.log'), file(log_piece2), file("*align.txt") into aligned_bams
+        set file("align_out/*Aligned.out.bam"), val(orig_name), file('align.log'), file(log_piece2), file("*align.txt") into aligned_bams
 
     """
     cat ${logfile} > align.log
@@ -209,7 +254,7 @@ process align_reads {
             --readFilesIn $input_file --readFilesCommand zcat --outFileNamePrefix \$info2 
             --outSAMtype BAM Unsorted --outSAMmultNmax 1 --outSAMstrandField intronMotif\n
     Process output:\n" >> piece.log
-
+   
     STAR \
         --runThreadN $cores_align \
         --genomeDir \$info1 \
@@ -249,11 +294,11 @@ process sort_and_filter {
     
     output:
         file "*.bam" into sorted_bams
-        file logfile into bam_logs
+        file "*_sf.log" into bam_logs
         set val(key), file(log_piece2), file(log_piece3), file("*_sf.txt") into log_pieces
 
     script:
-    key = orig_name.split(/-L[0-9]{3}/)[0]
+    key = orig_name.split(/-L[0-9]{3}/)[0].split(/\.fq.part/)[0]
 
     """
     printf "** Start process 'sort_and_filter' for $aligned_bam at: \$(date)\n\n" > ${orig_name}_piece.log
@@ -273,8 +318,8 @@ process sort_and_filter {
     printf "** End process 'sort_and_filter' at: \$(date)\n\n" >> ${orig_name}_piece.log
 
     cp ${orig_name}_piece.log ${orig_name}_sf.txt
-    cat ${logfile} > ${orig_name}.log
-    cat ${orig_name}_piece.log >> ${orig_name}.log
+    cat ${logfile} > ${orig_name}_sf.log
+    cat ${orig_name}_piece.log >> ${orig_name}_sf.log
 
     """
 }
@@ -303,7 +348,7 @@ process combine_logs {
 
 sorted_bams
     .map { file ->
-        def key = file.name.toString().split(/-L[0-9]{3}/)[0]
+        def key = file.name.toString().split(/-L[0-9]{3}/)[0].split(/\.fq.part/)[0]
         return tuple(key, file)
     }
     .groupTuple()
@@ -368,10 +413,9 @@ process remove_dups {
 
     export LC_ALL=C
 
-    samtools view -h "$merged_bam" \
-            | rmdup.py --bam - \
-            | samtools view -bh \
-            | bedtools bamtobed -i - -split \
+    rmdup.py --bam $merged_bam --output_bam out.bam
+
+    bedtools bamtobed -i out.bam -split \
             | sort -k1,1 -k2,2n -k3,3n -S 5G \
             > "${key}.bed"
 
@@ -410,7 +454,7 @@ def quick_parse(file_path):
         yield entries_dict
 lookup = {}
 for rt_well in quick_parse("$sample_sheet_file2"):
-    lookup[rt_well['Sample ID'].replace('(', '.').replace(')', '.').replace(' ', '.').replace('-', '.').replace('_', '.').replace('/', '.')] = rt_well['Reference Genome']
+    lookup[rt_well['Sample ID'].replace('(', '.').replace(')', '.').replace(' ', '.').replace('-', '.').replace('_', '.').replace('/', '.').split(".fq.part")[0]] = rt_well['Reference Genome']
 GENE_MODELS = {}
 with open("$gene_file", 'r') as f:
     for line in f:
@@ -626,7 +670,7 @@ def quick_parse(file_path):
         yield entries_dict
 lookup = {}
 for rt_well in quick_parse("$sample_sheet_file3"):
-    lookup[rt_well['Sample ID'].replace('(', '.').replace(')', '.').replace(' ', '.').replace('-', '.').replace('_', '.').replace('/', '.')] = rt_well['Reference Genome']
+    lookup[rt_well['Sample ID'].replace('(', '.').replace(')', '.').replace(' ', '.').replace('-', '.').replace('_', '.').replace('/', '.').split(".fq.part")[0]] = rt_well['Reference Genome']
 GENE_MODELS = {}
 with open("$gene_file", 'r') as f:
     for line in f:
@@ -1092,22 +1136,25 @@ process generate_summary_log {
 
     """
     head -n 2 ${logfile} > ${key}_full.log
-    printf "Git Version: $workflow.revision, $workflow.commitId\n" >> ${key}_full.log
+    printf "Git Version, Commit ID, Session ID: $workflow.revision, $workflow.commitId, $workflow.sessionId\n" >> ${key}_full.log
     printf "Command:\n$workflow.commandLine\n\n" >> ${key}_full.log
     printf "***** PARAMETERS *****: \n\n" >> ${key}_full.log
-    printf "    params.run_dir:      $params.run_dir\n" >> ${key}_full.log
-    printf "    params.output_dir:   $params.output_dir\n" >> ${key}_full.log
-    printf "    params.sample_sheet: $params.sample_sheet\n" >> ${key}_full.log
-    printf "    params.p7_rows:      $params.p7_rows\n" >> ${key}_full.log
-    printf "    params.p5_cols:      $params.p5_cols\n" >> ${key}_full.log
-    printf "    params.demux_out:    $params.demux_out\n" >> ${key}_full.log
-    printf "    params.level:        $params.level\n" >> ${key}_full.log
-    printf "    params.max_cores:    $params.max_cores\n" >> ${key}_full.log
-    printf "    params.samples:      $params.samples\n" >> ${key}_full.log
-    printf "    params.star_file:    $params.star_file\n" >> ${key}_full.log
-    printf "    params.gene_file:    $params.gene_file\n" >> ${key}_full.log
-    printf "    params.umi_cutoff:   $params.umi_cutoff\n" >> ${key}_full.log
-    printf "    params.align_mem:    $params.align_mem\n\n" >> ${key}_full.log
+    printf "    params.run_dir:               $params.run_dir\n" >> ${key}_full.log
+    printf "    params.output_dir:            $params.output_dir\n" >> ${key}_full.log
+    printf "    params.sample_sheet:          $params.sample_sheet\n" >> ${key}_full.log
+    printf "    params.p7_rows:               $params.p7_rows\n" >> ${key}_full.log
+    printf "    params.p5_cols:               $params.p5_cols\n" >> ${key}_full.log
+    printf "    params.demux_out:             $params.demux_out\n" >> ${key}_full.log
+    printf "    params.level:                 $params.level\n" >> ${key}_full.log
+    printf "    params.max_cores:             $params.max_cores\n" >> ${key}_full.log
+    printf "    params.samples:               $params.samples\n" >> ${key}_full.log
+    printf "    params.star_file:             $params.star_file\n" >> ${key}_full.log
+    printf "    params.gene_file:             $params.gene_file\n" >> ${key}_full.log
+    printf "    params.umi_cutoff:            $params.umi_cutoff\n" >> ${key}_full.log
+    printf "    params.align_mem:             $params.align_mem\n\n" >> ${key}_full.log
+    printf "    params.rt_barcode_file:       $params.rt_barcode_file\n\n" >> ${key}_full.log
+    printf "    params.hash_list:             $params.hash_list\n\n" >> ${key}_full.log
+    printf "    params.max_wells_per_sample:  $params.max_wells_per_sample\n\n" >> ${key}_full.log
 
     tail -n +2 ${logfile} >> ${key}_full.log
     printf "\n** End processes generate cds, qc metrics and dashboard at: \$(date)\n\n" >> ${key}_full.log
