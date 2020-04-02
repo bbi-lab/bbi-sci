@@ -7,6 +7,7 @@ params.gene_file = "$baseDir/bin/gene_file.txt"
 params.umi_cutoff = 100
 params.align_mem = 80
 params.rt_barcode_file="default"
+params.max_cores = 16
 
 //print usage
 if (params.help) {
