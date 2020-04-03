@@ -40,12 +40,13 @@ module load drmaa/latest
 module load git/latest
 ```
 
-After loading the above modules, you must install the following python package:
+After loading the above modules, you must install the following python packages:
 
 ```
 pip install --user drmaa
 pip install --user biopython
 pip install --user fmt
+pip install --user pysam
 
 git clone https://github.com/andrewhill157/barcodeutils.git
 cd barcodeutils
