@@ -27,9 +27,9 @@ if __name__ == '__main__':
         all_scores = numpy.vstack((temp, temp))
         all_scores = numpy.transpose(all_scores)
         filename = args.key + "_scrublet_hist.png"
-        image = Image.new(mode = "RGB", size = (250,50), color = "white")
+        image = Image.new(mode = "RGB", size = (800,300), color = "white")
         draw = ImageDraw.Draw(image)
-        draw.text((10,10), "Scrublet failed. This is generally \nbecause there aren't enough cells.", fill = "black")
+        draw.text((120,140), "Scrublet failed. This is generally because there aren't enough cells with sufficient reads.", fill = "black")
         image.save(filename)
         numpy.savetxt(args.key + "_scrublet_out.csv", all_scores, fmt="%s", delimiter=",")
     except (AttributeError):
