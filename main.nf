@@ -5,7 +5,6 @@ params.samples = false
 params.star_file = "$baseDir/bin/star_file.txt"
 params.gene_file = "$baseDir/bin/gene_file.txt"
 params.umi_cutoff = 100
-params.align_mem = 80
 params.rt_barcode_file="default"
 params.max_cores = 16
 params.hash_list = false
@@ -41,7 +40,6 @@ if (params.help) {
     log.info '    params.star_file = PATH/TO/FILE            File with the genome to star maps, similar to the one included with the package.'
     log.info '    params.gene_file = PATH/TO/FILE            File with the genome to gene model maps, similar to the one included with the package.'
     log.info '    params.umi_cutoff = 100                    The umi cutoff to be called a cell in matrix output.'
-    log.info '    params.align_mem = 80                      Gigs of memory to use for alignment. Default is 80.'
     log.info '    params.hash_list = false                   Path to a tab-delimited file with at least two columns, first the hash name and second the hash barcode sequence. Default is false to indicate no hashing.'
     log.info '    params.max_wells_per_sample = 20           The maximum number of wells per sample - if a sample is in more wells, the fastqs will be split then reassembled for efficiency.'
     log.info ''
@@ -68,7 +66,6 @@ process check_sample_sheet {
         file 'start.txt' into log_piece1
 
     """
-
     printf "BBI bbi-sci Pipeline Log\n\n" > start.log
     printf "Run started at: \$(date)\n\n" >> start.log
 
@@ -85,9 +82,21 @@ process check_sample_sheet {
     printf "** End process 'check_sample_sheet' at: \$(date)\n\n" >> start.log
     cp start.log start.txt
     """
+
 }
 
 good_sample_sheet.into { sample_sheet_file1; sample_sheet_file2; sample_sheet_file3 }
+
+samp_file = file(params.sample_sheet)
+def samp_list = []
+for (line in samp_file.readLines()) {
+  samp_list.add(line.split(",")[1])
+}
+samp_list = samp_list.collect{"$it".replaceAll(/\s/, ".").replaceAll(/_/, ".").replaceAll(/-/, ".").replaceAll(/\\//, ".")}
+samp_list.removeElement("Sample.ID")
+if (params.samples != false) {
+  samp_list.intersect(params.samples.collect{"$it".replaceAll(/\s/, ".").replaceAll(/_/, ".").replaceAll(/-/, ".").replaceAll(/\\//, ".")})
+}
 
 process trim_fastqs {
     cache 'lenient'
@@ -104,7 +113,7 @@ process trim_fastqs {
         file input_fastq into fastqs_out
 
     when:
-	!((input_fastq.name - ~/-L00\d.fastq.gz/) in "Undetermined") && (!params.samples || ((input_fastq.name - ~/-L00\d.fastq.gz/) in params.samples) || ((input_fastq.name  - ~/-L00\d.fastq.gz/) in params.samples.collect{"$it".replaceAll(/\s/, ".").replaceAll(/_/, ".").replaceAll(/-/, ".").replaceAll(/\\//, ".")}))
+	!((input_fastq.name.split(/-L[0-9]{3}/)[0].split(/\.fq.part/)[0]) in "Undetermined") && ((input_fastq.name.split(/-L[0-9]{3}/)[0].split(/\.fq.part/)[0]) in samp_list)
 
     """
     cat ${logfile} > trim.log
@@ -125,7 +134,7 @@ process trim_fastqs {
         --three_prime_clip_R1 1 \
         --gzip \
         -o ./trim_out/
-    cat trim_out/*trimming_report.txt | sed '/Overview of/,+102 d' >> piece.log
+    cat trim_out/*trimming_report.txt | sed '/Overview of/,+RUN d' >> piece.log
     printf "** End process 'trim_fastqs' at: \$(date)\n\n" >> piece.log
     cp piece.log ${input_fastq.baseName - ~/.fastq/}_trim.txt
     cat piece.log >> trim.log
@@ -381,53 +390,7 @@ process merge_bams {
 
     printf "** End process 'merge_bams' at: \$(date)\n\n" >> merge_bams.log
     """
-
 }
-
-process remove_dups {
-    cache 'lenient'
-    memory '20 GB'
-    module 'java/latest:modules:modules-init:modules-gs:samtools/1.4:bedtools/2.26.0:python/3.6.4:coreutils/8.24'
-
-    input:
-        set key, file(merged_bam), file(logfile) from sample_bams
-
-
-    output:
-        set key, file("*.bed"), file(merged_bam), file("remove_dups.log") into remove_dup_out
-
-    """
-    cat ${logfile} > remove_dups.log
-    printf "** Start process 'remove_dups' at: \$(date)\n\n" >> remove_dups.log
-    printf "    Process versions: 
-        \$(bedtools --version)
-        \$(samtools --version | tr '\n' ' ')
-        \$(python --version)\n\n" >> remove_dups.log
-    printf "    Process command:     
-        samtools view -h "$merged_bam" 
-            | rmdup.py --bam - 
-            | samtools view -bh 
-            | bedtools bamtobed -i - -split 
-            | sort -k1,1 -k2,2n -k3,3n -S 5G 
-            > "${key}.bed"\n\n" >> remove_dups.log
-
-    export LC_ALL=C
-
-    rmdup.py --bam $merged_bam --output_bam out.bam
-
-    bedtools bamtobed -i out.bam -split \
-            | sort -k1,1 -k2,2n -k3,3n -S 5G \
-            > "${key}.bed"
-
-    printf "    Process stats:
-        remove_dups starting reads: \$(samtools view -c $merged_bam)
-        remove_dups ending reads  : \$(wc -l ${key}.bed | awk '{print \$1;}')\n\n" >> remove_dups.log
-
-    printf "** End process 'remove_dups' at: \$(date)\n\n" >> remove_dups.log
-    """
-}
-
-remove_dup_out.into { for_prep_assign; for_umi_by_sample }
 
 process prep_assign {
     module 'java/latest:modules:modules-init:modules-gs:python/3.6.4'
@@ -435,10 +398,10 @@ process prep_assign {
 
     input:
         file sample_sheet_file2
-        set key, file(sample_bed), file(merged_bam), file(logfile) from for_prep_assign
+        set key, file(merged_bam), file(logfile) from sample_bams
 
     output:
-        set key, file(sample_bed), file('info.txt'), file(merged_bam), file(logfile) into assign_prepped
+        set key, file('info.txt'), file(merged_bam), file(logfile) into assign_prepped
 
     """
 #!/usr/bin/env python
@@ -472,6 +435,50 @@ f.close()
     """
 }
 
+
+process split_bam {
+    cache 'lenient'
+    memory '1 GB'
+    module 'java/latest:modules:modules-init:modules-gs:samtools/1.4:bamtools/2.2.3:bedtools/2.26.0:python/3.6.4'
+
+    input:
+        set key, file(assign_info), file(input_bam), file(logfile) from assign_prepped
+
+    output:
+        set key, file("split_bams/*.bam"), file(assign_info) into split_bams mode flatten
+        set key, file(input_bam), file("remove_dups.log") into bam_and_log
+
+    """
+    cat ${logfile} > remove_dups.log
+    printf "** Start processes 'remove duplicates' at: \$(date)\n\n" >> remove_dups.log
+    printf "    Process versions:
+        \$(bedtools --version)
+        \$(samtools --version | tr '\n' ' ')
+        \$(bamtools --version | grep bamtools)
+        \$(python --version)\n\n" >> remove_dups.log
+
+    printf "    Process command:
+        mkdir split_bams
+        bamtools split -in $input_bam -reference -stub split_bams/split
+        rmdup.py --bam input_bam --output_bam out.bam
+
+        bedtools bamtobed -i out.bam -split \
+                | sort -k1,1 -k2,2n -k3,3n -S 5G \
+                > out.bed
+
+        cat out_beds > ${key}.bed\n\n" >> remove_dups.log 
+
+
+    printf "    Process stats:
+        remove_dups starting reads: \$(samtools view -c $input_bam)" >> remove_dups.log
+
+    mkdir split_bams
+    bamtools split -in $input_bam -reference -stub split_bams/split
+
+    """
+
+}
+
 /**
 Assign genes:
 1. First use bedtools map to map the dedupped bed file to all exons with options:
@@ -492,44 +499,30 @@ Assign genes:
 4. Run assign-reads-to-genes.py to deal with exon v intron
 **/
 
-process assign_genes {
+process remove_dups_assign_genes {
     cache 'lenient'
-    memory '15 GB'
-    module 'java/latest:modules:modules-init:modules-gs:bedtools/2.26.0:coreutils/8.24'
+    memory '3 GB'
+    module 'java/latest:modules:modules-init:modules-gs:bedtools/2.26.0:python/3.6.4:coreutils/8.24'
 
     input:
-        set key, file(input_bed), file(info), file(merged_bam), file(logfile) from assign_prepped
+        set key, file(in_bam), file(info) from split_bams
 
     output:
-        set key, file("*.txt"), file(input_bed), file(merged_bam), file("assign_genes.log") into assign_genes_out
+        set key, file("*.bed"), file("*.txt") into remove_dup_part_out
 
     """
+    rmdup.py --bam $in_bam --output_bam out.bam
+
+    bedtools bamtobed -i out.bam -split \
+            | sort -k1,1 -k2,2n -k3,3n -S 5G \
+            > "${in_bam}.bed"
+
     exon_index=`head -n 1 $info`
     gene_index=`head -2 $info | tail -1`
     prefix=`head -3 $info | tail -1`
 
-    cat ${logfile} > assign_genes.log
-    printf "** Start process 'assign_genes' at: \$(date)\n\n" >> assign_genes.log
-    printf "    Process versions: 
-        \$(bedtools --version)\n        " >> assign_genes.log
-    python --version &>> assign_genes.log
-    printf "\n\n    Process command: 
-        bedtools map 
-                -a '$input_bed' 
-                -b \$exon_index 
-                -nonamecheck -s -f 0.95 -c 7 -o distinct -delim '|' 
-            | bedtools map 
-                -a - -b \$gene_index 
-                -nonamecheck -s -f 0.95 -c 4 -o distinct -delim '|' 
-            | sort -k4,4 -k2,2n -k3,3n -S 5G
-            | datamash 
-                 -g 4 first 1 first 2 last 3 first 5 first 6 collapse 7 collapse 8 
-            | assign-reads-to-genes.py \$gene_index
-            > '\$prefix'
-            if [[ ! -s \$prefix ]]; then echo 'File is empty'; exit 125; fi\n\n" >> assign_genes.log
-
     bedtools map \
-        -a "$input_bed" \
+        -a "${in_bam}.bed" \
         -b \$exon_index \
         -nonamecheck -s -f 0.95 -c 7 -o distinct -delim '|' \
     | bedtools map \
@@ -539,13 +532,46 @@ process assign_genes {
     | datamash \
         -g 4 first 1 first 2 last 3 first 5 first 6 collapse 7 collapse 8 \
     | assign-reads-to-genes.py \$gene_index \
-    > "\$prefix"
-    if [[ ! -s \$prefix ]]; then echo "File is empty"; exit 125; fi
+    | awk '\$3 == "exonic" || \$3 == "intronic" {{
+            split(\$1, arr, "|")
+            printf "%s_%s_%s\t%s\t%s\\n", arr[3], arr[4], arr[5], \$2, \$3
+    }}' \
+    | sort -k2,2 -k1,1 -S 5G > "${in_bam}.txt"
+
+    """
+
+}
+
+
+remove_dup_part_out
+    .groupTuple()
+    .join(bam_and_log)
+    .set { for_cat_dups }
+
+process cat_dups {
+    cache 'lenient'
+    memory '1 GB'
+    module 'java/latest:modules:modules-init:modules-gs'
+
+    input:
+        set key, file(in_bed), file(in_assign), file(merged_bam), file(logfile) from for_cat_dups
+
+    output:
+        set key, file("*.bed"), file("*_cd.txt"), file(merged_bam), file("cat_dups.log") into assign_genes_out
+	
+    """
+    cat ${logfile} > cat_dups.log
+
+    cat $in_bed > "${key}.bed"
+    sort -m -k2,2 -k1,1 $in_assign > "${key}_cd.txt"
+
+    printf "\n        remove_dups ending reads  : \$(wc -l ${key}.bed | awk '{print \$1;}')\n\n" >> cat_dups.log
 
     printf "    Process stats:
-        Read assignments:\n\$(awk '{count[\$3]++} END {for (word in count) { printf "            %-20s %10i\\n", word, count[word]}}' \$prefix)\n\n" >> assign_genes.log
+        Read assignments:\n\$(awk '{count[\$3]++} END {for (word in count) { printf "            %-20s %10i\\n", word, count[word]}}' ${key}_cd.txt)\n\n" >> cat_dups.log
 
-     printf "** End process 'assign_genes' at: \$(date)\n\n" >> assign_genes.log
+    printf "** End processes 'remove duplicates, assign_genes' at: \$(date)\n\n" >> cat_dups.log
+    
     """
 
 }
@@ -559,11 +585,11 @@ count instances of the gene for each read
 
 process umi_rollup {
     cache 'lenient'
-    memory '8 GB'
+    memory '1 GB'
     module 'java/latest:modules:modules-init:modules-gs:coreutils/8.24'
 
     input:
-        set key, file(gene_assignments_file), file(input_bed), file(merged_bam), file(logfile) from assign_genes_out
+        set key, file(input_bed), file(gene_assignments_file), file(merged_bam), file(logfile) from assign_genes_out
 
     output:
         set key, file("*.gz"), file(gene_assignments_file), file(input_bed), file(merged_bam), file("umi_rollup.log") into umi_rollup_out
@@ -583,12 +609,7 @@ process umi_rollup {
         | datamash -g 1,2 count 2 
         | gzip > \"${key}.gz\"'      >> umi_rollup.log
 
-    awk '\$3 == "exonic" || \$3 == "intronic" {{
-            split(\$1, arr, "|")
-            printf "%s_%s_%s\t%s\\n", arr[3], arr[4], arr[5], \$2
-    }}' "$gene_assignments_file" \
-    | sort -k1,1 -k2,2 -S 5G \
-    | datamash -g 1,2 count 2 \
+    datamash -g 1,2 count 2 <"$gene_assignments_file" \
     | gzip > "${key}.gz"
 
      printf "\n** End process 'umi_rollup' at: \$(date)\n\n" >> umi_rollup.log
@@ -614,7 +635,7 @@ process umi_by_sample_summary {
         set val(key), file(umi_rollup), file(gene_assignments_file), file(input_bed), file(merged_bam), file(logfile) from umi_rollup_out  
 
     output:
-        set key, file(umi_rollup), file(gene_assignments_file), file(input_bed), file(merged_bam), file("umi_by_sample_summary.log") into ubss_out
+        set key, file(umi_rollup), file(input_bed), file(merged_bam), file("umi_by_sample_summary.log") into ubss_out
         set key, file("*UMIs.per.cell.barcode.txt") into umis_per_cell_barcode
         file "*UMIs.per.cell.barcode.intronic.txt" into umi_per_cell_intronic
 
@@ -651,10 +672,10 @@ process prep_make_matrix {
 
     input:
         file sample_sheet_file3
-        set key, file(umi_rollup), file(gene_assignments_file), file(input_bed), file(merged_bam), file(logfile) from ubss_out
+        set key, file(umi_rollup), file(input_bed), file(merged_bam), file(logfile) from ubss_out
 
     output:
-        set key, file(umi_rollup), file(gene_assignments_file), stdout, file("*_info.txt"), file(input_bed), file(merged_bam), file(logfile) into make_matrix_prepped
+        set key, file(umi_rollup), stdout, file("*_info.txt"), file(input_bed), file(merged_bam), file(logfile) into make_matrix_prepped
 
     """
 #!/usr/bin/env python
@@ -703,7 +724,7 @@ process make_matrix {
     publishDir path: "${params.output_dir}/", saveAs: save_gene_anno, pattern: "*gene_annotations.txt", mode: 'copy'
 
     input:
-        set key, file(umi_rollup_file), file(gene_assignments_file), val(annotations_path), file(gene_bed), file(input_bed), file(merged_bam), file(logfile) from make_matrix_prepped
+        set key, file(umi_rollup_file), val(annotations_path), file(gene_bed), file(input_bed), file(merged_bam), file(logfile) from make_matrix_prepped
 
     output:
         set key, file("*cell_annotations.txt"), file("*umi_counts.mtx"), file("*gene_annotations.txt"), file(gene_bed), file(input_bed), file(merged_bam), file("make_matrix.log") into mat_output
@@ -748,7 +769,7 @@ process make_cds {
             "$cell_data"\
             "$gene_data"\
             "$gene_bed"\
-            "$key" ' >> make_cds
+            "$key" ' >> make_cds.log
 
     make_cds.R \
         "$umi_matrix"\
@@ -890,7 +911,7 @@ process reformat_scrub {
     output: 
         set key, file("temp_fold/*.RDS"),  file("temp_fold/*.csv") into rscrub_out
         file("*sample_stats.csv") into sample_stats
-        file("*collision.txt") optional true into barn_collision
+        file("*collision.txt") into barn_collision
         set key, file(logfile) into pipe_log
 
 """
@@ -931,12 +952,12 @@ if ("$key" == "Barnyard") {
 
   collision_rate <- round(sum(pData(cds)\$collision/nrow(pData(cds))) * 200, 1)
   fileConn<-file("Barn_collision.txt")
-  writeLines(paste0(collision_rate, "%"), fileConn)
+  writeLines(paste0("$key", "\t", collision_rate, "%"), fileConn)
   close(fileConn)
 
 } else {
   fileConn<-file("no_collision.txt")
-  writeLines("NA", fileConn)
+  writeLines(paste0("$key", "\t", "NA", fileConn)
   close(fileConn)
 }
 """
@@ -1006,6 +1027,25 @@ process calc_cell_totals {
 
 }
 
+process collapse_collision {
+    module 'java/latest:modules:modules-init:modules-gs'
+    memory '1 GB'
+    cache 'lenient'
+
+    input:
+        file col_file from barn_collision.collect()
+
+    output:
+        file "*.txt" into all_collision
+
+"""
+cat $col_file > all_collision.txt
+
+
+"""
+
+}
+
 process generate_dash_info {
     module 'java/latest:modules:modules-init:modules-gs:gcc/8.1.0:R/3.6.1'
     cache 'lenient'
@@ -1014,7 +1054,7 @@ process generate_dash_info {
     input:
         file(dup_file) from all_dups
         file(cell_counts) from cell_counts
-        file(barn_col) from barn_collision       
+        file(barn_col) from all_collision       
     output:
         file("*.js") into run_data
 
@@ -1076,9 +1116,10 @@ if("Sentinel" %in% sample_list) {
 barn_collision <- NA
 if("Barnyard" %in% sample_list) {
   sample_list <- c("Barnyard", setdiff(sample_list, c("Barnyard")))
-  barn_collision <- readLines("$barn_col")
+  barn_collision <- read.table("$barn_col")
+  barn_collision <- barn_collision[barn_collision$V1 == "Barnyard", barn_collision$V2]
 }
-
+sample_list <- as.list(sample_list)
 json_info <- list("run_name" = project_name,
                   "cell_counts" = c(sum(all_dups\$Cells_100_UMIs), sum(all_dups\$Cells_1000_UMIs)),
                   "sample_list" = sample_list,
@@ -1151,7 +1192,6 @@ process generate_summary_log {
     printf "    params.star_file:             $params.star_file\n" >> ${key}_full.log
     printf "    params.gene_file:             $params.gene_file\n" >> ${key}_full.log
     printf "    params.umi_cutoff:            $params.umi_cutoff\n" >> ${key}_full.log
-    printf "    params.align_mem:             $params.align_mem\n\n" >> ${key}_full.log
     printf "    params.rt_barcode_file:       $params.rt_barcode_file\n\n" >> ${key}_full.log
     printf "    params.hash_list:             $params.hash_list\n\n" >> ${key}_full.log
     printf "    params.max_wells_per_sample:  $params.max_wells_per_sample\n\n" >> ${key}_full.log

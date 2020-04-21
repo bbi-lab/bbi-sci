@@ -50,19 +50,16 @@ if __name__ == '__main__':
     parser.add_argument('--gene_annotation', required=True, help='Gene annotation file with all genes to be included as first column.')
     parser.add_argument('--key', help='sample name for output file.')
     args = parser.parse_args()
-    print("starting")
+
     feature_dict = dict()
     count = 0
-    print("gene_anno bit")
     with open(args.gene_annotation, 'r') as gene_file:
         for line in gene_file:
             gene_id = line.strip().split("\t")[0]
             feature_dict[gene_id] = count
             count += 1
-    print("read_sparse bit")
     col,row,data,col_names = read_old_sparse(args.umi_rollup, feature_dict)
     
-    print("csc bit")
     sparse_mat = csc_matrix((np.array(data), (np.array(row), np.array(col))), shape=(len(feature_dict), len(col_names)), dtype='int32')
     write_mtx_file(sparse_mat, col_names, args.key)
 
