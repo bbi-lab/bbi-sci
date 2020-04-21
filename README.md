@@ -11,7 +11,7 @@ The pipeline is run in two parts, the first is [bbi-dmux](https://github.com/bbi
 module load tmux/latest
 tmux
 ```
-If you get disconnected, you can return to the head node you were using (grid-head or shead) and type:
+If you get disconnected, you can return to the head node you were using (grid-head1 or grid-head2) and type:
 ```
 tmux attach
 ```
@@ -40,12 +40,13 @@ module load drmaa/latest
 module load git/latest
 ```
 
-After loading the above modules, you must install the following python package:
+After loading the above modules, you must install the following python packages:
 
 ```
 pip install --user drmaa
 pip install --user biopython
 pip install --user fmt
+pip install --user pysam
 
 git clone https://github.com/andrewhill157/barcodeutils.git
 cd barcodeutils
@@ -57,12 +58,22 @@ Then, install monocle3 by running:
 
 ```
 module load gcc/8.1.0
-module load R/3.5.2
+module load R/3.6.1
 R
 ```
-Then from within R, follow the installation instructions on the [monocle3 website](https://cole-trapnell-lab.github.io/monocle3/monocle3_docs/#installing-monocle-3).
+Then from within R, follow the installation instructions on the [monocle3 website](https://cole-trapnell-lab.github.io/monocle3/).
 
-Once monocle3 is installed, install nextflow by typing:
+You will also require scrublet, a tool used to detect doublets in single-cell RNA-seq data. You can install it from source by running:
+
+```
+git clone https://github.com/AllonKleinLab/scrublet.git
+cd scrublet
+pip install -r requirements.txt --user
+python setup.py install --user
+cd ..
+```
+
+Once monocle3 and scrublet are installed, install nextflow by typing:
 
 ```
 curl -s https://get.nextflow.io | bash
@@ -107,7 +118,7 @@ An example configuration file is included in the package and includes further in
 
 For Shendure lab cluster
 ```
-process.queue = "ravana.q"
+process.queue = "shendure-long.q"
 ```
 
 #### Run the pipeline:
@@ -144,3 +155,6 @@ Warning: After you delete the work folder, -resume will no longer restart from t
 
 #### Questions and errors:
 If you run into problems, please leave a detailed description in the issue tab above!
+
+### Acknowledgements
+Many members of the Shendure and Trapnell labs as well as the BBI team have worked on portions of this pipeline or its predecessors, especially Andrew Hill and Jonathan Packer. Many thanks to them!

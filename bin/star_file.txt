@@ -1,13 +1,20 @@
-Human   /net/trapnell/vol1/jspacker/STAR/human/GRCh38-primary-assembly
-Mouse   /net/trapnell/vol1/jspacker/STAR/mouse/GRCm38-primary-assembly
-Barnyard    /net/trapnell/vol1/jspacker/STAR/human-and-mouse/GRCh38-GRCm38-primary-assembly
-Barn    /net/trapnell/vol1/jspacker/STAR/human-and-mouse/GRCh38-GRCm38-primary-assembly
-Celegans    /net/trapnell/vol1/jspacker/STAR/c-elegans/WS260
-Camelina    None
-Arabidopsis None
-Maize   None
-Rat /net/bbi/vol1/data/genomes/rat_star
-Macaque /net/bbi/vol1/data/genomes/macaque_star
-Zebrafish   /net/bbi/vol1/data/genomes/zebrafish_star
-Drosophila  /net/bbi/vol1/data/genomes/drosophila_star
-Chicken	/net/bbi/vol1/data/genomes/chicken_star
+Human   /net/bbi/vol1/data/genomes/human_star 60
+Mouse   /net/bbi/vol1/data/genomes/mouse_star 47
+Barnyard    /net/bbi/vol1/data/genomes/barnyard_star  90
+Worm    /net/bbi/vol1/data/genomes/worm_star  10
+Rat /net/bbi/vol1/data/genomes/rat_star 37
+Macaque /net/bbi/vol1/data/genomes/macaque_star 110
+Zebrafish   /net/bbi/vol1/data/genomes/zebrafish_star 20
+Drosophila  /net/bbi/vol1/data/genomes/drosophila_star  10
+Chicken	/net/bbi/vol1/data/genomes/chicken_star 15
+Opossum	/net/bbi/vol1/data/genomes/opossum_star 40
+Corn	/net/bbi/vol1/data/genomes/corn_star  25
+Arabidopsis	/net/bbi/vol1/data/genomes/arabidopsis_star 10
+Pig  /net/bbi/vol1/data/genomes/pig_star 47
+Elephant	/net/bbi/vol1/data/genomes/elephant_star 47
+Cow	/net/bbi/vol1/data/genomes/cow_star 47
+Dog	/net/bbi/vol1/data/genomes/dog_star 47
+Cat	/net/bbi/vol1/data/genomes/cat_star 47
+Cynomolgus	/net/bbi/vol1/data/genomes/cynomolgus_star 110
+Maize   None  0
+Camelina    None  0

@@ -11,6 +11,7 @@ suppressPackageStartupMessages({
 parser = argparse::ArgumentParser(description='Script to generate experiment dashboard.')
 parser$add_argument('input_folder', help='input folder.')
 parser$add_argument('--all_dups', required=TRUE, help='all dup file')
+parser$add_argument('--counts', required=TRUE, help='count info')
 args = parser$parse_args()
 
 output_folder <- args$input_folder
@@ -20,12 +21,19 @@ dedup <- dedup[seq(2, length(dedup), by=2)]
 dedup_df <- as.data.frame(stringr::str_split_fixed(dedup, " +", 4))
 dedup_df$sample <- stringr::str_split_fixed(dedup_df$V1, ":", 2)[,2]
 
+project_name <- unlist(stringr::str_split(output_folder, "/"))
+project_name <- project_name[[length(project_name)]]
+
+count_info <- read.table(args$counts, header=F)
+c100 <- sum(count_info[count_info$V2 == 100,]$V3)
+c500 <- sum(count_info[count_info$V2 == 500,]$V3)
+c1000 <- sum(count_info[count_info$V2 == 1000,]$V3)
 
 
 barn <- ""
 sent <- ""
 
-top <- HTML('<!doctype html>
+top <- list(HTML('<!doctype html>
 <html lang="en">
   <head>
     <!-- Required meta tags -->
@@ -52,7 +60,7 @@ top <- HTML('<!doctype html>
           box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
         }
         </style>
-  </head>')
+  </head>'))
 
 
 if ("Barnyard" %in% sample_folds) {
@@ -81,7 +89,7 @@ if ("Barnyard" %in% sample_folds) {
   collision_rate <- round(sum(pData(cds)$collision/nrow(pData(cds))) * 200, 1)
   system(paste0("cp ", output_folder, "/Barnyard/knee_plot.png", " exp_dash/img/Barnyard_knee_plot.png"))
  barn <- list(HTML('<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-                <h1 class="h3" id="rt">Barnyard</h1>
+                <h1 class="h3" id="barn">Barnyard</h1>
             </div>
           <nav>
               <div class="nav nav-tabs" id="navbarn-tab" role="tablist">
@@ -242,7 +250,7 @@ body <- tags$body(
             </ul>
         </div>
         <div class="mx-auto order-0">
-            <a class="navbar-brand mx-auto" href="#">Experiment QC Dashboard</a>
+            <a class="navbar-brand mx-auto" href="#">'), paste('Experiment', project_name, 'QC Dashboard'), HTML('</a>
         </div>
         <div class="navbar-collapse collapse w-100 order-3 dual-collapse2">
         </div>
@@ -253,9 +261,9 @@ body <- tags$body(
           <div class="sidebar-sticky">
             <ul class="nav flex-column">
               <li class="nav-item">
-                <a class="nav-link active" href="#summary">
+                <a class="nav-link active" href="#cell_totals">
                   <span data-feather="home"></span>
-                  Summary Statistics <span class="sr-only">(current)</span>
+                  Cell Totals <span class="sr-only">(current)</span>
                 </a>
               </li>
               <li class="nav-item">
@@ -271,7 +279,7 @@ body <- tags$body(
                 </a>
               </li>
               <li class="nav-item">
-                <a class="nav-link" href="#sent">
+                <a class="nav-link" href="#samples">
                   <span data-feather="shopping-cart"></span>
                   Samples
                 </a>
@@ -280,10 +288,29 @@ body <- tags$body(
           </div>
         </nav>
        <main role="main" class="col-md-9 ml-sm-auto col-lg-10 px-4" style="padding-top: 15px;">'),
+   HTML('<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+ <h1 class="h3" id="cell_totals">Cell totals</h1>
+</div>
+                    <table class="table table-hover">
+                        <tbody>
+                          <tr>
+                            <th scope="row">Total cells with > 100 UMIs</th>
+                            <td>'), c100, HTML('</td>
+                          </tr>
+                          <tr>
+                            <th scope="row">Total cells with > 500 UMIs</th>
+                            <td>'), c500, HTML('</td>
+                          </tr>
+                          <tr>
+                            <th scope="row">Total cells with > 1000 UMIs</th>
+                            <td>'), c1000, HTML('</td>
+                          </tr>
+                        </tbody>
+                      </table>'),
   barn,
    sent,
   HTML('                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-                  <h1 class="h3" id="sent">Samples</h1>
+                  <h1 class="h3" id="samples">Samples</h1>
               </div>
         <nav>
                 <div class="nav nav-tabs" id="navsamp1-tab" role="tablist">'
