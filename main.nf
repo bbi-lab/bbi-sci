@@ -74,10 +74,10 @@ process check_sample_sheet {
 
     printf "***** BEGIN PIPELINE *****: \n\n" >> start.log
     printf "** Start process 'check_sample_sheet' at: \$(date)\n\n" >> start.log
-    printf "    Process versions: 
+    printf "    Process versions:
         \$(python --version)\n\n" >> start.log
-    printf "    Process command: 
-        check_sample_sheet.py --sample_sheet $params.sample_sheet 
+    printf "    Process command:
+        check_sample_sheet.py --sample_sheet $params.sample_sheet
             --star_file $star_file --level $params.level\n\n" >> start.log
 
     check_sample_sheet.py --sample_sheet $params.sample_sheet --star_file $star_file --level $params.level --rt_barcode_file $params.rt_barcode_file --max_wells_per_samp $params.max_wells_per_sample
@@ -109,14 +109,14 @@ process trim_fastqs {
     """
     cat ${logfile} > trim.log
     printf "** Start process 'trim_fastqs' for $input_fastq at: \$(date)\n\n" > piece.log
-    printf "    Process versions: 
+    printf "    Process versions:
         " >> piece.log
     python --version &>> piece.log
     printf "        trim_galore \$(trim_galore -v | grep version | awk '{\$1=\$1;print}')
         cutadapt version \$(cutadapt --version)\n\n" >> piece.log
 
-    printf "    Process command: 
-        trim_galore $input_fastq -a AAAAAAAA --three_prime_clip_R1 1 
+    printf "    Process command:
+        trim_galore $input_fastq -a AAAAAAAA --three_prime_clip_R1 1
             --gzip -o ./trim_out/\n
     Process output:\n" >> piece.log
     mkdir trim_out
@@ -165,7 +165,7 @@ process process_hashes {
 
     """
      process_hashes.py --hash_sheet $params.hash_list \
-         --fastq <(zcat $fqs) --key $key 
+         --fastq <(zcat $fqs) --key $key
 
     """
 
@@ -242,19 +242,19 @@ process align_reads {
     """
     cat ${logfile} > align.log
     printf "** Start process 'align_reads' for $input_file at: \$(date)\n\n" > piece.log
-    printf "    Process versions: 
+    printf "    Process versions:
         \$(STAR --version)\n\n" >> piece.log
 
     mkdir align_out
     info1=`head -n 1 $info`
     info2=`head -2 $info | tail -1`
 
-    printf "    Process command: 
-        STAR --runThreadN $cores_align --genomeDir \$info1 
-            --readFilesIn $input_file --readFilesCommand zcat --outFileNamePrefix \$info2 
+    printf "    Process command:
+        STAR --runThreadN $cores_align --genomeDir \$info1
+            --readFilesIn $input_file --readFilesCommand zcat --outFileNamePrefix \$info2
             --outSAMtype BAM Unsorted --outSAMmultNmax 1 --outSAMstrandField intronMotif\n
     Process output:\n" >> piece.log
-   
+
     STAR \
         --runThreadN $cores_align \
         --genomeDir \$info1 \
@@ -291,7 +291,7 @@ process sort_and_filter {
 
     input:
         set file(aligned_bam), val(orig_name), file(logfile), file(log_piece2), file(log_piece3) from aligned_bams
-    
+
     output:
         file "*.bam" into sorted_bams
         file "*_sf.log" into bam_logs
@@ -302,10 +302,10 @@ process sort_and_filter {
 
     """
     printf "** Start process 'sort_and_filter' for $aligned_bam at: \$(date)\n\n" > ${orig_name}_piece.log
-    printf "    Process versions: 
+    printf "    Process versions:
         \$(samtools --version | tr '\n' ' ')\n\n" >> ${orig_name}_piece.log
-    printf "    Process command: 
-        samtools view -bh -q 30 -F 4 '$aligned_bam' 
+    printf "    Process command:
+        samtools view -bh -q 30 -F 4 '$aligned_bam'
             | samtools sort -@ $cores_sf - > '${orig_name}.bam'\n\n" >> ${orig_name}_piece.log
 
     samtools view -bh -q 30 -F 4 "$aligned_bam" \
@@ -353,7 +353,7 @@ sorted_bams
     }
     .groupTuple()
     .set { bams_to_merge }
-    
+
 log_premerge.join(bams_to_merge).set{for_merge_bams}
 
 save_bam = {params.output_dir + "/" + it - ~/.bam/ + "/" + it}
@@ -372,9 +372,9 @@ process merge_bams {
     """
     cat ${logfile} > merge_bams.log
     printf "** Start process 'merge_bams' at: \$(date)\n\n" >> merge_bams.log
-    printf "    Process versions: 
+    printf "    Process versions:
         \$(samtools --version | tr '\n' ' ')\n\n" >> merge_bams.log
-    printf "    Process command: 
+    printf "    Process command:
         samtools merge ${key}.bam $bam_set\n\n" >> merge_bams.log
 
     samtools merge ${key}.bam $bam_set
@@ -399,16 +399,16 @@ process remove_dups {
     """
     cat ${logfile} > remove_dups.log
     printf "** Start process 'remove_dups' at: \$(date)\n\n" >> remove_dups.log
-    printf "    Process versions: 
+    printf "    Process versions:
         \$(bedtools --version)
         \$(samtools --version | tr '\n' ' ')
         \$(python --version)\n\n" >> remove_dups.log
-    printf "    Process command:     
-        samtools view -h "$merged_bam" 
-            | rmdup.py --bam - 
-            | samtools view -bh 
-            | bedtools bamtobed -i - -split 
-            | sort -k1,1 -k2,2n -k3,3n -S 5G 
+    printf "    Process command:
+        samtools view -h "$merged_bam"
+            | rmdup.py --bam -
+            | samtools view -bh
+            | bedtools bamtobed -i - -split
+            | sort -k1,1 -k2,2n -k3,3n -S 5G
             > "${key}.bed"\n\n" >> remove_dups.log
 
     export LC_ALL=C
@@ -510,20 +510,20 @@ process assign_genes {
 
     cat ${logfile} > assign_genes.log
     printf "** Start process 'assign_genes' at: \$(date)\n\n" >> assign_genes.log
-    printf "    Process versions: 
+    printf "    Process versions:
         \$(bedtools --version)\n        " >> assign_genes.log
     python --version &>> assign_genes.log
-    printf "\n\n    Process command: 
-        bedtools map 
-                -a '$input_bed' 
-                -b \$exon_index 
-                -nonamecheck -s -f 0.95 -c 7 -o distinct -delim '|' 
-            | bedtools map 
-                -a - -b \$gene_index 
-                -nonamecheck -s -f 0.95 -c 4 -o distinct -delim '|' 
+    printf "\n\n    Process command:
+        bedtools map
+                -a '$input_bed'
+                -b \$exon_index
+                -nonamecheck -s -f 0.95 -c 7 -o distinct -delim '|'
+            | bedtools map
+                -a - -b \$gene_index
+                -nonamecheck -s -f 0.95 -c 4 -o distinct -delim '|'
             | sort -k4,4 -k2,2n -k3,3n -S 5G
-            | datamash 
-                 -g 4 first 1 first 2 last 3 first 5 first 6 collapse 7 collapse 8 
+            | datamash
+                 -g 4 first 1 first 2 last 3 first 5 first 6 collapse 7 collapse 8
             | assign-reads-to-genes.py \$gene_index
             > '\$prefix'
             if [[ ! -s \$prefix ]]; then echo 'File is empty'; exit 125; fi\n\n" >> assign_genes.log
@@ -572,15 +572,15 @@ process umi_rollup {
     """
     cat ${logfile} > umi_rollup.log
     printf "** Start process 'umi_rollup' at: \$(date)\n\n" >> umi_rollup.log
-    printf "    Process versions: 
+    printf "    Process versions:
             None\n\n" >> umi_rollup.log
-    echo '    Process command:  
+    echo '    Process command:
         awk "\$ == "exonic" || \$ == "intronic" {{
             split(\$1, arr, "|")
             printf "%s_%s_%s\t%s\\n", arr[3], arr[4], arr[5], \$2
-            }}" "$gene_assignments_file" 
-        | sort -k1,1 -k2,2 -S 5G 
-        | datamash -g 1,2 count 2 
+            }}" "$gene_assignments_file"
+        | sort -k1,1 -k2,2 -S 5G
+        | datamash -g 1,2 count 2
         | gzip > \"${key}.gz\"'      >> umi_rollup.log
 
     awk '\$3 == "exonic" || \$3 == "intronic" {{
@@ -607,11 +607,11 @@ process umi_by_sample_summary {
     cache 'lenient'
     memory '8 GB'
 
-    publishDir path: "${params.output_dir}/", saveAs: save_umi_per_int, pattern: "*intronic.txt", mode: 'copy' 
-    publishDir path: "${params.output_dir}/", saveAs: save_umi_per_cell, pattern: "*barcode.txt", mode: 'copy'  
-  
+    publishDir path: "${params.output_dir}/", saveAs: save_umi_per_int, pattern: "*intronic.txt", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_umi_per_cell, pattern: "*barcode.txt", mode: 'copy'
+
     input:
-        set val(key), file(umi_rollup), file(gene_assignments_file), file(input_bed), file(merged_bam), file(logfile) from umi_rollup_out  
+        set val(key), file(umi_rollup), file(gene_assignments_file), file(input_bed), file(merged_bam), file(logfile) from umi_rollup_out
 
     output:
         set key, file(umi_rollup), file(gene_assignments_file), file(input_bed), file(merged_bam), file("umi_by_sample_summary.log") into ubss_out
@@ -621,12 +621,12 @@ process umi_by_sample_summary {
     """
     cat ${logfile} > umi_by_sample_summary.log
     printf "** Start process 'umi_by_sample_summary' at: \$(date)\n\n" >> umi_by_sample_summary.log
-    printf "    Process versions: 
+    printf "    Process versions:
         \$(python --version)\n\n" >> umi_by_sample_summary.log
-    printf "    Process command:  
-        tabulate_per_cell_counts.py 
-            --gene_assignment_files "$gene_assignments_file" 
-            --all_counts_file "${key}.UMIs.per.cell.barcode.txt" 
+    printf "    Process command:
+        tabulate_per_cell_counts.py
+            --gene_assignment_files "$gene_assignments_file"
+            --all_counts_file "${key}.UMIs.per.cell.barcode.txt"
             --intron_counts_file "${key}.UMIs.per.cell.barcode.intronic.txt"\n\n"      >> umi_by_sample_summary.log
 
     tabulate_per_cell_counts.py \
@@ -713,10 +713,10 @@ process make_matrix {
     printf "** Start process 'make_matrix' at: \$(date)\n\n" >> make_matrix.log
 
     echo '    Process command:
-        make_matrix.py <(zcat $umi_rollup_file) --gene_annotation $annotations_path --key "$key"   
+        make_matrix.py <(zcat $umi_rollup_file) --gene_annotation $annotations_path --key "$key"
         cat $annotations_path > "${key}.gene_annotations.txt"  ' >> make_matrix.log
-   
-    make_matrix.py <(zcat $umi_rollup_file) --gene_annotation $annotations_path --key "$key" 
+
+    make_matrix.py <(zcat $umi_rollup_file) --gene_annotation $annotations_path --key "$key"
     cat $annotations_path > "${key}.gene_annotations.txt"
 
     printf "\n** End process 'make_matrix' at: \$(date)\n\n" >> make_matrix.log
@@ -739,10 +739,10 @@ process make_cds {
 """
     cat ${logfile} > make_cds.log
     printf "** Start process 'make_cds' at: \$(date)\n\n" >> make_cds.log
-    printf "    Process versions: 
+    printf "    Process versions:
         \$(R --version | grep 'R version')
             monocle3 version \$(Rscript -e 'packageVersion("monocle3")')\n\n" >> make_cds.log
-    echo '    Process command:  
+    echo '    Process command:
         make_cds.R \
             "$umi_matrix"\
             "$cell_data"\
@@ -779,10 +779,10 @@ process run_scrublet {
 """
     cat ${logfile} > run_scrublet.log
     printf "** Start process 'run_scrublet' at: \$(date)\n\n" >> run_scrublet.log
-    printf "    Process versions: 
+    printf "    Process versions:
         \$(python --version)
             \$(pip freeze | grep scrublet | tr '==' ' ')\n\n" >> run_scrublet.log
-    echo '    Process command:  
+    echo '    Process command:
         run_scrublet.py --key $key --mat $scrub_mat\n'  >> run_scrublet.log
 
     run_scrublet.py --key $key --mat $scrub_mat
@@ -794,7 +794,7 @@ process run_scrublet {
 
 process umi_by_sample {
     cache 'lenient'
-    memory '20 GB'    
+    memory '20 GB'
     module 'java/latest:modules:modules-init:modules-gs:samtools/1.4:coreutils/8.24'
 
     input:
@@ -808,9 +808,9 @@ process umi_by_sample {
 
     cat ${logfile} > umi_by_sample.log
     printf "** Start process 'umi_by_sample' at: \$(date)\n\n" >> umi_by_sample.log
-    printf "    Process versions: 
+    printf "    Process versions:
         \$(samtools --version | tr '\n' ' ')\n\n" >> umi_by_sample.log
-    echo '    Process command:      
+    echo '    Process command:
     awk "{{ split(\$4, arr, "|")
             if (!seen[arr[1]]) {{
                 seen[arr[1]] = 1; count[arr[2]]++;
@@ -832,7 +832,7 @@ process umi_by_sample {
 
     cat ${key}.UMI_count.txt \
     | join - "${key}.read_count.txt" \
-    | awk "{{ 
+    | awk "{{
             printf "%-18s   %10d    %10d    %7.1f%\\n",
                 \$1, \$3, \$2, 100 * (1 - \$2/\$3);
     }}" \
@@ -860,7 +860,7 @@ process umi_by_sample {
 
     cat ${key}.UMI_count.txt \
     | join - "${key}.read_count.txt" \
-    | awk '{{ 
+    | awk '{{
             printf "%-18s   %10d    %10d    %7.1f%\\n",
                 \$1, \$3, \$2, 100 * (1 - \$2/\$3);
     }}' \
@@ -887,7 +887,7 @@ process reformat_scrub {
     input:
         set key, file(scrublet_outs), file(cds), file(cell_qc), file(dup_stats), file(logfile) from duplication_rate_out
 
-    output: 
+    output:
         set key, file("temp_fold/*.RDS"),  file("temp_fold/*.csv") into rscrub_out
         file("*sample_stats.csv") into sample_stats
         file("*collision.txt") optional true into barn_collision
@@ -981,7 +981,7 @@ process zip_up_duplication {
         file "*ll_sample_stats.csv" into all_dups
     """
      sed -s 1d $files > all_sample_stats.csv
-    """      
+    """
 }
 
 process calc_cell_totals {
@@ -1014,7 +1014,7 @@ process generate_dash_info {
     input:
         file(dup_file) from all_dups
         file(cell_counts) from cell_counts
-        file(barn_col) from barn_collision       
+        file(barn_col) from barn_collision
     output:
         file("*.js") into run_data
 
@@ -1056,11 +1056,11 @@ row.names(all_dups) <- all_dups\$V1
 names(all_dups) <- c("Sample", "Total_reads",
                      "Total_UMIs",
                      "Duplication_rate",
-                     "Doublet_Number", 
+                     "Doublet_Number",
                      "Doublet_Percent",
                      "Doublet_NAs",
                      "Cells_100_UMIs",
-                     "Cells_1000_UMIs" 
+                     "Cells_1000_UMIs"
                      )
 
 all_dups\$Doublet_Number[is.na(all_dups\$Doublet_Number)] <- "Fail"
@@ -1084,7 +1084,7 @@ json_info <- list("run_name" = project_name,
                   "sample_list" = sample_list,
                   "barn_collision" = barn_collision,
                   "sample_stats" = all_dup_lst)
-                  
+
 fileConn<-file("data.js")
 writeLines(c("const run_data =", toJSON(json_info, pretty=TRUE, auto_unbox=TRUE)), fileConn)
 close(fileConn)
@@ -1114,7 +1114,7 @@ process exp_dash {
     mv *.png exp_dash/img/
 
     mv $run_data exp_dash/js/
-    
+
     """
 }
 
@@ -1124,7 +1124,7 @@ process generate_summary_log {
     cache 'lenient'
     publishDir path: "${params.output_dir}/", saveAs: save_logs, pattern: "*.log", mode: 'copy'
     publishDir path: "${params.output_dir}/", saveAs: save_json, pattern: "*.js", mode: 'copy'
-    
+
     input:
         set key, file(logfile) from pipe_log
         file exp_dash from exp_dash_out
@@ -1175,7 +1175,7 @@ process generate_summary_log {
     align_too_short=`a=0
     for i in \${align_too_short_arr[@]}
     do
-        echo "\${align_too_short_arr[\$a]} * \${align_totals[\$a]}" | bc 
+        echo "\${align_too_short_arr[\$a]} * \${align_totals[\$a]}" | bc
         a=\$((a+1))
     done | awk '{sum += \$1} END {print sum}'`
 
@@ -1194,9 +1194,8 @@ process generate_summary_log {
 
     # In real cells:
     reads_in_cells=`cat \$filename | grep 'Total reads in cells with > 100 reads' | awk -F ':' '{sum += \$2} END {print sum}'`
-    
+
     printf "
-        const log_data = { 
             "alignment_start" : \$align_start,
             "alignment_mapped" : \$align_mapped,
             "align_multimapped" : \$align_multimapped,
@@ -1207,7 +1206,7 @@ process generate_summary_log {
             "dup_end" : \$dup_end,
             "assigned_exonic" : \$assigned_exonic,
             "assigned_intronic" : \$assigned_intronic,
-            "reads_in_cells" : \$reads_in_cells }
+            "reads_in_cells" : \$reads_in_cells
     " > ${key}_log_data.js
 
 
@@ -1220,7 +1219,7 @@ process generate_summary_log {
     printf "%20s %20s %20s %20.2f %20.2f\n" "Filtering" \$sf_start \$sf_end \$(echo "(\$sf_start - \$sf_end)/\$sf_start * 100" | bc -l ) \$(echo "(\$sf_start - \$sf_end)/\$trim_start * 100" | bc -l ) >> ${key}_read_metrics.log
     printf "%20s %20s %20s %20.2f %20.2f\n" "Deduplication" \$dup_start \$dup_end \$(echo "(\$dup_start - \$dup_end)/\$dup_start * 100" | bc -l ) \$(echo "(\$dup_start - \$dup_end)/\$trim_start * 100" | bc -l ) >> ${key}_read_metrics.log
     printf "%20s %20s %20s %20.2f %20.2f\n" "Gene assignment" \$dup_end \$assigned_end \$(echo "(\$dup_end - \$assigned_end)/\$dup_end * 100" | bc -l ) \$(echo "(\$dup_end - \$assigned_end)/\$trim_start * 100" | bc -l ) >> ${key}_read_metrics.log
- 
+
     printf "\nAlignment details: \n" >> ${key}_read_metrics.log
     printf "%25s %20s %20s\n" "" "Count" "Percent"  >> ${key}_read_metrics.log
     printf "========================================================================================================\n" >> ${key}_read_metrics.log
@@ -1229,7 +1228,7 @@ process generate_summary_log {
     printf "%25s %20s %20.2f\n" "Reads multi-mapped:" \$align_multimapped \$(echo "(\$align_multimapped)/\$align_start * 100" | bc -l )  >> ${key}_read_metrics.log
     printf "%25s %20s %20.2f\n" "Reads too short:" \$align_too_short \$(echo "(\$align_too_short)/\$align_start * 100" | bc -l ) >> ${key}_read_metrics.log
 
- 
+
     cat ${key}_read_metrics.log >> ${key}_full.log
 
     """
@@ -1258,8 +1257,3 @@ workflow.onComplete {
     """
 }
 */
-
-
-    
-
-
