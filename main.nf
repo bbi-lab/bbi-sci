@@ -109,11 +109,15 @@ process trim_fastqs {
 
     output:
         file "trim_out" into trim_output
-        set file("trim_out/*.fq.gz"), val("${input_fastq.baseName - ~/.fastq/}"), file('trim.log'), file('*trim.txt') into trimmed_fastqs
-        file input_fastq into fastqs_out
+        set val(key), val(name), file("trim_out/*.fq.gz"), file('trim.log'), file('*trim.txt') into trimmed_fastqs
+        set val(key), file(input_fastq) into fastqs_out
 
     when:
 	!((input_fastq.name.split(/-L[0-9]{3}/)[0].split(/\.fq.part/)[0]) in "Undetermined") && ((input_fastq.name.split(/-L[0-9]{3}/)[0].split(/\.fq.part/)[0]) in samp_list)
+
+    script:
+    name = input_fastq.baseName - ~/.fastq/
+    key = input_fastq.baseName.split(/-L[0-9]{3}/)[0].split(/\.fq.part/)[0]
 
     """
     cat ${logfile} > trim.log
@@ -136,16 +140,34 @@ process trim_fastqs {
         -o ./trim_out/
     cat trim_out/*trimming_report.txt | sed '/Overview of/,+RUN d' >> piece.log
     printf "** End process 'trim_fastqs' at: \$(date)\n\n" >> piece.log
-    cp piece.log ${input_fastq.baseName - ~/.fastq/}_trim.txt
+    cp piece.log ${name}_trim.txt
     cat piece.log >> trim.log
     """
 }
 
+process gather_info {
+    cache 'lenient'
+    memory '1G'
+    module 'java/latest:modules:modules-init:modules-gs:python/3.6.4'
+
+    input:
+        file sample_sheet_file1
+        set val(key), val(name), file(trimmed_fastq), file(logfile), file(log_piece2) from trimmed_fastqs
+
+    output:
+        set val(key), val(name), env(star_path), env(star_mem), file(trimmed_fastq), file('info.txt'), file(logfile), file(log_piece2) into align_prepped
+        set val(key), env(gtf_path) into gtf_info
+
+    """
+    spec=`awk 'BEGIN {FS=","}; \$2=="$key" {print \$3}' $sample_sheet_file1 | uniq`
+    star_mem=`awk 'BEGIN {FS="\t"}; \$1=="\$spec" {print \$3}' $star_file | uniq`
+    star_path=`awk 'BEGIN {FS="\t"}; \$1=="\$spec" {print \$2}' $star_file | uniq`
+    gtf_path=`awk 'BEGIN {FS="\t"}; \$1=="\$spec" {print \$2}' $gene_file | uniq`    
+
+    """
+}
+
 fastqs_out
-    .map { file ->
-        def key = file.name.toString().split(/-L[0-9]{3}/)[0].split(/\.fq.part/)[0]
-        return tuple(key, file)
-    }
     .groupTuple()
     .set { for_hash }
 
@@ -177,61 +199,12 @@ process process_hashes {
          --fastq <(zcat $fqs) --key $key 
 
     """
-
 }
-
 
 if (params.max_cores < 8) {
     cores_align = params.max_cores
 } else {
     cores_align = 8
-}
-
-process prep_align {
-    cache 'lenient'
-    module 'java/latest:modules:modules-init:modules-gs:python/3.6.4'
-
-    input:
-        file sample_sheet_file1
-        set file(trimmed_fastq), val(name), file(logfile), file(log_piece2) from trimmed_fastqs
-
-    output:
-        set file(trimmed_fastq), file('info.txt'), val(name), file(logfile), file(log_piece2), stdout into align_prepped
-
-    """
-#!/usr/bin/env python
-def quick_parse(file_path):
-    # a copy of only the relevant lines from easygrid.read_delim
-    fh = open(file_path)
-    columns = next(fh).strip().split(",")
-    for line_number, line in enumerate(fh):
-        entries = line.strip().split(",")
-        if len(entries) != len(columns):
-            raise ValueError('Length of entries: %s, not equal to length of columns %s, in file: %s, line number %s' % (len(entries), len(columns), file_path, line_number))
-        entries_dict = dict(zip(columns, entries))
-        yield entries_dict
-lookup = {}
-for rt_well in quick_parse("$sample_sheet_file1"):
-    lookup[rt_well['Sample ID'].replace('(', '.').replace(')', '.').replace(' ', '.').replace('-', '.').replace('_', '.').replace('/', '.')] = rt_well['Reference Genome']
-
-STAR_INDICES = {}
-MEM = {}
-with open("$star_file", 'r') as f:
-    for line in f:
-        items = line.strip().split()
-        key, values, mem = items[0], items[1],  items[2]
-        STAR_INDICES[key] = values
-        MEM[key] = mem
-samp = "${trimmed_fastq}".split('-')[0]
-samp_name = "${trimmed_fastq}".replace('_trimmed.fq.gz', '.')
-star_index = STAR_INDICES[lookup[samp]]
-print(MEM[lookup[samp]])
-prefix = "./align_out/" + samp_name
-f = open("info.txt", 'w')
-f.write(star_index + '\\n' + prefix)
-f.close()
-    """
-
 }
 
 process align_reads {
@@ -242,11 +215,11 @@ process align_reads {
     cpus cores_align
 
     input:
-        set file(input_file), file(info), val(orig_name), file(logfile), file(log_piece2), val(mem) from align_prepped
+        set val(key), val(name), val(star), val(mem), file(input_file), file(logfile), file(log_piece2) from align_prepped
 
     output:
         file "align_out" into align_output
-        set file("align_out/*Aligned.out.bam"), val(orig_name), file('align.log'), file(log_piece2), file("*align.txt") into aligned_bams
+        set val(key), val(name), file("align_out/*Aligned.out.bam"), file('align.log'), file(log_piece2), file("*align.txt") into aligned_bams
 
     """
     cat ${logfile} > align.log
@@ -254,22 +227,18 @@ process align_reads {
     printf "    Process versions: 
         \$(STAR --version)\n\n" >> piece.log
 
-    mkdir align_out
-    info1=`head -n 1 $info`
-    info2=`head -2 $info | tail -1`
-
     printf "    Process command: 
-        STAR --runThreadN $cores_align --genomeDir \$info1 
-            --readFilesIn $input_file --readFilesCommand zcat --outFileNamePrefix \$info2 
+        STAR --runThreadN $cores_align --genomeDir $star 
+            --readFilesIn $input_file --readFilesCommand zcat --outFileNamePrefix ./align_out/${name} 
             --outSAMtype BAM Unsorted --outSAMmultNmax 1 --outSAMstrandField intronMotif\n
     Process output:\n" >> piece.log
    
     STAR \
         --runThreadN $cores_align \
-        --genomeDir \$info1 \
+        --genomeDir $star \
         --readFilesIn $input_file \
         --readFilesCommand zcat \
-        --outFileNamePrefix \$info2 \
+        --outFileNamePrefix ./align_out/${name}  \
         --outSAMtype BAM Unsorted \
         --outSAMmultNmax 1 \
         --outSAMstrandField intronMotif
@@ -278,7 +247,7 @@ process align_reads {
 
     printf "\n** End process 'align_reads' at: \$(date)\n\n" >> piece.log
 
-    cp piece.log ${orig_name}_align.txt
+    cp piece.log ${name}_align.txt
     cat piece.log >> align.log
 
     """
@@ -299,36 +268,33 @@ process sort_and_filter {
     cpus cores_sf
 
     input:
-        set file(aligned_bam), val(orig_name), file(logfile), file(log_piece2), file(log_piece3) from aligned_bams
+        set val(key), val(name), file(aligned_bam), file(logfile), file(log_piece2), file(log_piece3) from aligned_bams
     
     output:
-        file "*.bam" into sorted_bams
+        set val(key), file("*.bam") into sorted_bams
         file "*_sf.log" into bam_logs
         set val(key), file(log_piece2), file(log_piece3), file("*_sf.txt") into log_pieces
 
-    script:
-    key = orig_name.split(/-L[0-9]{3}/)[0].split(/\.fq.part/)[0]
-
     """
-    printf "** Start process 'sort_and_filter' for $aligned_bam at: \$(date)\n\n" > ${orig_name}_piece.log
+    printf "** Start process 'sort_and_filter' for $aligned_bam at: \$(date)\n\n" > ${name}_piece.log
     printf "    Process versions: 
-        \$(samtools --version | tr '\n' ' ')\n\n" >> ${orig_name}_piece.log
+        \$(samtools --version | tr '\n' ' ')\n\n" >> ${name}_piece.log
     printf "    Process command: 
         samtools view -bh -q 30 -F 4 '$aligned_bam' 
-            | samtools sort -@ $cores_sf - > '${orig_name}.bam'\n\n" >> ${orig_name}_piece.log
+            | samtools sort -@ $cores_sf - > '${name}.bam'\n\n" >> ${name}_piece.log
 
     samtools view -bh -q 30 -F 4 "$aligned_bam" \
         | samtools sort -@ $cores_sf - \
-        > "${orig_name}.bam"
+        > "${name}.bam"
 
     printf "    Process stats:
         sort_and_filter starting reads: \$(samtools view -c $aligned_bam)
-        sort_and_filter ending reads  : \$(samtools view -c ${orig_name}.bam)\n\n" >> ${orig_name}_piece.log
-    printf "** End process 'sort_and_filter' at: \$(date)\n\n" >> ${orig_name}_piece.log
+        sort_and_filter ending reads  : \$(samtools view -c ${name}.bam)\n\n" >> ${name}_piece.log
+    printf "** End process 'sort_and_filter' at: \$(date)\n\n" >> ${name}_piece.log
 
-    cp ${orig_name}_piece.log ${orig_name}_sf.txt
-    cat ${logfile} > ${orig_name}_sf.log
-    cat ${orig_name}_piece.log >> ${orig_name}_sf.log
+    cp ${name}_piece.log ${name}_sf.txt
+    cat ${logfile} > ${name}_sf.log
+    cat ${name}_piece.log >> ${name}_sf.log
 
     """
 }
@@ -356,10 +322,6 @@ process combine_logs {
 }
 
 sorted_bams
-    .map { file ->
-        def key = file.name.toString().split(/-L[0-9]{3}/)[0].split(/\.fq.part/)[0]
-        return tuple(key, file)
-    }
     .groupTuple()
     .set { bams_to_merge }
     
@@ -378,6 +340,7 @@ process merge_bams {
     output:
         set key, file("*.bam"), file("merge_bams.log") into sample_bams
 
+
     """
     cat ${logfile} > merge_bams.log
     printf "** Start process 'merge_bams' at: \$(date)\n\n" >> merge_bams.log
@@ -392,49 +355,7 @@ process merge_bams {
     """
 }
 
-process prep_assign {
-    module 'java/latest:modules:modules-init:modules-gs:python/3.6.4'
-    cache 'lenient'
-
-    input:
-        file sample_sheet_file2
-        set key, file(merged_bam), file(logfile) from sample_bams
-
-    output:
-        set key, file('info.txt'), file(merged_bam), file(logfile) into assign_prepped
-
-    """
-#!/usr/bin/env python
-def quick_parse(file_path):
-    # a copy of only the relevant lines from easygrid.read_delim
-    fh = open(file_path)
-    columns = next(fh).strip().split(",")
-    for line_number, line in enumerate(fh):
-        entries = line.strip().split(",")
-        if len(entries) != len(columns):
-            raise ValueError('Length of entries: %s, not equal to length of columns %s, in file: %s, line number %s' % (len(entries), len(columns), file_path, line_number))
-        entries_dict = dict(zip(columns, entries))
-        yield entries_dict
-lookup = {}
-for rt_well in quick_parse("$sample_sheet_file2"):
-    lookup[rt_well['Sample ID'].replace('(', '.').replace(')', '.').replace(' ', '.').replace('-', '.').replace('_', '.').replace('/', '.').split(".fq.part")[0]] = rt_well['Reference Genome']
-GENE_MODELS = {}
-with open("$gene_file", 'r') as f:
-    for line in f:
-        items = line.strip().split()
-        key, values = items[0], items[1]
-        GENE_MODELS[key] = values
-print(lookup)
-samp = "${key}"
-print(samp)
-exon_index = GENE_MODELS[lookup[samp]] + "latest.exons.bed"
-gene_index = GENE_MODELS[lookup[samp]] + "latest.genes.bed"
-f = open("info.txt", 'w')
-f.write(exon_index + '\\n' + gene_index + '\\n' + samp + ".txt")
-f.close()
-    """
-}
-
+sample_bams.join(gtf_info).set{assign_prepped}
 
 process split_bam {
     cache 'lenient'
@@ -442,15 +363,16 @@ process split_bam {
     module 'java/latest:modules:modules-init:modules-gs:samtools/1.4:bamtools/2.2.3:bedtools/2.26.0:python/3.6.4'
 
     input:
-        set key, file(assign_info), file(input_bam), file(logfile) from assign_prepped
+        set key, file(input_bam), file(logfile), val(gtf_path) from assign_prepped
 
     output:
-        set key, file("split_bams/*.bam"), file(assign_info) into split_bams mode flatten
-        set key, file(input_bam), file("remove_dups.log") into bam_and_log
-
+        set key, file("split_bams/*.bam"), file(gtf_path) into split_bams mode flatten
+        set key, file("remove_dups.log") into bam_and_log
+        file input_bam into output 
+        
     """
     cat ${logfile} > remove_dups.log
-    printf "** Start processes 'remove duplicates' at: \$(date)\n\n" >> remove_dups.log
+    printf "** Start processes 'remove duplicates, assign_genes, umi_rollup' at: \$(date)\n\n" >> remove_dups.log
     printf "    Process versions:
         \$(bedtools --version)
         \$(samtools --version | tr '\n' ' ')
@@ -460,13 +382,34 @@ process split_bam {
     printf "    Process command:
         mkdir split_bams
         bamtools split -in $input_bam -reference -stub split_bams/split
-        rmdup.py --bam input_bam --output_bam out.bam
+        
+        rmdup.py --bam in_bam --output_bam out.bam
 
         bedtools bamtobed -i out.bam -split \
                 | sort -k1,1 -k2,2n -k3,3n -S 5G \
-                > out.bed
+                > "in_bam.bed"
 
-        cat out_beds > ${key}.bed\n\n" >> remove_dups.log 
+        bedtools map \
+            -a in_bam.bed \
+            -b exon_index \
+            -nonamecheck -s -f 0.95 -c 7 -o distinct -delim '|' \
+        | bedtools map \
+            -a - -b gene_index \
+            -nonamecheck -s -f 0.95 -c 4 -o distinct -delim '|' \
+        | sort -k4,4 -k2,2n -k3,3n -S 5G\
+        | datamash \
+            -g 4 first 1 first 2 last 3 first 5 first 6 collapse 7 collapse 8 \
+        | assign-reads-to-genes.py gene_index \
+        | awk '\$3 == 'exonic' || \$3 == 'intronic' {{
+                split(\$1, arr, '|')
+                printf '%s_%s_%s\t%s\t%s\\n', arr[3], arr[4], arr[5], \$2, \$3
+        }}' \
+        | sort -k2,2 -k1,1 -S 5G > in_bam.txt
+
+        cat in_bed > key.bed
+        sort -m -k2,2 -k1,1 in_assign | datamash -g 1,2 count 2 \
+        | gzip > key.gz
+        " >> remove_dups.log 
 
 
     printf "    Process stats:
@@ -505,7 +448,7 @@ process remove_dups_assign_genes {
     module 'java/latest:modules:modules-init:modules-gs:bedtools/2.26.0:python/3.6.4:coreutils/8.24'
 
     input:
-        set key, file(in_bam), file(info) from split_bams
+        set key, file(in_bam), file(gtf_path) from split_bams
 
     output:
         set key, file("*.bed"), file("*.txt") into remove_dup_part_out
@@ -517,21 +460,17 @@ process remove_dups_assign_genes {
             | sort -k1,1 -k2,2n -k3,3n -S 5G \
             > "${in_bam}.bed"
 
-    exon_index=`head -n 1 $info`
-    gene_index=`head -2 $info | tail -1`
-    prefix=`head -3 $info | tail -1`
-
     bedtools map \
         -a "${in_bam}.bed" \
-        -b \$exon_index \
+        -b "${gtf_path}/latest.exons.bed" \
         -nonamecheck -s -f 0.95 -c 7 -o distinct -delim '|' \
     | bedtools map \
-        -a - -b \$gene_index \
+        -a - -b "${gtf_path}/latest.genes.bed" \
         -nonamecheck -s -f 0.95 -c 4 -o distinct -delim '|' \
     | sort -k4,4 -k2,2n -k3,3n -S 5G\
     | datamash \
         -g 4 first 1 first 2 last 3 first 5 first 6 collapse 7 collapse 8 \
-    | assign-reads-to-genes.py \$gene_index \
+    | assign-reads-to-genes.py "${gtf_path}/latest.genes.bed" \
     | awk '\$3 == "exonic" || \$3 == "intronic" {{
             split(\$1, arr, "|")
             printf "%s_%s_%s\t%s\t%s\\n", arr[3], arr[4], arr[5], \$2, \$3
@@ -542,40 +481,10 @@ process remove_dups_assign_genes {
 
 }
 
-
 remove_dup_part_out
     .groupTuple()
     .join(bam_and_log)
     .set { for_cat_dups }
-
-process cat_dups {
-    cache 'lenient'
-    memory '1 GB'
-    module 'java/latest:modules:modules-init:modules-gs'
-
-    input:
-        set key, file(in_bed), file(in_assign), file(merged_bam), file(logfile) from for_cat_dups
-
-    output:
-        set key, file("*.bed"), file("*_cd.txt"), file(merged_bam), file("cat_dups.log") into assign_genes_out
-	
-    """
-    cat ${logfile} > cat_dups.log
-
-    cat $in_bed > "${key}.bed"
-    sort -m -k2,2 -k1,1 $in_assign > "${key}_cd.txt"
-
-    printf "\n        remove_dups ending reads  : \$(wc -l ${key}.bed | awk '{print \$1;}')\n\n" >> cat_dups.log
-
-    printf "    Process stats:
-        Read assignments:\n\$(awk '{count[\$3]++} END {for (word in count) { printf "            %-20s %10i\\n", word, count[word]}}' ${key}_cd.txt)\n\n" >> cat_dups.log
-
-    printf "** End processes 'remove duplicates, assign_genes' at: \$(date)\n\n" >> cat_dups.log
-    
-    """
-
-}
-
 
 /**
 make cell, gene table for each read
@@ -589,30 +498,26 @@ process umi_rollup {
     module 'java/latest:modules:modules-init:modules-gs:coreutils/8.24'
 
     input:
-        set key, file(input_bed), file(gene_assignments_file), file(merged_bam), file(logfile) from assign_genes_out
+        set key, file(in_bed), file(in_assign), file(logfile) from for_cat_dups
 
     output:
-        set key, file("*.gz"), file(gene_assignments_file), file(input_bed), file(merged_bam), file("umi_rollup.log") into umi_rollup_out
+        set key, file("*.gz"), file("*_ga.txt"), file(input_bed), file("umi_rollup.log") into umi_rollup_out
 
 
     """
     cat ${logfile} > umi_rollup.log
-    printf "** Start process 'umi_rollup' at: \$(date)\n\n" >> umi_rollup.log
-    printf "    Process versions: 
-            None\n\n" >> umi_rollup.log
-    echo '    Process command:  
-        awk "\$ == "exonic" || \$ == "intronic" {{
-            split(\$1, arr, "|")
-            printf "%s_%s_%s\t%s\\n", arr[3], arr[4], arr[5], \$2
-            }}" "$gene_assignments_file" 
-        | sort -k1,1 -k2,2 -S 5G 
-        | datamash -g 1,2 count 2 
-        | gzip > \"${key}.gz\"'      >> umi_rollup.log
 
-    datamash -g 1,2 count 2 <"$gene_assignments_file" \
+    cat $in_bed > "${key}.bed"
+    sort -m -k2,2 -k1,1 $in_assign > "${key}_ga.txt"
+    datamash -g 1,2 count 2 < "${key}_ga.txt" \
     | gzip > "${key}.gz"
 
-     printf "\n** End process 'umi_rollup' at: \$(date)\n\n" >> umi_rollup.log
+    printf "
+        remove_dups ending reads  : \$(wc -l ${key}.bed | awk '{print \$1;}')\n\n
+        Read assignments:\n\$(awk '{count[\$3]++} END {for (word in count) { printf "            %-20s %10i\\n", word, count[word]}}' ${key}_cd.txt)\n\n" >> umi_rollup.log
+
+    printf "** End processes 'remove duplicates, assign_genes, umi_rollup' at: \$(date)\n\n" >> umi_rollup.log
+    
     """
 }
 
@@ -632,10 +537,10 @@ process umi_by_sample_summary {
     publishDir path: "${params.output_dir}/", saveAs: save_umi_per_cell, pattern: "*barcode.txt", mode: 'copy'  
   
     input:
-        set val(key), file(umi_rollup), file(gene_assignments_file), file(input_bed), file(merged_bam), file(logfile) from umi_rollup_out  
+        set val(key), file(umi_rollup), file(gene_assignments_file), file(input_bed), file(logfile) from umi_rollup_out  
 
     output:
-        set key, file(umi_rollup), file(input_bed), file(merged_bam), file("umi_by_sample_summary.log") into ubss_out
+        set key, file(umi_rollup), file(input_bed), file("umi_by_sample_summary.log") into ubss_out
         set key, file("*UMIs.per.cell.barcode.txt") into umis_per_cell_barcode
         file "*UMIs.per.cell.barcode.intronic.txt" into umi_per_cell_intronic
 
@@ -666,51 +571,11 @@ process umi_by_sample_summary {
     """
 }
 
-process prep_make_matrix {
-    module 'java/latest:modules:modules-init:modules-gs:python/3.6.4'
-    cache 'lenient'
-
-    input:
-        file sample_sheet_file3
-        set key, file(umi_rollup), file(input_bed), file(merged_bam), file(logfile) from ubss_out
-
-    output:
-        set key, file(umi_rollup), stdout, file("*_info.txt"), file(input_bed), file(merged_bam), file(logfile) into make_matrix_prepped
-
-    """
-#!/usr/bin/env python
-def quick_parse(file_path):
-    # a copy of only the relevant lines from easygrid.read_delim
-    fh = open(file_path)
-    columns = next(fh).strip().split(",")
-    for line_number, line in enumerate(fh):
-        entries = line.strip().split(",")
-        if len(entries) != len(columns):
-            raise ValueError('Length of entries: %s, not equal to length of columns %s, in file: %s, line number %s' % (len(entries), len(columns), file_path, line_number))
-        entries_dict = dict(zip(columns, entries))
-        yield entries_dict
-lookup = {}
-for rt_well in quick_parse("$sample_sheet_file3"):
-    lookup[rt_well['Sample ID'].replace('(', '.').replace(')', '.').replace(' ', '.').replace('-', '.').replace('_', '.').replace('/', '.').split(".fq.part")[0]] = rt_well['Reference Genome']
-GENE_MODELS = {}
-with open("$gene_file", 'r') as f:
-    for line in f:
-        items = line.strip().split()
-        key, values = items[0], items[1]
-        GENE_MODELS[key] = values
-samp = "${key}"
-exon_index = GENE_MODELS[lookup[samp]] + "latest.gene.annotations"
-print(exon_index, end="")
-with open("bed_info.txt", 'w') as f:
-    f.write(GENE_MODELS[lookup[samp]] + "latest.genes.bed")
-    """
-}
-
 save_umi = {params.output_dir + "/" + it - ~/.umi_counts.mtx/ + "/umi_counts.mtx"}
 save_cell_anno = {params.output_dir + "/" + it - ~/.cell_annotations.txt/ + "/cell_annotations.txt"}
 save_gene_anno = {params.output_dir + "/" + it - ~/.gene_annotations.txt/ + "/gene_annotations.txt"}
 
-
+ubss_out.join(gtf_info).set(make_matrix_prepped)
 /**
 sum up total assigned reads per cell and keep only those above the cutoff
 make the number matrix
@@ -724,21 +589,21 @@ process make_matrix {
     publishDir path: "${params.output_dir}/", saveAs: save_gene_anno, pattern: "*gene_annotations.txt", mode: 'copy'
 
     input:
-        set key, file(umi_rollup_file), val(annotations_path), file(gene_bed), file(input_bed), file(merged_bam), file(logfile) from make_matrix_prepped
+        set key, file(umi_rollup_file), file(input_bed), file(logfile), val(gtf_path) from make_matrix_prepped
 
     output:
-        set key, file("*cell_annotations.txt"), file("*umi_counts.mtx"), file("*gene_annotations.txt"), file(gene_bed), file(input_bed), file(merged_bam), file("make_matrix.log") into mat_output
+        set key, file("*cell_annotations.txt"), file("*umi_counts.mtx"), file("*gene_annotations.txt"), file(gtf_path), file(input_bed), file("make_matrix.log") into mat_output
 
     """
     cat ${logfile} > make_matrix.log
     printf "** Start process 'make_matrix' at: \$(date)\n\n" >> make_matrix.log
 
     echo '    Process command:
-        make_matrix.py <(zcat $umi_rollup_file) --gene_annotation $annotations_path --key "$key"   
+        make_matrix.py <(zcat $umi_rollup_file) --gene_annotation "${gtf_path}/latest.gene.annotations" --key "$key"   
         cat $annotations_path > "${key}.gene_annotations.txt"  ' >> make_matrix.log
    
-    make_matrix.py <(zcat $umi_rollup_file) --gene_annotation $annotations_path --key "$key" 
-    cat $annotations_path > "${key}.gene_annotations.txt"
+    make_matrix.py <(zcat $umi_rollup_file) --gene_annotation "${gtf_path}/latest.gene.annotations" --key "$key" 
+    cat "${gtf_path}/latest.gene.annotations" > "${key}.gene_annotations.txt"
 
     printf "\n** End process 'make_matrix' at: \$(date)\n\n" >> make_matrix.log
     """
@@ -751,10 +616,10 @@ process make_cds {
     memory '15 GB'
 
     input:
-        set key, file(cell_data), file(umi_matrix), file(gene_data), file(gene_bed), file(input_bed), file(merged_bam), file(logfile) from mat_output
+        set key, file(cell_data), file(umi_matrix), file(gene_data), file(gtf_path), file(input_bed), file(logfile) from mat_output
 
     output:
-        set key, file("*for_scrub.mtx"), file("*.RDS"), file("*cell_qc.csv"), file(input_bed), file(merged_bam), file("make_cds.log") into for_scrub
+        set key, file("*for_scrub.mtx"), file("*.RDS"), file("*cell_qc.csv"), file(input_bed), file("make_cds.log") into for_scrub
         file("*cell_qc.csv") into cell_qcs
 
 """
@@ -768,14 +633,14 @@ process make_cds {
             "$umi_matrix"\
             "$cell_data"\
             "$gene_data"\
-            "$gene_bed"\
+            "${gtf_path}/latest.genes.bed"\
             "$key" ' >> make_cds.log
 
     make_cds.R \
         "$umi_matrix"\
         "$cell_data"\
         "$gene_data"\
-        "$gene_bed"\
+        "${gtf_path}/latest.genes.bed"\
         "$key"
 
     printf "** End process 'make_cds' at: \$(date)\n\n" >> make_cds.log
@@ -791,9 +656,9 @@ process run_scrublet {
     module 'modules:java/latest:modules-init:modules-gs:python/3.6.4'
     memory '10 GB'
     input:
-        set key, file(scrub_mat), file(cds), file(cell_qc), file(input_bed), file(merged_bam), file(logfile) from for_scrub
+        set key, file(scrub_mat), file(cds), file(cell_qc), file(input_bed), file(logfile) from for_scrub
     output:
-        set key, file("*scrublet_out.csv"), file(cds), file(cell_qc), file(input_bed), file(merged_bam), file("run_scrublet.log") into scrublet_out
+        set key, file("*scrublet_out.csv"), file(cds), file(cell_qc), file(input_bed), file("run_scrublet.log") into scrublet_out
         file ("*.png") into scrub_pngs
 
 
@@ -1279,27 +1144,4 @@ process generate_summary_log {
 workflow.onComplete {
 	println ( workflow.success ? "Done! Saving output" : "Oops .. something went wrong" )
 }
-
-/** send mail
-\
-workflow.onComplete {
-    def subject = 'indropSeq execution'
-    def recipient = "${params.email}"
-    def attachment = "${outputMultiQC}/multiqc_report.html"
-    ['mail', '-s', subject, '-a', attachment, recipient].execute() << """
-    Pipeline execution summary
-    ---------------------------
-    Completed at: ${workflow.complete}
-    Duration    : ${workflow.duration}
-    Success     : ${workflow.success}
-    workDir     : ${workflow.workDir}
-    exit status : ${workflow.exitStatus}
-    Error report: ${workflow.errorReport ?: '-'}
-    """
-}
-*/
-
-
-    
-
 
