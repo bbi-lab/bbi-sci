@@ -19,7 +19,7 @@ if __name__ == '__main__':
             
             category = entries[2]
             barcodes = entries[0].split('|')
-            sample, cell = (barcodes[1], f'{barcodes[2]}_{barcodes[3]}_{barcodes[4]}')
+            sample, cell = barcodes[0], barcodes[1]
 
             if category == 'exonic' or category == 'intronic':
                 cell_key = (sample, cell)
@@ -37,5 +37,3 @@ if __name__ == '__main__':
             sample, cell = count_key
             all_counts_file.write(f'{sample}\t{cell}\t{all_count}\n')
             intron_counts_file.write(f'{sample}\t{cell}\t{intron_count}\n')
-
-

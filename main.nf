@@ -155,14 +155,15 @@ process gather_info {
         set val(key), val(name), file(trimmed_fastq), file(logfile), file(log_piece2) from trimmed_fastqs
 
     output:
-        set val(key), val(name), env(star_path), env(star_mem), file(trimmed_fastq), file('info.txt'), file(logfile), file(log_piece2) into align_prepped
+        set val(key), val(name), env(star_path), env(star_mem), file(trimmed_fastq), file(logfile), file(log_piece2) into align_prepped
         set val(key), env(gtf_path) into gtf_info
+        set val(key), env(gtf_path) into gtf_info2
 
     """
-    spec=`awk 'BEGIN {FS=","}; \$2=="$key" {print \$3}' $sample_sheet_file1 | uniq`
-    star_mem=`awk 'BEGIN {FS="\t"}; \$1=="\$spec" {print \$3}' $star_file | uniq`
-    star_path=`awk 'BEGIN {FS="\t"}; \$1=="\$spec" {print \$2}' $star_file | uniq`
-    gtf_path=`awk 'BEGIN {FS="\t"}; \$1=="\$spec" {print \$2}' $gene_file | uniq`    
+    spec=`awk 'BEGIN {FS=",";OFS=","};{sub(" ", ".", \$2);sub("/", ".", \$2);sub("-", ".", \$2);sub("_", ".", \$2);split(\$2,a,"_fq_part");print(\$1, a[1], \$3)}' $sample_sheet_file1 | awk 'BEGIN {FS=","}; \$2=="$key" {print \$3}' | uniq`
+    star_mem=`awk -v var="\$spec" '\$1==var {print \$3}' $star_file | uniq`
+    star_path=`awk -v var="\$spec" '\$1==var {print \$2}' $star_file | uniq`
+    gtf_path=`awk -v var="\$spec" '\$1==var {print \$2}' $gene_file | uniq`    
 
     """
 }
@@ -232,7 +233,8 @@ process align_reads {
             --readFilesIn $input_file --readFilesCommand zcat --outFileNamePrefix ./align_out/${name} 
             --outSAMtype BAM Unsorted --outSAMmultNmax 1 --outSAMstrandField intronMotif\n
     Process output:\n" >> piece.log
-   
+
+    mkdir align_out 
     STAR \
         --runThreadN $cores_align \
         --genomeDir $star \
@@ -366,7 +368,7 @@ process split_bam {
         set key, file(input_bam), file(logfile), val(gtf_path) from assign_prepped
 
     output:
-        set key, file("split_bams/*.bam"), file(gtf_path) into split_bams mode flatten
+        set key, file("split_bams/*.bam"), val(gtf_path) into split_bams mode flatten
         set key, file("remove_dups.log") into bam_and_log
         file input_bam into output 
         
@@ -379,7 +381,7 @@ process split_bam {
         \$(bamtools --version | grep bamtools)
         \$(python --version)\n\n" >> remove_dups.log
 
-    printf "    Process command:
+    echo '    Process command:
         mkdir split_bams
         bamtools split -in $input_bam -reference -stub split_bams/split
         
@@ -392,24 +394,24 @@ process split_bam {
         bedtools map \
             -a in_bam.bed \
             -b exon_index \
-            -nonamecheck -s -f 0.95 -c 7 -o distinct -delim '|' \
+            -nonamecheck -s -f 0.95 -c 7 -o distinct -delim "|" \
         | bedtools map \
             -a - -b gene_index \
-            -nonamecheck -s -f 0.95 -c 4 -o distinct -delim '|' \
+            -nonamecheck -s -f 0.95 -c 4 -o distinct -delim "|" \
         | sort -k4,4 -k2,2n -k3,3n -S 5G\
         | datamash \
             -g 4 first 1 first 2 last 3 first 5 first 6 collapse 7 collapse 8 \
         | assign-reads-to-genes.py gene_index \
-        | awk '\$3 == 'exonic' || \$3 == 'intronic' {{
-                split(\$1, arr, '|')
-                printf '%s_%s_%s\t%s\t%s\\n', arr[3], arr[4], arr[5], \$2, \$3
-        }}' \
+        | awk \$3 == "exonic" || \$3 == "intronic" {{
+                split(\$1, arr, "|")
+                printf "%s_%s_%s\t%s\t%s\\n", arr[3], arr[4], arr[5], \$2, \$3
+        }} \
         | sort -k2,2 -k1,1 -S 5G > in_bam.txt
 
         cat in_bed > key.bed
         sort -m -k2,2 -k1,1 in_assign | datamash -g 1,2 count 2 \
         | gzip > key.gz
-        " >> remove_dups.log 
+        ' >> remove_dups.log 
 
 
     printf "    Process stats:
@@ -417,7 +419,10 @@ process split_bam {
 
     mkdir split_bams
     bamtools split -in $input_bam -reference -stub split_bams/split
-
+    cd split_bams
+    ls | grep "_[0-9A-Za-z\\.]\\{3,\\}.bam\$" | samtools merge split.REFnonstand.bam -b -
+    ls | grep "_[0-9A-Za-z\\.]\\{3,\\}.bam\$" | xargs -d"\\n" rm
+    mv split.REFnonstand.bam split.REF_nonstand.bam
     """
 
 }
@@ -448,10 +453,10 @@ process remove_dups_assign_genes {
     module 'java/latest:modules:modules-init:modules-gs:bedtools/2.26.0:python/3.6.4:coreutils/8.24'
 
     input:
-        set key, file(in_bam), file(gtf_path) from split_bams
+        set key, file(in_bam), val(gtf_path) from split_bams
 
     output:
-        set key, file("*.bed"), file("*.txt") into remove_dup_part_out
+        set key, file("*.bed"), file(in_bam), file("*.txt") into remove_dup_part_out
 
     """
     rmdup.py --bam $in_bam --output_bam out.bam
@@ -473,7 +478,7 @@ process remove_dups_assign_genes {
     | assign-reads-to-genes.py "${gtf_path}/latest.genes.bed" \
     | awk '\$3 == "exonic" || \$3 == "intronic" {{
             split(\$1, arr, "|")
-            printf "%s_%s_%s\t%s\t%s\\n", arr[3], arr[4], arr[5], \$2, \$3
+            printf "%s|%s_%s_%s\t%s\t%s\\n", arr[2], arr[3], arr[4], arr[5], \$2, \$3
     }}' \
     | sort -k2,2 -k1,1 -S 5G > "${in_bam}.txt"
 
@@ -498,10 +503,10 @@ process umi_rollup {
     module 'java/latest:modules:modules-init:modules-gs:coreutils/8.24'
 
     input:
-        set key, file(in_bed), file(in_assign), file(logfile) from for_cat_dups
+        set key, file(in_bed), file(in_bam), file(in_assign), file(logfile) from for_cat_dups
 
     output:
-        set key, file("*.gz"), file("*_ga.txt"), file(input_bed), file("umi_rollup.log") into umi_rollup_out
+        set key, file("*.gz"), file("*_ga.txt"), file("*.bed"), file(in_bam), file("umi_rollup.log") into umi_rollup_out
 
 
     """
@@ -514,7 +519,7 @@ process umi_rollup {
 
     printf "
         remove_dups ending reads  : \$(wc -l ${key}.bed | awk '{print \$1;}')\n\n
-        Read assignments:\n\$(awk '{count[\$3]++} END {for (word in count) { printf "            %-20s %10i\\n", word, count[word]}}' ${key}_cd.txt)\n\n" >> umi_rollup.log
+        Read assignments:\n\$(awk '{count[\$3]++} END {for (word in count) { printf "            %-20s %10i\\n", word, count[word]}}' $in_bed)\n\n" >> umi_rollup.log
 
     printf "** End processes 'remove duplicates, assign_genes, umi_rollup' at: \$(date)\n\n" >> umi_rollup.log
     
@@ -537,10 +542,10 @@ process umi_by_sample_summary {
     publishDir path: "${params.output_dir}/", saveAs: save_umi_per_cell, pattern: "*barcode.txt", mode: 'copy'  
   
     input:
-        set val(key), file(umi_rollup), file(gene_assignments_file), file(input_bed), file(logfile) from umi_rollup_out  
+        set val(key), file(umi_rollup), file(gene_assignments_file), file(input_bed), file(filtered_bam), file(logfile) from umi_rollup_out  
 
     output:
-        set key, file(umi_rollup), file(input_bed), file("umi_by_sample_summary.log") into ubss_out
+        set key, file(umi_rollup), file(input_bed), file(filtered_bam), file("umi_by_sample_summary.log") into ubss_out
         set key, file("*UMIs.per.cell.barcode.txt") into umis_per_cell_barcode
         file "*UMIs.per.cell.barcode.intronic.txt" into umi_per_cell_intronic
 
@@ -575,7 +580,7 @@ save_umi = {params.output_dir + "/" + it - ~/.umi_counts.mtx/ + "/umi_counts.mtx
 save_cell_anno = {params.output_dir + "/" + it - ~/.cell_annotations.txt/ + "/cell_annotations.txt"}
 save_gene_anno = {params.output_dir + "/" + it - ~/.gene_annotations.txt/ + "/gene_annotations.txt"}
 
-ubss_out.join(gtf_info).set(make_matrix_prepped)
+ubss_out.join(gtf_info2).set{make_matrix_prepped}
 /**
 sum up total assigned reads per cell and keep only those above the cutoff
 make the number matrix
@@ -589,10 +594,10 @@ process make_matrix {
     publishDir path: "${params.output_dir}/", saveAs: save_gene_anno, pattern: "*gene_annotations.txt", mode: 'copy'
 
     input:
-        set key, file(umi_rollup_file), file(input_bed), file(logfile), val(gtf_path) from make_matrix_prepped
+        set key, file(umi_rollup_file), file(input_bed), file(filtered_bam), file(logfile), val(gtf_path) from make_matrix_prepped
 
     output:
-        set key, file("*cell_annotations.txt"), file("*umi_counts.mtx"), file("*gene_annotations.txt"), file(gtf_path), file(input_bed), file("make_matrix.log") into mat_output
+        set key, file("*cell_annotations.txt"), file("*umi_counts.mtx"), file("*gene_annotations.txt"), val(gtf_path), file(input_bed), file(filtered_bam), file("make_matrix.log") into mat_output
 
     """
     cat ${logfile} > make_matrix.log
@@ -600,7 +605,7 @@ process make_matrix {
 
     echo '    Process command:
         make_matrix.py <(zcat $umi_rollup_file) --gene_annotation "${gtf_path}/latest.gene.annotations" --key "$key"   
-        cat $annotations_path > "${key}.gene_annotations.txt"  ' >> make_matrix.log
+        cat ${gtf_path}/latest.gene.annotations > "${key}.gene_annotations.txt"  ' >> make_matrix.log
    
     make_matrix.py <(zcat $umi_rollup_file) --gene_annotation "${gtf_path}/latest.gene.annotations" --key "$key" 
     cat "${gtf_path}/latest.gene.annotations" > "${key}.gene_annotations.txt"
@@ -616,10 +621,10 @@ process make_cds {
     memory '15 GB'
 
     input:
-        set key, file(cell_data), file(umi_matrix), file(gene_data), file(gtf_path), file(input_bed), file(logfile) from mat_output
+        set key, file(cell_data), file(umi_matrix), file(gene_data), val(gtf_path), file(input_bed), file(filtered_bam), file(logfile) from mat_output
 
     output:
-        set key, file("*for_scrub.mtx"), file("*.RDS"), file("*cell_qc.csv"), file(input_bed), file("make_cds.log") into for_scrub
+        set key, file("*for_scrub.mtx"), file("*.RDS"), file("*cell_qc.csv"), file(input_bed), file(filtered_bam), file("make_cds.log") into for_scrub
         file("*cell_qc.csv") into cell_qcs
 
 """
@@ -656,9 +661,9 @@ process run_scrublet {
     module 'modules:java/latest:modules-init:modules-gs:python/3.6.4'
     memory '10 GB'
     input:
-        set key, file(scrub_mat), file(cds), file(cell_qc), file(input_bed), file(logfile) from for_scrub
+        set key, file(scrub_mat), file(cds), file(cell_qc), file(input_bed), file(filtered_bam), file(logfile) from for_scrub
     output:
-        set key, file("*scrublet_out.csv"), file(cds), file(cell_qc), file(input_bed), file("run_scrublet.log") into scrublet_out
+        set key, file("*scrublet_out.csv"), file(cds), file(cell_qc), file(input_bed), file(filtered_bam), file("run_scrublet.log") into scrublet_out
         file ("*.png") into scrub_pngs
 
 
