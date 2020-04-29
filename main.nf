@@ -546,7 +546,7 @@ process remove_dups_assign_genes {
         set key, val(gtf_path) from split_bams
 
     output:
-        set key, file("*.bed"),, file("*.txt") into remove_dup_part_out
+        set key, file("*.bed"), file("*.txt") into remove_dup_part_out
 
     """
     rmdup.py --bam $in_bam --output_bam out.bam
