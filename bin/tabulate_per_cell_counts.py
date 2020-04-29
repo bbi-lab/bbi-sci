@@ -7,9 +7,9 @@ intronic_counts = {}
 all_counts = {}
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Script to deduplicate sciRNA data given stdin of sorted BAM file. BAM printed to STDOUT. Tolerates 1bp mismatches in UMIs.')
+    parser = argparse.ArgumentParser(description='Script to count umis per cell.')
     parser.add_argument('--gene_assignment_files', required=True, nargs='+', help='List of input files with gene assignments.') 
-    parser.add_argument('--all_counts_file', required=True, help='Counts per cell in exons.') 
+    parser.add_argument('--all_counts_file', required=True, help='Counts per cell in exons and introns.') 
     parser.add_argument('--intron_counts_file', required=True, help='Counts per cell in introns.') 
     args = parser.parse_args()
 
