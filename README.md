@@ -19,7 +19,7 @@ which will return you to your session. See a handy tmux tutorial [here](https://
 
 2. Always start with a qlogin session before you begin the pipeline. This can be done by
 ```
-qlogin -l mfree=10G
+qlogin -l mfree=20G
 ```
 
 ## Installation
