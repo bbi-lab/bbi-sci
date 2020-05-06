@@ -214,7 +214,7 @@ process trim_fastqs {
         -o ./trim_out/
     
     
-    cat trim_out/*trimming_report.txt | sed '/Overview of/,+RUN d' >> piece.log
+    cat trim_out/*trimming_report.txt | sed '/Overview of/,/RUN/{//!d}' | sed 's/Overview of removed sequences//' >> piece.log
     printf "** End process 'trim_fastqs' at: \$(date)\n\n" >> piece.log
     cp piece.log ${name}_trim.txt
     cat piece.log >> trim.log
@@ -416,6 +416,16 @@ process align_reads {
         STAR --runThreadN $cores_align --genomeDir $star_path 
             --readFilesIn $trimmed_fastq --readFilesCommand zcat --outFileNamePrefix ./align_out/${name} 
             --outSAMtype BAM Unsorted --outSAMmultNmax 1 --outSAMstrandField intronMotif\n
+    
+    Reference genome information:
+        \$(grep fastq_url $star_path/../*gsrc/record.out | awk '{\$1=\$2=""; print \$0}')
+        FASTA download date: \$(grep fastq_download_date $star_path/../*gsrc/record.out | awk '{\$1=\$2=""; print \$0}')
+        Non REF sequences removed.
+
+        \$(grep gtf_url $star_path/../*gsrc/record.out | awk '{\$1=\$2=""; print \$0}')
+        GTF download date: \$(grep gtf_download_date $star_path/../*gsrc/record.out | awk '{\$1=\$2=""; print \$0}')
+        \$(grep gtf_include_biotypes $star_path/record.out | awk '{\$1=\$2=""; print \$0}')
+
     Process output:\n" >> piece.log
 
 
@@ -606,6 +616,12 @@ Process: merge_bams
 
 *************/
 
+if (params.max_cores < 8) {
+    cores_merge = params.max_cores
+} else {
+    cores_merge = 8
+}
+
 sorted_bams
     .groupTuple()
     .set { bams_to_merge }
@@ -618,6 +634,8 @@ process merge_bams {
     cache 'lenient'
     module 'modules:modules-init:modules-gs:samtools/1.4'
     publishDir path: "${params.output_dir}/", saveAs: save_bam, pattern: "*.bam", mode: 'copy'
+    penv 'serial'
+    cpus cores_merge
 
     input:
         set key, file(logfile), file(sorted_bam) from for_merge_bams
@@ -635,7 +653,7 @@ process merge_bams {
         samtools merge ${key}.bam $sorted_bam\n\n" >> merge_bams.log
 
 
-    samtools merge ${key}.bam $sorted_bam
+    samtools merge -@ $cores_merge ${key}.bam $sorted_bam
 
 
     printf "${key}\t\$(samtools view -c ${key}.bam)" > ${key}.read_count.txt
@@ -707,29 +725,29 @@ process split_bam {
         
         rmdup.py --bam in_bam --output_bam out.bam
 
-        bedtools bamtobed -i out.bam -split \
-                | sort -k1,1 -k2,2n -k3,3n -S 5G \
+        bedtools bamtobed -i out.bam -split 
+                | sort -k1,1 -k2,2n -k3,3n -S 5G 
                 > "in_bam.bed"
 
-        bedtools map \
-            -a in_bam.bed \
-            -b exon_index \
-            -nonamecheck -s -f 0.95 -c 7 -o distinct -delim "|" \
-        | bedtools map \
-            -a - -b gene_index \
-            -nonamecheck -s -f 0.95 -c 4 -o distinct -delim "|" \
-        | sort -k4,4 -k2,2n -k3,3n -S 5G\
-        | datamash \
-            -g 4 first 1 first 2 last 3 first 5 first 6 collapse 7 collapse 8 \
-        | assign-reads-to-genes.py gene_index \
+        bedtools map 
+            -a in_bam.bed 
+            -b exon_index 
+            -nonamecheck -s -f 0.95 -c 7 -o distinct -delim "|" 
+        | bedtools map 
+            -a - -b gene_index 
+            -nonamecheck -s -f 0.95 -c 4 -o distinct -delim "|" 
+        | sort -k4,4 -k2,2n -k3,3n -S 5G
+        | datamash 
+            -g 4 first 1 first 2 last 3 first 5 first 6 collapse 7 collapse 8 
+        | assign-reads-to-genes.py gene_index 
         | awk \$3 == "exonic" || \$3 == "intronic" {{
                 split(\$1, arr, "|")
                 printf "%s_%s_%s\t%s\t%s\\n", arr[3], arr[4], arr[5], \$2, \$3
-        }} \
+        }} 
         | sort -k2,2 -k1,1 -S 5G > in_bam.txt
 
         cat in_bed > key.bed
-        sort -m -k2,2 -k1,1 in_assign | datamash -g 1,2 count 2 \
+        sort -m -k2,2 -k1,1 in_assign | datamash -g 1,2 count 2 
         | gzip > key.gz
         ' >> remove_dups.log 
 
@@ -790,6 +808,7 @@ Process: remove_dups_assign_genes
  Published:
 
  Notes:
+    Potential speed up - remove non-genic reads before sort?
 
 *************/
 
@@ -892,7 +911,7 @@ process merge_assignment {
 
 
     printf "
-        remove_dups ending reads  : \$(wc -l ${key}.bed | awk '{print \$1;}')\n\n
+        remove_dups ending reads  : \$(wc -l ${key}.bed | awk '{print \$1;}')\n
         Read assignments:\n\$(awk '{count[\$3]++} END {for (word in count) { printf "            %-20s %10i\\n", word, count[word]}}' ${key}.bed)\n\n" >> merge_assignment.log
 
     printf "** End processes 'remove duplicates, assign_genes, merge_assignment' at: \$(date)\n\n" >> merge_assignment.log
@@ -931,6 +950,7 @@ Process: calc_duplication_rate
  Published:
 
  Notes:
+    Potential speed up  - get UMI count from collapsed cell_gene_count instead of bed
 
 *************/
 
@@ -1206,12 +1226,12 @@ process make_cds {
         \$(R --version | grep 'R version')
             monocle3 version \$(Rscript -e 'packageVersion("monocle3")')\n\n" >> make_cds.log
     echo '    Process command:  
-        make_cds.R \
-            "$umi_matrix"\
-            "$cell_data"\
-            "$gene_data"\
-            "${gtf_path}/latest.genes.bed"\
-            "$key" ' >> make_cds.log
+        make_cds.R 
+            "$umi_matrix"
+            "$cell_data"
+            "$gene_data"
+            "${gtf_path}/latest.genes.bed"
+            "$key" \n' >> make_cds.log
 
 
     make_cds.R \
@@ -1290,7 +1310,7 @@ process run_scrublet {
     run_scrublet.py --key $key --mat $scrub_matrix
 
 
-    printf "\n** End process 'run_scrublet' at: \$(date)\n\n" >> run_scrublet.log
+    printf "** End process 'run_scrublet' at: \$(date)\n\n" >> run_scrublet.log
 
     printf "** Start processes to generate qc metrics and dashboard at: \$(date)\n\n" >> run_scrublet.log
     """
@@ -1742,8 +1762,8 @@ process finish_log {
     printf "    params.star_file:             $params.star_file\n" >> ${key}_full.log
     printf "    params.gene_file:             $params.gene_file\n" >> ${key}_full.log
     printf "    params.umi_cutoff:            $params.umi_cutoff\n" >> ${key}_full.log
-    printf "    params.rt_barcode_file:       $params.rt_barcode_file\n\n" >> ${key}_full.log
-    printf "    params.hash_list:             $params.hash_list\n\n" >> ${key}_full.log
+    printf "    params.rt_barcode_file:       $params.rt_barcode_file\n" >> ${key}_full.log
+    printf "    params.hash_list:             $params.hash_list\n" >> ${key}_full.log
     printf "    params.max_wells_per_sample:  $params.max_wells_per_sample\n\n" >> ${key}_full.log
 
     tail -n +2 ${logfile} >> ${key}_full.log
