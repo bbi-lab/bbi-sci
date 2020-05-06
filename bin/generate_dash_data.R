@@ -65,7 +65,7 @@ barn_collision <- NA
 if("Barnyard" %in% sample_list) {
   sample_list <- c("Barnyard", setdiff(sample_list, c("Barnyard")))
   barn_collision <- read.table(args$barn_col)
-  barn_collision <- barn_collision[barn_collision$V1 == "Barnyard", barn_collision$V2]
+  barn_collision <- barn_collision[barn_collision$V1 == "Barnyard", "V2"]
 }
 sample_list <- as.list(sample_list)
 json_info <- list("run_name" = project_name,

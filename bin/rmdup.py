@@ -32,25 +32,30 @@ if __name__ == '__main__':
 
     readsin = pysam.AlignmentFile(args.bam, "rb")
     readsout = pysam.AlignmentFile(args.output_bam, "wb", template=readsin)
-
-    for read_number,read in enumerate(readsin):
+    reads_included = 0
+    position_reads = dict()
+    for read in readsin:
         position = read.reference_start
-        if not current_position or current_position != position:
-            cell_umis_at_position = set()
-            current_position = position    
-        read_name_parts = read.query_name.split('|')
-        cell_barcode = f'{read_name_parts[2]}_{read_name_parts[3]}_{read_name_parts[4]}'
-        umi = read_name_parts[5]
-
-        cell_umi_key = (cell_barcode, umi)
-
-        if cell_umi_key in cell_umis_at_position:
-            continue
+        if not current_position or current_position == position:
+            position_reads[read.query_name] = read
+            reads_included += 1
+            current_position = position
         else:
-            # Track the UMI and all 1bp mismatches to it
-            cell_umis_at_position.add((cell_barcode, umi))
+            for key,value in sorted(position_reads.items()):
+                read_name_parts = key.split('|')
+                cell_barcode = f'{read_name_parts[2]}_{read_name_parts[3]}_{read_name_parts[4]}'
+                umi = read_name_parts[5]
+                cell_umi_key = (cell_barcode, umi)
+       	        if cell_umi_key not in cell_umis_at_position:
+                    readsout.write(value)               
+                # Track the UMI and all 1bp mismatches to it
+                cell_umis_at_position.add((cell_barcode, umi))
 
-            for mismatch in generate_1bp_mismatches(umi):
-                cell_umis_at_position.add((cell_barcode, mismatch))
-            
-            readsout.write(read)
+                for mismatch in generate_1bp_mismatches(umi):
+                    cell_umis_at_position.add((cell_barcode, mismatch))
+            cell_umis_at_position = set()
+            position_reads = dict()
+            position_reads[read.query_name] = read
+            reads_included += 1
+            current_position = position
+    print(reads_included)

@@ -568,7 +568,7 @@ process combine_logs {
 
     """
 
-    cat $log_piece1 $log_piece2 $log_piece4 $log4 > ${key}_pre.log
+    cat $log_piece1 $log_piece2 $log_piece3 $log_piece4 > ${key}_pre.log
 
     """
 }
@@ -824,9 +824,9 @@ process remove_dups_assign_genes {
     | assign-reads-to-genes.py "${gtf_path}/latest.genes.bed" \
     | awk '\$3 == "exonic" || \$3 == "intronic" {{
             split(\$1, arr, "|")
-            printf "%s|%s_%s_%s\t%s\t%s\\n", arr[2], arr[3], arr[4], arr[5], \$2, \$3
+            printf "%s_%s_%s\t%s\t%s\\n", arr[3], arr[4], arr[5], \$2, \$3
     }}' \
-    | sort -k2,2 -k1,1 -S 5G > "${split_bam}.txt"
+    | sort -k1,1 -k2,2 -S 5G > "${split_bam}.txt"
 
     """
 
@@ -885,7 +885,7 @@ process merge_assignment {
     cat ${logfile} > merge_assignment.log
 
     cat $split_bed > "${key}.bed"
-    sort -m -k2,2 -k1,1 $split_gene_assign > "${key}_ga.txt"
+    sort -m -k1,1 -k2,2 $split_gene_assign > "${key}_ga.txt"
 
     datamash -g 1,2 count 2 < "${key}_ga.txt" \
     | gzip > "${key}.gz"
@@ -893,7 +893,7 @@ process merge_assignment {
 
     printf "
         remove_dups ending reads  : \$(wc -l ${key}.bed | awk '{print \$1;}')\n\n
-        Read assignments:\n\$(awk '{count[\$3]++} END {for (word in count) { printf "            %-20s %10i\\n", word, count[word]}}' ${key}.bed)\n\n" >> merge_assignment.log
+        Read assignments:\n\$(awk '{count[\$3]++} END {for (word in count) { printf "            %-20s %10i\\n", word, count[word]}}' ${key}_ga.txt)\n\n" >> merge_assignment.log
 
     printf "** End processes 'remove duplicates, assign_genes, merge_assignment' at: \$(date)\n\n" >> merge_assignment.log
     
@@ -1357,7 +1357,7 @@ process reformat_scrub {
     output: 
         set key, file("temp_fold/*.RDS"), file("temp_fold/*.csv") into rscrub_out
         file("*sample_stats.csv") into sample_stats
-        file("*collision.txt") into barn_collision
+        file("*collision.txt") into collision
 
 
     """
@@ -1407,8 +1407,8 @@ process reformat_scrub {
         writeLines(paste0("$key", "\t", collision_rate, "%"), fileConn)
         close(fileConn) 
     } else {
-        fileConn<-file("no_collision.txt")
-        writeLines(paste0("$key", "\t", "NA", fileConn)
+        fileConn<-file("${key}_no_collision.txt")
+        writeLines(paste0("$key", "\t", "NA"), fileConn)
         close(fileConn)
     }
     """
