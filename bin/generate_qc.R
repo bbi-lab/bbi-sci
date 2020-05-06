@@ -281,8 +281,8 @@ gen_knee <- function(sample_name, cutoff) {
   
   df = read.table(
     args$umis_file,
-    col.names = c("sample", "barcode", "n.umi"),
-    colClasses = c("factor", "character", "integer"))
+    col.names = c("barcode", "n.umi"),
+    colClasses = c("character", "integer"))
   
   # if empty return empty plot
   if (nrow(df) == 0) {
