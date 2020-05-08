@@ -1184,6 +1184,7 @@ Process: make_cds
     gene_anno - Gene annotations for umi_matrix
     gtf_path - path to gtf info folder
     logfile - running log
+    params.umi_cutoff
 
  Outputs:
     key - sample id
@@ -1231,7 +1232,8 @@ process make_cds {
             "$cell_data"
             "$gene_data"
             "${gtf_path}/latest.genes.bed"
-            "$key" \n' >> make_cds.log
+            "$key" 
+            "$params.umi_cutoff"\n' >> make_cds.log
 
 
     make_cds.R \
@@ -1239,7 +1241,8 @@ process make_cds {
         "$cell_data"\
         "$gene_data"\
         "${gtf_path}/latest.genes.bed"\
-        "$key"
+        "$key"\
+        "$params.umi_cutoff"
 
 
     printf "** End process 'make_cds' at: \$(date)\n\n" >> make_cds.log

@@ -12,12 +12,13 @@ parser$add_argument('cell_data', help='File of cell data.')
 parser$add_argument('gene_data', help='File of gene data.')
 parser$add_argument('gene_bed', help='Bed file of gene info.')
 parser$add_argument('key', help='The sample name prefix.')
+parser$add_argument('umi_cutoff', help='UMI cutoff to count as a cell.')
 args = parser$parse_args()
 
 sample_name <- args$key
 
 cds <- load_mm_data(mat_path = args$matrix, feature_anno_path = args$gene_data, 
-                    cell_anno_path = args$cell_data, umi_cutoff=100,
+                    cell_anno_path = args$cell_data, umi_cutoff=args.umi_cutoff,
                     feature_metadata_column_names=c('gene_short_name'), sep="")
 gene_bed <- read.table(args$gene_bed)
 row.names(gene_bed) <- gene_bed$V4
