@@ -1,3 +1,4 @@
+
 // Parse input parameters
 params.help = false
 params.samples = false
@@ -53,27 +54,36 @@ if (!params.output_dir || !params.sample_sheet || !params.level || !params.demux
 
 
 /*************
+
 Process: check_sample_sheet
+
  Inputs:
     params.sample_sheet
     params.star_file
     params.level
     params.max_wells_per_sample
     params.rt_barcode_file
+
  Outputs:
     good_sample_sheet - corrected csv sample sheet
     logfile - running log
     log_piece1 - piece of log to be concatenated for full log
+
  Pass through:
+
  Summary:
     Check and process sample sheet - check_sample_sheet.py
     Start log
+
  Downstream:
     gather_info
     trim_fastqs
     combine_logs
+
  Published:
+
  Notes:
+
 *************/
 
 process check_sample_sheet {
@@ -88,6 +98,7 @@ process check_sample_sheet {
     """
     printf "BBI bbi-sci Pipeline Log\n\n" > start.log
     printf "Run started at: \$(date)\n\n" >> start.log
+
     printf "***** BEGIN PIPELINE *****: \n\n" >> start.log
     printf "** Start process 'check_sample_sheet' at: \$(date)\n\n" >> start.log
     printf "    Process versions:
@@ -96,9 +107,13 @@ process check_sample_sheet {
         check_sample_sheet.py --sample_sheet $params.sample_sheet --star_file $params.star_file
             --level $params.level --rt_barcode_file $params.rt_barcode_file
             --max_wells_per_samp $params.max_wells_per_sample\n\n" >> start.log
+
+
     check_sample_sheet.py --sample_sheet $params.sample_sheet --star_file $params.star_file \
         --level $params.level --rt_barcode_file $params.rt_barcode_file \
         --max_wells_per_samp $params.max_wells_per_sample
+
+
     printf "** End process 'check_sample_sheet' at: \$(date)\n\n" >> start.log
     cp start.log start.txt
     """
@@ -122,7 +137,9 @@ if (params.samples != false) {
 
 
 /*************
+
 Process: trim_fastqs
+
  Inputs:
     input_fastq - all fastq files from params.demux_out folder
     logfile - running log
@@ -134,8 +151,10 @@ Process: trim_fastqs
     trimmed_fastq - trimmed, gzipped fastq
     logfile - running log
     log_piece2 - piece of log to be concatenated for full log
+
  Pass through:
     input_fastq - all fastq files from params.demux_out folder
+
  Summary:
     Trim fastqs - trim_galore
     Continue log
@@ -145,8 +164,10 @@ Process: trim_fastqs
     process_hashes
 
  Published:
+
  Notes:
     Only moves forward if sample is in samp_list - where params.samples comes in
+
 *************/
 
 process trim_fastqs {
@@ -178,10 +199,13 @@ process trim_fastqs {
     python --version &>> piece.log
     printf "        trim_galore \$(trim_galore -v | grep version | awk '{\$1=\$1;print}')
         cutadapt version \$(cutadapt --version)\n\n" >> piece.log
+
     printf "    Process command:
         trim_galore $input_fastq -a AAAAAAAA --three_prime_clip_R1 1
             --gzip -o ./trim_out/\n
     Process output:\n" >> piece.log
+
+
     mkdir trim_out
     trim_galore $input_fastq \
         -a AAAAAAAA \
@@ -199,22 +223,27 @@ process trim_fastqs {
 
 
 /*************
+
 Process: gather_info
+
  Inputs:
     good_sample_sheet - corrected csv sample sheet
     key - sample id
     params.star_file
     params.gene_file
+
  Outputs:
     key - sample id
     star_path - path to star index folder
     gtf_path - path to gtf info folder
     star_mem - GB needed for star alignment
+
  Pass through:
     name - file id (including lane and split info)
     trimmed_fastq - trimmed, gzipped fastq
     log_piece2 - piece of log to be concatenated for full log
     logfile - running log
+
  Summary:
     Gather the star and gtf paths and info for downstream
 
@@ -222,8 +251,11 @@ Process: gather_info
     split_bam
     make_matrix
     align_reads
+
  Published:
+
  Notes:
+
 *************/
 
 process gather_info {
@@ -241,36 +273,46 @@ process gather_info {
         set val(key), env(gtf_path) into gtf_info2
 
     """
+
     spec=`awk 'BEGIN {FS=",";OFS=","};{sub(" ", ".", \$2);sub("/", ".", \$2);sub("-", ".", \$2);sub("_", ".", \$2);split(\$2,a,"_fq_part");print(\$1, a[1], \$3)}' $good_sample_sheet | awk 'BEGIN {FS=","}; \$2=="$key" {print \$3}' | uniq`
     star_mem=`awk -v var="\$spec" '\$1==var {print \$3}' $params.star_file | uniq`
     star_path=`awk -v var="\$spec" '\$1==var {print \$2}' $params.star_file | uniq`
     gtf_path=`awk -v var="\$spec" '\$1==var {print \$2}' $params.gene_file | uniq`
+
     """
 }
 
 
 /*************
+
 Process: process_hashes
+
  Inputs:
     key - sample id
     input_fastq - all fastq files from params.demux_out folder
     params.hash_list
+
  Outputs:
     hash_log - log of the hash information
     hash_mtx - MatrixMarket matrix of hash information
     hash_cell - Cell info for matrix of hash information
     hash_hash - Hash info for matrix of hash information
+
  Pass through:
+
  Summary:
     Collect and process hash barcodes - process_hashes.py
 
  Downstream:
+
  Published:
     hash_mtx - MatrixMarket matrix of hash information
     hash_cell - Cell info for matrix of hash information
     hash_hash - Hash info for matrix of hash information
+
  Notes:
     Only when params.hash = true
+
 *************/
 
 // Group fastqs for finding hash barcodes
@@ -303,12 +345,15 @@ process process_hashes {
     """
     process_hashes.py --hash_sheet $params.hash_list \
         --fastq <(zcat $input_fastq) --key $key
+
     """
 }
 
 
 /*************
+
 Process: align_reads
+
  Inputs:
     name - file id (including lane and split info)
     star_path - path to star index folder
@@ -316,22 +361,28 @@ Process: align_reads
     trimmed_fastq - trimmed, gzipped fastq
     logfile - running log
     cores_align - number of cores to use
+
  Outputs:
     align_out - folder of all alignment output - stops here
     name - file id (including lane and split info)
     aligned_bam - bam output from star alignment
     logfile - running log
     log_piece3 - piece of log to be concatenated for full log
+
  Pass through:
     key - sample id
     log_piece2 - piece of log to be concatenated for full log
+
  Summary:
     Align reads to genome using STAR
 
  Downstream:
     sort_and_filter
+
  Published:
+
  Notes:
+
 *************/
 
 // Cores for alignment set at 8 unless limit is lower
@@ -360,6 +411,7 @@ process align_reads {
     printf "** Start process 'align_reads' for $trimmed_fastq at: \$(date)\n\n" > piece.log
     printf "    Process versions:
         \$(STAR --version)\n\n" >> piece.log
+
     printf "    Process command:
         STAR --runThreadN $cores_align --genomeDir $star_path
             --readFilesIn $trimmed_fastq --readFilesCommand zcat --outFileNamePrefix ./align_out/${name}
@@ -369,10 +421,14 @@ process align_reads {
       \$(grep fastq_url $star_path/../*gsrc/record.out | awk '{\$1=\$2=""; print \$0}')
         FASTA download date: \$(grep fastq_download_date $star_path/../*gsrc/record.out | awk '{\$1=\$2=""; print \$0}')
         Non REF sequences removed.
+
       \$(grep gtf_url $star_path/../*gsrc/record.out | awk '{\$1=\$2=""; print \$0}')
         GTF download date: \$(grep gtf_download_date $star_path/../*gsrc/record.out | awk '{\$1=\$2=""; print \$0}')
         \$(grep gtf_include_biotypes $star_path/record.out | awk '{\$1=\$2=""; print \$0}')
+
     Process output:\n" >> piece.log
+
+
     mkdir align_out
     STAR \
         --runThreadN $cores_align \
@@ -383,38 +439,51 @@ process align_reads {
         --outSAMtype BAM Unsorted \
         --outSAMmultNmax 1 \
         --outSAMstrandField intronMotif
+
+
     cat align_out/*Log.final.out >> piece.log
+
     printf "\n** End process 'align_reads' at: \$(date)\n\n" >> piece.log
+
     cp piece.log ${name}_align.txt
     cat piece.log >> align.log
+
     """
 
 }
 
 
 /*************
+
 Process: sort_and_filter
+
  Inputs:
     name - file id (including lane and split info)
     aligned_bam - bam output from star alignment
     logfile - running log
     cores_sf - number of cores to use
+
  Outputs:
     name - file id (including lane and split info)
     sorted_bam - sorted and quality filtered bam
     log_piece4 - piece of log to be concatenated for full log
+
  Pass through:
     key - sample id
     log_piece2 - piece of log to be concatenated for full log
     log_piece3 - piece of log to be concatenated for full log
+
  Summary:
     Use samtools to filter for read quality 30 and sort bam
 
  Downstream:
     merge_bams
     combine_logs
+
  Published:
+
  Notes:
+
 *************/
 
 // Cores for sort and filter set at 10 unless limit is lower
@@ -445,36 +514,50 @@ process sort_and_filter {
     printf "    Process command:
         samtools view -bh -q 30 -F 4 '$aligned_bam'
             | samtools sort -@ $cores_sf - > '${name}.bam'\n\n" >> ${name}_piece.log
+
+
     samtools view -bh -q 30 -F 4 "$aligned_bam" \
         | samtools sort -@ $cores_sf - \
         > "${name}.bam"
+
+
     printf "    Process stats:
         sort_and_filter starting reads: \$(samtools view -c $aligned_bam)
         sort_and_filter ending reads  : \$(samtools view -c ${name}.bam)\n\n" >> ${name}_piece.log
     printf "** End process 'sort_and_filter' at: \$(date)\n\n" >> ${name}_piece.log
+
     cp ${name}_piece.log ${name}_sf.txt
+
     """
 }
 
 
 /*************
+
 Process: combine_logs
+
  Inputs:
     log_piece1 - piece of log to be concatenated for full log
     log_piece2 - piece of log to be concatenated for full log
     log_piece3 - piece of log to be concatenated for full log
     log_piece4 - piece of log to be concatenated for full log
+
  Outputs:
     logfile - concatenated running log
+
  Pass through:
     key - sample id
+
  Summary:
     Combine the log pieces from the first steps in the correct order
 
  Downstream:
     merge_bams
+
  Published:
+
  Notes:
+
 *************/
 
 log_pieces
@@ -494,23 +577,30 @@ process combine_logs {
         set val(key), file("*_pre.log") into log_premerge
 
     """
+
     cat $log_piece1 $log_piece2 $log_piece3 $log_piece4 > ${key}_pre.log
+
     """
 }
 
 
 /*************
+
 Process: merge_bams
+
  Inputs:
     key - sample id
     logfile - running log
     sorted_bam - sorted and quality filtered bam
+
  Outputs:
     key - sample id
     merged_bam - sorted and quality filtered bam merged by sample
     read_count - file with the total reads listed
     logfile - running log
+
  Pass through:
+
  Summary:
     Use samtools to merge bams from the same sample
     Count the number of reads in the sample
@@ -518,9 +608,12 @@ Process: merge_bams
  Downstream:
     split_bam
     calc_duplication_rate
+
  Published:
     merged_bam - sorted and quality filtered bam merged by sample
+
  Notes:
+
 *************/
 
 if (params.max_cores < 8) {
@@ -558,25 +651,35 @@ process merge_bams {
         \$(samtools --version | tr '\n' ' ')\n\n" >> merge_bams.log
     printf "    Process command:
         samtools merge ${key}.bam $sorted_bam\n\n" >> merge_bams.log
+
+
     samtools merge -@ $cores_merge ${key}.bam $sorted_bam
+
+
     printf "${key}\t\$(samtools view -c ${key}.bam)" > ${key}.read_count.txt
+
     printf "** End process 'merge_bams' at: \$(date)\n\n" >> merge_bams.log
     """
 }
 
 
 /*************
+
 Process: split_bam
+
  Inputs:
     merged_bam - sorted and quality filtered bam merged by sample
     logfile - running log
+
  Outputs:
     merged_bam - sorted and quality filtered bam merged by sample - stops here
     split_bam - bams split by reference (chromosome)
+
  Pass through:
     key - sample id
     gtf_path - path to gtf info folder
     logfile - running log
+
  Summary:
     Use bamtools split to split bam by reference (chromosome) for speed
     Combine the small non-chromosomal references to keep file number reasonable
@@ -584,9 +687,12 @@ Process: split_bam
  Downstream:
     merge_assignment
     remove_dups_assign_genes
+
  Published:
+
  Notes:
     Potential improvement: find a way to split bams into more evenly sized chunks
+
 *************/
 
 sample_bams.join(gtf_info).set{assign_prepped}
@@ -612,14 +718,17 @@ process split_bam {
         \$(samtools --version | tr '\n' ' ')
         \$(bamtools --version | grep bamtools)
         \$(python --version)\n\n" >> remove_dups.log
+
     echo '    Process command:
         mkdir split_bams
         bamtools split -in $merged_bam -reference -stub split_bams/split
 
         rmdup.py --bam in_bam --output_bam out.bam
+
         bedtools bamtobed -i out.bam -split
                 | sort -k1,1 -k2,2n -k3,3n -S 5G
                 > "in_bam.bed"
+
         bedtools map
             -a in_bam.bed
             -b exon_index
@@ -636,33 +745,44 @@ process split_bam {
                 printf "%s_%s_%s\t%s\t%s\\n", arr[3], arr[4], arr[5], \$2, \$3
         }}
         | sort -k2,2 -k1,1 -S 5G > in_bam.txt
+
         cat in_bed > key.bed
         sort -m -k2,2 -k1,1 in_assign | datamash -g 1,2 count 2
         | gzip > key.gz
         ' >> remove_dups.log
+
     printf "    Process stats:
         remove_dups starting reads: \$(samtools view -c $merged_bam)" >> remove_dups.log
+
+
     mkdir split_bams
     bamtools split -in $merged_bam -reference -stub split_bams/split
     cd split_bams
     ls | grep "_[0-9A-Za-z\\.]\\{3,\\}.bam\$" | samtools merge split.REFnonstand.bam -b -
     ls | grep "_[0-9A-Za-z\\.]\\{3,\\}.bam\$" | xargs -d"\\n" rm
     mv split.REFnonstand.bam split.REF_nonstand.bam
+
+
     """
 
 }
 
 
 /*************
+
 Process: remove_dups_assign_genes
+
  Inputs:
     split_bam - bams split by reference (chromosome)
     gtf_path - path to gtf info folder
+
  Outputs:
     split_gene_assign - text file with 3 columns: sample|cell, gene, gene type (exonic, intronic)
     split_bed - deduplicated sorted bed file
+
  Pass through:
     key - sample id
+
  Summary:
     1. Remove duplicate reads using rmdup.py
     2. Use bedtools map to map the dedupped bed file to all exons with options:
@@ -681,11 +801,15 @@ Process: remove_dups_assign_genes
         -nonamecheck Don't error if there are different naming conventions for the chromosomes
     4. Sort and collapse
     5. Run assign-reads-to-genes.py to deal with exon v intron
+
  Downstream:
     merge_assignment
+
  Published:
+
  Notes:
     Potential speed up - remove non-genic reads before sort?
+
 *************/
 
 process remove_dups_assign_genes {
@@ -701,9 +825,11 @@ process remove_dups_assign_genes {
 
     """
     rmdup.py --bam $split_bam --output_bam out.bam
+
     bedtools bamtobed -i out.bam -split \
             | sort -k1,1 -k2,2n -k3,3n -S 5G \
             > "${split_bam}.bed"
+
     bedtools map \
         -a "${split_bam}.bed" \
         -b "${gtf_path}/latest.exons.bed" \
@@ -720,33 +846,42 @@ process remove_dups_assign_genes {
             printf "%s_%s_%s\t%s\t%s\\n", arr[3], arr[4], arr[5], \$2, \$3
     }}' \
     | sort -k1,1 -k2,2 -S 5G > "${split_bam}.txt"
+
     """
 
 }
 
 /*************
+
 Process: merge_assignment
+
  Inputs:
     key - sample id
     split_gene_assign - text file with 3 columns: sample|cell, gene, gene type (exonic, intronic)
     split_bed - deduplicated sorted bed file
     logfile - running log
+
  Outputs:
     key - sample id
     sample_bed - deduplicated sorted bed file
     gene_assign - text file with 3 columns: sample|cell, gene, gene type (exonic, intronic)
     cell_gene_count - gzipped text file with a count of cell, gene pairs
     logfile - running log
+
  Pass through:
 
  Summary:
     merge bed files by sample
     merge gene assignment files by sample
     make cell gene count file
+
  Downstream:
     count_umis_by_sample
+
  Published:
+
  Notes:
+
 *************/
 
 remove_dup_part_out
@@ -767,13 +902,18 @@ process merge_assignment {
 
     """
     cat ${logfile} > merge_assignment.log
+
     cat $split_bed > "${key}.bed"
     sort -m -k1,1 -k2,2 $split_gene_assign > "${key}_ga.txt"
+
     datamash -g 1,2 count 2 < "${key}_ga.txt" \
     | gzip > "${key}.gz"
+
+
     printf "
         remove_dups ending reads  : \$(wc -l ${key}.bed | awk '{print \$1;}')\n\n
         Read assignments:\n\$(awk '{count[\$3]++} END {for (word in count) { printf "            %-20s %10i\\n", word, count[word]}}' ${key}_ga.txt)\n\n" >> merge_assignment.log
+
     printf "** End processes 'remove duplicates, assign_genes, merge_assignment' at: \$(date)\n\n" >> merge_assignment.log
 
     """
@@ -781,16 +921,20 @@ process merge_assignment {
 
 
 /*************
+
 Process: calc_duplication_rate
+
  Inputs:
     key - sample id
     sample_bed - deduplicated sorted bed file
     read_count - file with the total reads listed
     logfile - running log
+
  Outputs:
     key - sample id
     dup_stats - file with duplication rate information for the sample
     logfile - running log
+
  Pass through:
     gene_assign - text file with 3 columns: sample|cell, gene, gene type (exonic, intronic)
     cell_gene_count - gzipped text file with a count of cell, gene pairs
@@ -798,12 +942,16 @@ Process: calc_duplication_rate
  Summary:
     Calculate total umis
     Calculate duplication rate
+
  Downstream:
     count_umis_by_sample
     reformat_scrub
+
  Published:
+
  Notes:
     Potential speed up  - get UMI count from collapsed cell_gene_count instead of bed
+
 *************/
 
 merge_assignment_out.join(read_count).set{ calc_duplication_rate_in }
@@ -821,6 +969,7 @@ process calc_duplication_rate {
         set val(key), file(cell_gene_count), file(gene_assign), file("calc_duplication_rate.log") into calc_dup_out
         set val(key), file("*duplication_rate_stats.txt") into duplication_rate_out
     """
+
     cat ${logfile} > calc_duplication_rate.log
     printf "** Start process 'calc_duplication_rate' at: \$(date)\n\n" >> calc_duplication_rate.log
     printf "    Process versions:
@@ -837,6 +986,7 @@ process calc_duplication_rate {
             }}" "$sample_bed" \
     | sort -k1,1 -S 5G\
     >"${key}.UMI_count.txt"
+
     cat ${key}.UMI_count.txt \
     | join - "${key}.read_count.txt" \
     | awk "{{
@@ -844,6 +994,8 @@ process calc_duplication_rate {
                 \$1, \$3, \$2, 100 * (1 - \$2/\$3);
     }}" \
     >"${key}.duplication_rate_stats.txt" \n'  >> calc_duplication_rate.log
+
+
     awk '{{ split(\$4, arr, "|")
             if (!seen[arr[1]]) {{
                 seen[arr[1]] = 1; count[arr[2]]++;
@@ -855,6 +1007,7 @@ process calc_duplication_rate {
             }}' "$sample_bed" \
     | sort -k1,1 -S 5G\
     >"${key}.UMI_count.txt"
+
     cat ${key}.UMI_count.txt \
     | join - "$read_count" \
     | awk '{{
@@ -862,16 +1015,21 @@ process calc_duplication_rate {
                 \$1, \$3, \$2, 100 * (1 - \$2/\$3);
     }}' \
     >"${key}.duplication_rate_stats.txt"
+
+
     printf "\n** End process 'calc_duplication_rate' at: \$(date)\n\n" >> calc_duplication_rate.log
     """
 }
 
 /*************
+
 Process: count_umis_by_sample
+
  Inputs:
     key - sample id
     gene_assign - text file with 3 columns: sample|cell, gene, gene type (exonic, intronic)
     logfile - running log
+
  Outputs:
     key - sample id
     logfile - running log
@@ -883,13 +1041,17 @@ Process: count_umis_by_sample
 
  Summary:
     calculate umis per sample - tabulate_per_cell_counts.py
+
  Downstream:
     make_matrix
     generate_qc_metrics
+
  Published:
     umis_per_cell - count of umis per cell
     umis_per_cell_intronic - count of umis per cell only from intronic reads
+
  Notes:
+
 *************/
 
 save_umi_per_cell = {params.output_dir + "/" + it - ~/.UMIs.per.cell.barcode.txt/ + "/umis_per_cell_barcode.txt"}
@@ -920,27 +1082,35 @@ process count_umis_by_sample {
             --gene_assignment_files "$gene_assign"
             --all_counts_file "${key}.UMIs.per.cell.barcode.txt"
             --intron_counts_file "${key}.UMIs.per.cell.barcode.intronic.txt"\n\n"      >> count_umis_by_sample.log
+
+
     tabulate_per_cell_counts.py \
         --gene_assignment_files "$gene_assign" \
         --all_counts_file "${key}.UMIs.per.cell.barcode.txt" \
         --intron_counts_file "${key}.UMIs.per.cell.barcode.intronic.txt"
+
+
     printf "    Process stats:
         Total cells                            : \$(wc -l ${key}.UMIs.per.cell.barcode.txt | awk '{print \$1;}')
         Total cells > 100 reads                : \$(awk '\$3>100{c++} END{print c+0}' ${key}.UMIs.per.cell.barcode.txt)
         Total cells > 1000 reads               : \$(awk '\$3>1000{c++} END{print c+0}' ${key}.UMIs.per.cell.barcode.txt)
         Total reads in cells with > 100 reads  : \$(awk '\$3>100{c=c+\$3} END{print c+0}' ${key}.UMIs.per.cell.barcode.txt)\n\n" >> count_umis_by_sample.log
+
     printf "** End process 'count_umis_by_sample' at: \$(date)\n\n" >> count_umis_by_sample.log
     """
 }
 
 
 /*************
+
 Process: make_matrix
+
  Inputs:
     key - sample id
     gtf_path - path to gtf info folder
     cell_gene_count - gzipped text file with a count of cell, gene pairs
     logfile - running log
+
  Outputs:
     key - sample id
     logfile - running log
@@ -953,13 +1123,17 @@ Process: make_matrix
 
  Summary:
     Generate a matrix of cells by genes - make_matrix.py
+
  Downstream:
     make_cds
+
  Published:
     umi_matrix - MatrixMarket format matrix of cell by umi
     cell_anno - Cell annotations for umi_matrix
     gene_anno - Gene annotations for umi_matrix
+
  Notes:
+
 *************/
 
 ubss_out.join(gtf_info2).set{make_matrix_prepped}
@@ -983,12 +1157,16 @@ process make_matrix {
     """
     cat ${logfile} > make_matrix.log
     printf "** Start process 'make_matrix' at: \$(date)\n\n" >> make_matrix.log
+
     echo '    Process command:
         make_matrix.py <(zcat $cell_gene_count) --gene_annotation "${gtf_path}/latest.gene.annotations" --key "$key"
         cat ${gtf_path}/latest.gene.annotations > "${key}.gene_annotations.txt"  ' >> make_matrix.log
 
+
     make_matrix.py <(zcat $cell_gene_count) --gene_annotation "${gtf_path}/latest.gene.annotations" --key "$key"
     cat "${gtf_path}/latest.gene.annotations" > "${key}.gene_annotations.txt"
+
+
     printf "\n** End process 'make_matrix' at: \$(date)\n\n" >> make_matrix.log
     """
 
@@ -996,7 +1174,9 @@ process make_matrix {
 
 
 /*************
+
 Process: make_cds
+
  Inputs:
     key - sample id
     umi_matrix - MatrixMarket format matrix of cells by genes
@@ -1005,6 +1185,7 @@ Process: make_cds
     gtf_path - path to gtf info folder
     logfile - running log
     params.umi_cutoff
+
  Outputs:
     key - sample id
     scrub_matrix - matrix of counts output in proper format for scrublet
@@ -1016,11 +1197,15 @@ Process: make_cds
 
  Summary:
     Generate a monocle3 cds object - make_cds.R
+
  Downstream:
     run_scrublet
     calc_cell_totals
+
  Published:
+
  Notes:
+
 *************/
 
 process make_cds {
@@ -1049,6 +1234,8 @@ process make_cds {
             "${gtf_path}/latest.genes.bed"
             "$key"
             "$params.umi_cutoff"\n' >> make_cds.log
+
+
     make_cds.R \
         "$umi_matrix"\
         "$cell_data"\
@@ -1056,17 +1243,22 @@ process make_cds {
         "${gtf_path}/latest.genes.bed"\
         "$key"\
         "$params.umi_cutoff"
+
+
     printf "** End process 'make_cds' at: \$(date)\n\n" >> make_cds.log
     """
 }
 
 
 /*************
+
 Process: run_scrublet
+
  Inputs:
     key - sample id
     scrub_matrix - matrix of counts output in proper format for scrublet
     logfile - running log
+
  Outputs:
     key - sample id
     scrub_csv - scrublet results csv
@@ -1079,13 +1271,17 @@ Process: run_scrublet
 
  Summary:
     Run scrublet to generate doublet scores - run_scrublet.py
+
  Downstream:
     calc_duplication_rate
     generate_dashboard
     finish_log
+
  Published:
     scrublet_png - png histogram of scrublet scores
+
  Notes:
+
 *************/
 
 save_hist = {params.output_dir + "/" + it - ~/_scrublet_hist.png/ + "/" + it}
@@ -1112,8 +1308,13 @@ process run_scrublet {
             \$(pip freeze | grep scrublet | tr '==' ' ')\n\n" >> run_scrublet.log
     echo '    Process command:
         run_scrublet.py --key $key --mat $scrub_matrix\n'  >> run_scrublet.log
+
+
     run_scrublet.py --key $key --mat $scrub_matrix
+
+
     printf "** End process 'run_scrublet' at: \$(date)\n\n" >> run_scrublet.log
+
     printf "** Start processes to generate qc metrics and dashboard at: \$(date)\n\n" >> run_scrublet.log
     """
 
@@ -1121,13 +1322,16 @@ process run_scrublet {
 
 
 /*************
+
 Process: reformat_scrub
+
  Inputs:
     key - sample id
     cds_object - cds object in RDS format
     cell_qc - csv of cell quality control information
     scrub_csv - scrublet results csv
     dup_stats - file with duplication rate information for the sample
+
  Outputs:
     key - sample id
     cds_object - cds object in RDS format
@@ -1136,19 +1340,24 @@ Process: reformat_scrub
     collision - file containing collision rate if barnyard sample
 
  Pass through:
+
  Summary:
     Add scrublet info to cell_qc and cds object
     Calculate collision rate for barnyard
     Calculate sample statistics
+
  Downstream:
     generate_qc_metrics
     zip_up_sample_stats
     collapse_collision
+
  Published:
     cds_object - cds object in RDS format
     sample_stats - csv with sample-wise statistics
     cell_qc - csv of cell quality control information
+
  Notes:
+
 *************/
 
 scrublet_out.join(duplication_rate_out).set{reformat_scrub_in}
@@ -1176,10 +1385,13 @@ process reformat_scrub {
 
     """
     #!/usr/bin/env Rscript
+
     library(monocle3)
+
     dir.create("temp_fold")
     cds <- readRDS("$cds_object")
     cell_qc <- read.csv("$cell_qc")
+
     if(nrow(pData(cds)) > 0) {
         scrublet_out <- read.csv("$scrub_csv", header=F)
         pData(cds)\$scrublet_score <- scrublet_out\$V1
@@ -1187,25 +1399,32 @@ process reformat_scrub {
         cell_qc\$scrublet_score <- scrublet_out\$V1
         cell_qc\$scrublet_call <- ifelse(scrublet_out\$V2 == 1, "Doublet", "Singlet")
     }
+
     write.csv(cell_qc, quote=FALSE, file="temp_fold/$cell_qc")
+
     dup_stats <- read.table(paste0("$key", ".duplication_rate_stats.txt"))
+
     df <- data.frame(sample="$key", n.reads = dup_stats\$V2, n.umi = dup_stats\$V3,
                      duplication_rate = dup_stats\$V4,
                      doublet_count = sum(cell_qc\$scrublet_call == "Doublet", na.rm=TRUE),
                      doublet_perc = paste0(round(sum(cell_qc\$scrublet_call == "Doublet",
                                                      na.rm=TRUE)/nrow(cell_qc) * 100, 1), "%"),
                      doublet_NAs=sum(is.na(cell_qc\$scrublet_call)))
+
     write.csv(df, file=paste0("$key", "_sample_stats.csv"), quote=FALSE, row.names=FALSE)
     saveRDS(cds, file="temp_fold/$cds_object")
+
     if ("$key" == "Barnyard") {
         fData(cds)\$mouse <- grepl("ENSMUSG", fData(cds)\$id)
         fData(cds)\$human <- grepl("ENSG", fData(cds)\$id)
+
         pData(cds)\$mouse_reads <- Matrix::colSums(exprs(cds)[fData(cds)\$mouse,])
         pData(cds)\$human_reads <- Matrix::colSums(exprs(cds)[fData(cds)\$human,])
         pData(cds)\$total_reads <- pData(cds)\$mouse_reads + pData(cds)\$human_reads
         pData(cds)\$human_perc <- pData(cds)\$human_reads/pData(cds)\$total_reads
         pData(cds)\$mouse_perc <- pData(cds)\$mouse_reads/pData(cds)\$total_reads
         pData(cds)\$collision <- ifelse(pData(cds)\$human_perc >= .9 | pData(cds)\$mouse_perc >= .9, FALSE, TRUE)
+
         collision_rate <- round(sum(pData(cds)\$collision/nrow(pData(cds))) * 200, 1)
         fileConn<-file("Barn_collision.txt")
         writeLines(paste0("$key", "\t", collision_rate, "%"), fileConn)
@@ -1221,31 +1440,39 @@ process reformat_scrub {
 
 
 /*************
+
 Process: generate_qc_metrics
+
  Inputs:
     key - sample id
     params.umi_cutoff
     cds_object - cds object in RDS format
     cell_qc - csv of cell quality control information
     umis_per_cell - count of umis per cell
+
  Outputs:
     cutoff - not currently used
     umap_png - png sample UMAP
     knee_png - png sample knee plot
     qc_png - png of cell qc stats
+
  Pass through:
 
  Summary:
     Generate a bunch of qc metrics and plots - generate_qc.R
+
  Downstream:
     generate_dashboard
+
  Published:
     umap_png - png sample UMAP
     knee_png - png sample knee plot
     qc_png - png of cell qc stats
+
  Notes:
     Need to test umi cutoff here and in cds function
     Need to either remove or use output cutoff
+
 *************/
 
 for_gen_qc = rscrub_out.join(umis_per_cell)
@@ -1276,20 +1503,28 @@ process generate_qc_metrics {
 }
 
 /*************
+
 Process: zip_up_sample_stats
+
  Inputs:
     sample_stats - csv with sample-wise statistics - collected
+
  Outputs:
     all_sample_stats - concatenated table of sample stats from all samples
+
  Pass through:
 
  Summary:
     Concatenate duplication information into one table
+
  Downstream:
     generate_dashboard
+
  Published:
     all_sample_stats - concatenated table of sample stats from all samples
+
  Notes:
+
 *************/
 
 process zip_up_sample_stats {
@@ -1303,25 +1538,35 @@ process zip_up_sample_stats {
         file "*ll_sample_stats.csv" into all_sample_stats
 
     """
+
      sed -s 1d $files > all_sample_stats.csv
+
     """
 }
 
 
 /*************
+
 Process: calc_cell_totals
+
  Inputs:
     cell_qc - csv of cell quality control information - collected
+
  Outputs:
     cell_counts - table cell totals above set UMI thresholds for all samples
+
  Pass through:
 
  Summary:
     Count cell totals above set UMI thresholds for all samples
+
  Downstream:
     generate_dashboard
+
  Published:
+
  Notes:
+
 *************/
 
 process calc_cell_totals {
@@ -1335,31 +1580,41 @@ process calc_cell_totals {
         file "*.txt" into cell_counts
 
     """
+
     for f in $cell_qc
     do
       awk 'BEGIN {FS=","}; \$2>100{c++} END{print FILENAME, "100", c-1}' \$f >> cell_counts.txt
       awk 'BEGIN {FS=","}; \$2>500{c++} END{print FILENAME, "500", c-1}' \$f >> cell_counts.txt
       awk 'BEGIN {FS=","}; \$2>1000{c++} END{print FILENAME, "1000", c-1}' \$f >> cell_counts.txt
     done
+
     """
 
 }
 
 
 /*************
+
 Process: collapse_collision
+
  Inputs:
     collision - file containing collision rate if barnyard sample - collected
+
  Outputs:
     all_collision - concatenate collision values for all samples (all NA except Barnyard)
+
  Pass through:
 
  Summary:
     Concatenate collision values for all samples
+
  Downstream:
     generate_dashboard
+
  Published:
+
  Notes:
+
 *************/
 
 process collapse_collision {
@@ -1373,13 +1628,17 @@ process collapse_collision {
         file "*.txt" into all_collision
 
     """
+
     cat $col_file > all_collision.txt
+
     """
 }
 
 
 /*************
+
 Process: generate_dashboard
+
  Inputs:
     cell_counts - table cell totals above set UMI thresholds for all samples
     all_collision - concatenate collision values for all samples (all NA except Barnyard)
@@ -1389,18 +1648,24 @@ Process: generate_dashboard
     knee_png - png sample knee plot - combined as qc_plots
     qc_png - png of cell qc stats - combined as qc_plots
     scrublet_png - png histogram of scrublet scores
+
  Outputs:
     exp_dash - experimental dashboard
+
  Pass through:
 
  Summary:
     Collect plots and generate data file for experimental dashboard
     Assemble dashboard
+
  Downstream:
     generate_summary_log
+
  Published:
     exp_dash - experimental dashboard
+
  Notes:
+
 *************/
 
 process generate_dashboard {
@@ -1421,37 +1686,49 @@ process generate_dashboard {
 
     """
     generate_dash_data.R $all_sample_stats $params.output_dir $cell_counts $all_collision
+
     mkdir exp_dash
     cp -R $baseDir/bin/skeleton_dash/* exp_dash/
     mv *.png exp_dash/img/
+
     mv *.js exp_dash/js/
+
     """
 }
 
 
 /*************
+
 Process: finish_log
+
  Inputs:
     key - sample id
     logfile - running log
     exp_dash - experimental dashboard - input so runs last
+
  Outputs:
     full_log - Final full pipeline log
     summary_log - Summary log
     log_data - Logging info for experiment dash
+
+
  Pass through:
 
  Summary:
     Add parameter info to front of pipeline - allows restart when changing minor parameters
     Generate summary log
     Generate log info for experimental dash
+
  Downstream:
     END
+
  Published:
     full_log - Final full pipeline log
     summary_log - Summary log
     log_data - Logging info for experiment dash
+
  Notes:
+
 *************/
 
 save_logs = {params.output_dir + "/" + it - ~/_read_metrics.log/ - ~/_full.log/ + "/" + it}
@@ -1491,14 +1768,17 @@ process finish_log {
     printf "    params.rt_barcode_file:       $params.rt_barcode_file\n" >> ${key}_full.log
     printf "    params.hash_list:             $params.hash_list\n" >> ${key}_full.log
     printf "    params.max_wells_per_sample:  $params.max_wells_per_sample\n\n" >> ${key}_full.log
+
     tail -n +2 ${logfile} >> ${key}_full.log
     printf "\n** End processes generate qc metrics and dashboard at: \$(date)\n\n" >> ${key}_full.log
     printf "***** END PIPELINE *****: \n\n" >> ${key}_full.log
     filename=${key}_full.log
+
     # Trimming:
     trim_start=`cat \$filename | grep 'sequences processed in total' | awk -F ' ' '{sum += \$1} END {print sum}'`
     trim_lost=`cat \$filename | grep 'Sequences removed because they became shorter' | awk -F ' ' '{sum += \$14} END {print sum}'`
     trim_end=\$((\$trim_start - \$trim_lost))
+
     # Alignment:
     align_start=`cat \$filename | grep 'Number of input reads' | awk -F '|' '{sum += \$2} END {print sum}'`
     align_mapped=`cat \$filename | grep 'Uniquely mapped reads number' | awk -F '|' '{sum += \$2} END {print sum}'`
@@ -1511,16 +1791,20 @@ process finish_log {
         echo "\${align_too_short_arr[\$a]} * \${align_totals[\$a]}" | bc
         a=\$((a+1))
     done | awk '{sum += \$1} END {print sum}'`
+
     # Sort and Filter:
     sf_start=`cat \$filename | grep 'sort_and_filter starting reads' | awk -F ':' '{sum += \$2} END {print sum}'`
     sf_end=`cat \$filename | grep 'sort_and_filter ending reads' | awk -F ':' '{sum += \$2} END {print sum}'`
+
     # Dups:
     dup_start=`cat \$filename | grep 'remove_dups starting reads' | awk -F ':' '{sum += \$2} END {print sum}'`
     dup_end=`cat \$filename | grep 'remove_dups ending reads' | awk -F ':' '{sum += \$2} END {print sum}'`
+
     # Assignment:
     assigned_exonic=`cat \$filename | grep '    exonic     ' | awk -F ' ' '{sum += \$2} END {print sum}'`
     assigned_intronic=`cat \$filename | grep '    intronic     ' | awk -F ' ' '{sum += \$2} END {print sum}'`
     assigned_end=\$((\$assigned_exonic + \$assigned_intronic))
+
     # In real cells:
     reads_in_cells=`cat \$filename | grep 'Total reads in cells with > 100 reads' | awk -F ':' '{sum += \$2} END {print sum}'`
 
@@ -1538,7 +1822,10 @@ process finish_log {
             "assigned_intronic" : \$assigned_intronic,
             "reads_in_cells" : \$reads_in_cells }
     " > ${key}_log_data.js
+
+
     printf "***** PIPELINE READ STATS *****: \n\n" >> ${key}_read_metrics.log
+
     printf "%20s %20s %20s %20s %20s\n" "Process" "Starting reads" "Ending reads" "% lost" "% of total lost" >> ${key}_read_metrics.log
     printf "========================================================================================================\n" >> ${key}_read_metrics.log
     printf "%20s %20s %20s %20.2f %20.2f\n" "Trimming" \$trim_start \$trim_end \$(echo "(\$trim_start - \$trim_end)/\$trim_start * 100" | bc -l ) \$(echo "(\$trim_start - \$trim_end)/\$trim_start * 100" | bc -l ) >> ${key}_read_metrics.log
@@ -1555,7 +1842,9 @@ process finish_log {
     printf "%25s %20s %20.2f\n" "Reads multi-mapped:" \$align_multimapped \$(echo "(\$align_multimapped)/\$align_start * 100" | bc -l )  >> ${key}_read_metrics.log
     printf "%25s %20s %20.2f\n" "Reads too short:" \$align_too_short \$(echo "(\$align_too_short)/\$align_start * 100" | bc -l ) >> ${key}_read_metrics.log
 
+
     cat ${key}_read_metrics.log >> ${key}_full.log
+
     """
 
 }
