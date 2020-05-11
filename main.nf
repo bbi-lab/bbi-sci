@@ -9,6 +9,7 @@ params.rt_barcode_file="default"
 params.max_cores = 16
 params.hash_list = false
 params.max_wells_per_sample = 20
+params.garnett_file = false 
 
 //print usage
 if (params.help) {
@@ -42,6 +43,7 @@ if (params.help) {
     log.info '    params.umi_cutoff = 100                    The umi cutoff to be called a cell in matrix output.'
     log.info '    params.hash_list = false                   Path to a tab-delimited file with at least two columns, first the hash name and second the hash barcode sequence. Default is false to indicate no hashing.'
     log.info '    params.max_wells_per_sample = 20           The maximum number of wells per sample - if a sample is in more wells, the fastqs will be split then reassembled for efficiency.'
+    log.info '    params.garnett_file = false                Path to a csv with two columns, first is the sample name, and second is a path to the Garnett classifier to be applied to that sample. Default is false - no classification.'
     log.info ''
     log.info 'Issues? Contact hpliner@uw.edu'
     exit 1
@@ -1259,7 +1261,7 @@ process apply_garnett {
         set key, file(scrub_matrix), file(cds_object), file(cell_qc), file(logfile) from cds_out
 
     output:
-        set key, file(scrub_matrix), file("new_cds/*"), file(cell_qc), file(logfile) from for_scrub
+        set key, file(scrub_matrix), file("new_cds/*"), file(cell_qc), file(logfile) into for_scrub
 
 """
 mkdir new_cds
