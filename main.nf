@@ -1732,12 +1732,12 @@ Process: finish_log
 *************/
 
 save_logs = {params.output_dir + "/" + it - ~/_read_metrics.log/ - ~/_full.log/ + "/" + it}
-save_json = {params.output_dir + "/" + it - ~/_log_data.js/ + "/" + it}
+save_json = {params.output_dir + "/" + it - ~/_log_data.csv/ + "/" + it}
 
 process finish_log {
     cache 'lenient'
     publishDir path: "${params.output_dir}/", saveAs: save_logs, pattern: "*.log", mode: 'copy'
-    publishDir path: "${params.output_dir}/", saveAs: save_json, pattern: "*.js", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_json, pattern: "*.csv", mode: 'copy'
 
     input:
         set key, file(logfile) from pipe_log
@@ -1746,7 +1746,7 @@ process finish_log {
     output:
         file("*_full.log") into full_log
         file("*_read_metrics.log") into summary_log
-        file("*log_data.js") into log_json
+        file("*log_data.csv") into log_json
 
     """
     head -n 2 ${logfile} > ${key}_full.log
@@ -1809,7 +1809,8 @@ process finish_log {
     reads_in_cells=`cat \$filename | grep 'Total reads in cells with > 100 reads' | awk -F ':' '{sum += \$2} END {print sum}'`
 
     printf "
-        const log_data = {
+            {
+            "sample": "${key}",
             "alignment_start" : \$align_start,
             "alignment_mapped" : \$align_mapped,
             "align_multimapped" : \$align_multimapped,
@@ -1821,7 +1822,7 @@ process finish_log {
             "assigned_exonic" : \$assigned_exonic,
             "assigned_intronic" : \$assigned_intronic,
             "reads_in_cells" : \$reads_in_cells }
-    " > ${key}_log_data.js
+    " > ${key}_log_data.csv
 
 
     printf "***** PIPELINE READ STATS *****: \n\n" >> ${key}_read_metrics.log
