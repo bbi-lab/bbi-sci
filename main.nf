@@ -1217,7 +1217,7 @@ process make_cds {
         set key, file(cell_data), file(umi_matrix), file(gene_data), val(gtf_path), file(logfile) from mat_output
 
     output:
-        set key, file("*for_scrub.mtx"), file("*.RDS"), file("*cell_qc.csv"), file("make_cds.log") into for_scrub
+        set key, file("*for_scrub.mtx"), file("*.RDS"), file("*cell_qc.csv"), file("make_cds.log") into cds_out
         file("*cell_qc.csv") into cell_qcs
 
     """
@@ -1247,6 +1247,33 @@ process make_cds {
 
     printf "** End process 'make_cds' at: \$(date)\n\n" >> make_cds.log
     """
+}
+
+
+process apply_garnett {
+    cache 'lenient'
+    module 'modules:modules-init:modules-gs:gcc/8.1.0:R/3.6.1'
+    memory '15 GB'
+
+    input:
+        set key, file(scrub_matrix), file(cds_object), file(cell_qc), file(logfile) from cds_out
+
+    output:
+        set key, file(scrub_matrix), file("new_cds/*"), file(cell_qc), file(logfile) from for_scrub
+
+"""
+mkdir new_cds
+
+if [ $params.garnett_file == 'false' ]
+then
+    cp $cds_object new_cds/
+else
+    ./apply_garnett.R $params.garnett_file $cds_object $key
+fi
+
+"""
+
+
 }
 
 
