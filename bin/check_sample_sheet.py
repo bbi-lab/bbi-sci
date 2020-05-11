@@ -95,7 +95,7 @@ if __name__ == '__main__':
                     group_count += 1
                 well_dict[well] += "_fq_part" + str(group_count)
 
-    sheet = open(args.sample_sheet)
+    sheet = open(args.sample_sheet, 'r')
     # check for header
     topline_orig = sheet.readline()
     topline = topline_orig.strip().split(",")
