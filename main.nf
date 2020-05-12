@@ -1732,12 +1732,12 @@ Process: finish_log
 *************/
 
 save_logs = {params.output_dir + "/" + it - ~/_read_metrics.log/ - ~/_full.log/ + "/" + it}
-save_json = {params.output_dir + "/" + it - ~/_log_data.csv/ + "/" + it}
+save_csv = {params.output_dir + "/" + it - ~/_log_data.csv/ + "/" + it}
 
 process finish_log {
     cache 'lenient'
     publishDir path: "${params.output_dir}/", saveAs: save_logs, pattern: "*.log", mode: 'copy'
-    publishDir path: "${params.output_dir}/", saveAs: save_json, pattern: "*.csv", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_csv, pattern: "*.csv", mode: 'copy'
 
     input:
         set key, file(logfile) from pipe_log
@@ -1746,7 +1746,7 @@ process finish_log {
     output:
         file("*_full.log") into full_log
         file("*_read_metrics.log") into summary_log
-        file("*log_data.csv") into log_json
+        file("*log_data.csv") into log_csv
 
     """
     head -n 2 ${logfile} > ${key}_full.log
@@ -1853,7 +1853,7 @@ process finish_log {
 /*************
 Process: zip_up_log_data
  Inputs:
-    log_json - csv with sample-wise log_data files - collected
+    log_csv - csv with sample-wise log_data files - collected
 
  Outputs:
     all_log_data - concatenated table of log_data from all samples
@@ -1879,7 +1879,7 @@ process zip_up_log_data {
     publishDir path: "${params.output_dir}/", pattern: "all_log_data.csv", mode: 'copy'
 
     input:
-        file files from log_json.collect()
+        file files from log_csv.collect()
 
     output:
         file "*ll_log_data.csv" into all_log_data
