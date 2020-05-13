@@ -54,7 +54,7 @@ python setup.py install --user
 cd ..
 ```
 
-Then, install monocle3 by running:
+Then, install monocle3 and garnett by running:
 
 ```
 module load gcc/8.1.0
@@ -62,6 +62,7 @@ module load R/3.6.1
 R
 ```
 Then from within R, follow the installation instructions on the [monocle3 website](https://cole-trapnell-lab.github.io/monocle3/).
+And the instructions for garnett on the [Garnett website](https://cole-trapnell-lab.github.io/garnett/docs_m3/#install-from-github).
 
 You will also require scrublet, a tool used to detect doublets in single-cell RNA-seq data. You can install it from source by running:
 

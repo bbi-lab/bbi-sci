@@ -17,25 +17,32 @@ garnett_file$V1 <- gsub("_", "\\.", garnett_file$V1)
 garnett_file$V1 <- gsub(" ", "\\.", garnett_file$V1)
 garnett_file$V1 <- gsub("/", "\\.", garnett_file$V1)
 
-if (sample_id %in% garnett_file$orig) {
-    classifier_path <- garnett_file[garnett_file$orig == sample_id, ]$V2[1]
-} else if (sample_id %in% garnett_file$V1) {
-    classifier_path <- garnett_file[garnett_file$V1 == sample_id, ]$V2[1]
+if (args$sample_id %in% garnett_file$orig) {
+    classifier_path <- garnett_file[garnett_file$orig == args$sample_id, ]$V2[1]
+} else if (args$sample_id %in% garnett_file$V1) {
+    classifier_path <- garnett_file[garnett_file$V1 == args$sample_id, ]$V2[1]
 } else {
     classifier_path <- "NONE"
 }
 
+fileConn<-file("garnett_error.txt")
 if (classifier_path == "NONE") {
     file.copy(args$cds_path, "new_cds/")
 } else {
+    tryCatch({
     cds <- readRDS(args$cds_path)
-    classifier <- readRDS(classifier_path)
+    classifier <- readRDS(as.character(classifier_path))
 
     cds <- classify_cells(cds, classifier,
                            db = "none",
                            cluster_extend = FALSE,
                            cds_gene_id_type = "ENSEMBL")
     
-    saveRDS(cds, file=paste0("new_cds/", sample_id, "_cds.RDS"))
-
+    saveRDS(cds, file=paste0("new_cds/", args$sample_id, "_cds.RDS"))
+    writeLines("ok", fileConn)
+    }, error = function(e) {
+        file.copy(args$cds_path, "new_cds/")
+        writeLines(as.character(e), fileConn)
+    })
+ close(fileConn)
 }
