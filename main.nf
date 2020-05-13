@@ -274,7 +274,7 @@ process gather_info {
 
     """
 
-    spec=`awk 'BEGIN {FS=",";OFS=","};{sub(" ", ".", \$2);sub("/", ".", \$2);sub("-", ".", \$2);sub("_", ".", \$2);split(\$2,a,"_fq_part");print(\$1, a[1], \$3)}' $good_sample_sheet | awk 'BEGIN {FS=","}; \$2=="$key" {print \$3}' | uniq`
+    spec=`awk 'BEGIN {FS=",";OFS=","};{gsub(" ", ".", \$2);gsub("/", ".", \$2);gsub("-", ".", \$2);gsub("_", ".", \$2);split(\$2,a,"_fq_part");print(\$1, a[1], \$3)}' $good_sample_sheet | awk 'BEGIN {FS=","}; \$2=="$key" {print \$3}' | uniq`
     star_mem=`awk -v var="\$spec" '\$1==var {print \$3}' $params.star_file | uniq`
     star_path=`awk -v var="\$spec" '\$1==var {print \$2}' $params.star_file | uniq`
     gtf_path=`awk -v var="\$spec" '\$1==var {print \$2}' $params.gene_file | uniq`
