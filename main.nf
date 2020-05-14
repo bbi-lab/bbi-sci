@@ -1732,12 +1732,12 @@ Process: finish_log
 *************/
 
 save_logs = {params.output_dir + "/" + it - ~/_read_metrics.log/ - ~/_full.log/ + "/" + it}
-save_csv = {params.output_dir + "/" + it - ~/_log_data.csv/ + "/" + it}
+save_txt_for_wrap = {params.output_dir + "/" + it - ~/_log_data.txt/ + "/" + it}
 
 process finish_log {
     cache 'lenient'
     publishDir path: "${params.output_dir}/", saveAs: save_logs, pattern: "*.log", mode: 'copy'
-    publishDir path: "${params.output_dir}/", saveAs: save_csv, pattern: "*.csv", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_txt_for_wrap, pattern: "*.txt", mode: 'copy'
 
     input:
         set key, file(logfile) from pipe_log
@@ -1746,7 +1746,7 @@ process finish_log {
     output:
         file("*_full.log") into full_log
         file("*_read_metrics.log") into summary_log
-        file("*log_data.csv") into log_csv
+        file("*log_data.txt") into log_txt_for_wrap
 
     """
     head -n 2 ${logfile} > ${key}_full.log
@@ -1822,7 +1822,7 @@ process finish_log {
             "assigned_exonic" : \$assigned_exonic,
             "assigned_intronic" : \$assigned_intronic,
             "reads_in_cells" : \$reads_in_cells }
-    " > ${key}_log_data.csv
+    " > ${key}_log_data.txt
 
 
     printf "***** PIPELINE READ STATS *****: \n\n" >> ${key}_read_metrics.log
@@ -1853,7 +1853,7 @@ process finish_log {
 /*************
 Process: zip_up_log_data
  Inputs:
-    log_csv - csv with sample-wise log_data files - collected
+    log_txt_for_wrap - tab-delim file with sample-wise log_data files - collected
 
  Outputs:
     all_log_data - concatenated table of log_data from all samples
@@ -1876,17 +1876,17 @@ Process: zip_up_log_data
 
 process zip_up_log_data {
     cache 'lenient'
-    publishDir path: "${params.output_dir}/", pattern: "all_log_data.csv", mode: 'copy'
+    publishDir path: "${params.output_dir}/", pattern: "all_log_data.txt", mode: 'copy'
 
     input:
-        file files from log_csv.collect()
+        file files from log_txt_for_wrap.collect()
 
     output:
-        file "*ll_log_data.csv" into all_log_data
+        file "*ll_log_data.txt" into all_log_data
 
     """
 
-     sed -s 1d $files > all_log_data.csv
+     sed -s 1d $files > all_log_data.txt
 
     """
 }
