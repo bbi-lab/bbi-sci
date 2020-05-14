@@ -1853,7 +1853,7 @@ process finish_log {
 /*************
 Process: zip_up_log_data
  Inputs:
-    log_txt_for_wrap - tab-delim file with sample-wise log_data files - collected
+    log_txt_for_wrap - sample-wise tab delimited text files of log_data - collected
 
  Outputs:
     all_log_data - concatenated table of log_data from all samples
