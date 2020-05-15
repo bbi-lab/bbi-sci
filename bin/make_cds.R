@@ -18,6 +18,7 @@ args = parser$parse_args()
 sample_name <- args$key
 
 cds <- load_mm_data(mat_path = args$matrix, feature_anno_path = args$gene_data, 
+
                     cell_anno_path = args$cell_data, umi_cutoff=as.numeric(args$umi_cutoff),
                     feature_metadata_column_names=c('gene_short_name'), sep="")
 gene_bed <- read.table(args$gene_bed)
