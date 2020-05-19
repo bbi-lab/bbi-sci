@@ -17,10 +17,10 @@ garnett_file$V1 <- gsub("_", "\\.", garnett_file$V1)
 garnett_file$V1 <- gsub(" ", "\\.", garnett_file$V1)
 garnett_file$V1 <- gsub("/", "\\.", garnett_file$V1)
 
-if (sample_id %in% garnett_file$orig) {
-    classifier_path <- garnett_file[garnett_file$orig == sample_id, ]$V2[1]
+if (args$sample_id %in% garnett_file$orig) {
+    classifier_path <- garnett_file[garnett_file$orig == args$sample_id, ]$V2
 } else if (sample_id %in% garnett_file$V1) {
-    classifier_path <- garnett_file[garnett_file$V1 == sample_id, ]$V2[1]
+    classifier_path <- garnett_file[garnett_file$V1 == sample_id, ]$V2
 } else {
     classifier_path <- "NONE"
 }
@@ -29,13 +29,18 @@ if (classifier_path == "NONE") {
     file.copy(args$cds_path, "new_cds/")
 } else {
     cds <- readRDS(args$cds_path)
-    classifier <- readRDS(classifier_path)
+    for (val in classifier_path) {
+        classifier <- readRDS(classifier_path)
+        classifier_name <- stringr::str_split(classifier_path, "/")
+        classifier_name <- classifier_name[length(classifier_name)]
+        classifier_name <- gsub(".RDS", "", classifier_name)
 
-    cds <- classify_cells(cds, classifier,
-                           db = "none",
-                           cluster_extend = FALSE,
-                           cds_gene_id_type = "ENSEMBL")
-    
+        cds <- classify_cells(cds, classifier,
+                            db = "none",
+                            cluster_extend = FALSE,
+                            cds_gene_id_type = "ENSEMBL")
+        
+        names(colData(cds))[names(colData(cds)) == "cell_type"] <- paste0("garnett_type_", classifier_name)
+    }
     saveRDS(cds, file=paste0("new_cds/", sample_id, "_cds.RDS"))
-
 }

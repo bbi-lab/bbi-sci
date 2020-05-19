@@ -8,8 +8,8 @@ parser$add_argument('dup_file', help='File of all duplication stats.')
 parser$add_argument('output_folder', help='Output folder.')
 parser$add_argument('cell_counts', help='Cell counts file.')
 parser$add_argument('barn_col', help='File of concatenated collision values.')
+parser$add_argument('garnett_csv', help='File of Garnett models or false.')
 args = parser$parse_args()
-
 
 all_dups <- read.csv(args$dup_file, header=FALSE, stringsAsFactors=FALSE)
 output_folder <- args$output_folder
@@ -53,6 +53,14 @@ names(all_dups) <- c("Sample", "Total_reads",
 
 all_dups$Doublet_Number[is.na(all_dups$Doublet_Number)] <- "Fail"
 all_dups$Doublet_Percent[is.na(all_dups$Doublet_Percent)] <- "Fail"
+
+if (args$garnett_csv != "false") {
+  garnett_file <- read.csv(args$garnett_csv, header=FALSE)
+  all_dups$Garnett_model <- ""
+  for (samp in all_dups$Sample) {
+    all_dups$Garnett_model[all_dups$Sample == samp] <- garnett_file[garnett_file$V1 == samp, "V2"]
+  }
+}
 
 
 all_dup_lst <- apply(all_dups, 1, as.list)

@@ -1677,6 +1677,7 @@ Process: generate_dashboard
     knee_png - png sample knee plot - combined as qc_plots
     qc_png - png of cell qc stats - combined as qc_plots
     scrublet_png - png histogram of scrublet scores
+    params.garnett_file
 
  Outputs:
     exp_dash - experimental dashboard
@@ -1714,7 +1715,7 @@ process generate_dashboard {
         file exp_dash into exp_dash_out
 
     """
-    generate_dash_data.R $all_sample_stats $params.output_dir $cell_counts $all_collision
+    generate_dash_data.R $all_sample_stats $params.output_dir $cell_counts $all_collision $params.garnett_file
 
     mkdir exp_dash
     cp -R $baseDir/bin/skeleton_dash/* exp_dash/
