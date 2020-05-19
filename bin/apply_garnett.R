@@ -19,19 +19,21 @@ garnett_file$V1 <- gsub("/", "\\.", garnett_file$V1)
 
 if (args$sample_id %in% garnett_file$orig) {
     classifier_path <- garnett_file[garnett_file$orig == args$sample_id, ]$V2
-} else if (sample_id %in% garnett_file$V1) {
-    classifier_path <- garnett_file[garnett_file$V1 == sample_id, ]$V2
+} else if (args$sample_id %in% garnett_file$V1) {
+    classifier_path <- garnett_file[garnett_file$V1 == args$sample_id, ]$V2
 } else {
     classifier_path <- "NONE"
 }
 
+fileConn<-file("garnett_error.txt")
 if (classifier_path == "NONE") {
     file.copy(args$cds_path, "new_cds/")
 } else {
+    tryCatch({
     cds <- readRDS(args$cds_path)
     for (val in classifier_path) {
-        classifier <- readRDS(classifier_path)
-        classifier_name <- stringr::str_split(classifier_path, "/")
+        classifier <- readRDS(as.character(val))
+        classifier_name <- stringr::str_split(val, "/")
         classifier_name <- classifier_name[length(classifier_name)]
         classifier_name <- gsub(".RDS", "", classifier_name)
 
@@ -42,5 +44,11 @@ if (classifier_path == "NONE") {
         
         names(colData(cds))[names(colData(cds)) == "cell_type"] <- paste0("garnett_type_", classifier_name)
     }
-    saveRDS(cds, file=paste0("new_cds/", sample_id, "_cds.RDS"))
+    saveRDS(cds, file=paste0("new_cds/", args$sample_id, "_cds.RDS"))
+    writeLines("ok", fileConn)
+    }, error = function(e) {
+        file.copy(args$cds_path, "new_cds/")
+        writeLines(as.character(e), fileConn)
+    })
+ close(fileConn)
 }
