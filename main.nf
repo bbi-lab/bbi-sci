@@ -1809,7 +1809,7 @@ process finish_log {
     reads_in_cells=`cat \$filename | grep 'Total reads in cells with > 100 reads' | awk -F ':' '{sum += \$2} END {print sum}'`
 
     printf "
-            {
+            "${key}": {
             "sample": "${key}",
             "alignment_start" : \$align_start,
             "alignment_mapped" : \$align_mapped,
