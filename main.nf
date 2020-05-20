@@ -993,25 +993,10 @@ process calc_duplication_rate {
     }}" \
     >"${key}.duplication_rate_stats.txt" \n'  >> calc_duplication_rate.log
 
-
-    awk '{{ split(\$4, arr, "|")
-            if (!seen[arr[1]]) {{
-                seen[arr[1]] = 1; count[arr[2]]++;
-            }}
-            }} END {{
-                for (sample in count) {{
-                print sample "\\t" count[sample]
-                }}
-            }}' "$sample_bed" \
-    | sort -k1,1 -S 5G\
-    >"${key}.UMI_count.txt"
-
-    cat ${key}.UMI_count.txt \
-    | join - "$read_count" \
-    | awk '{{
-            printf "%-18s   %10d    %10d    %7.1f%\\n",
-                \$1, \$3, \$2, 100 * (1 - \$2/\$3);
-    }}' \
+    umi=`awk '!seen[\$4]++' test.bed | wc -l`
+    read=`cut -f2 $read_count`
+    perc=\$(echo "100.0 * (1 - \$umi/\$read)" | bc -l)
+    printf "%-18s   %10d    %10d    %7.1f\\n" $key \$read \$umi \$perc \
     >"${key}.duplication_rate_stats.txt"
 
 
