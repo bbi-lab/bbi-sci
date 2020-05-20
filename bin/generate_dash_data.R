@@ -55,10 +55,17 @@ all_dups$Doublet_Number[is.na(all_dups$Doublet_Number)] <- "Fail"
 all_dups$Doublet_Percent[is.na(all_dups$Doublet_Percent)] <- "Fail"
 
 if (args$garnett_csv != "false") {
-  garnett_file <- read.csv(args$garnett_csv, header=FALSE)
-  all_dups$Garnett_model <- ""
+  garnett_file <- read.csv(args$garnett_csv, header=FALSE, stringsAsFactors = FALSE)
+  garnett_file$V2 <- gsub(".RDS", "", garnett_file$V2)
+  garnett_file$V2 <- sapply(garnett_file$V2, function(x) {
+     y <- unlist(stringr::str_split(x, "/"))
+     y[length(y)]
+  })
+  all_dups$Garnett_model <- NA
   for (samp in all_dups$Sample) {
-    all_dups$Garnett_model[all_dups$Sample == samp] <- garnett_file[garnett_file$V1 == samp, "V2"]
+    if (samp %in% garnett_file$V1) {
+      all_dups$Garnett_model[all_dups$Sample == samp] <- list(garnett_file[garnett_file$V1 == samp, "V2"])
+    }
   }
 }
 
@@ -83,5 +90,5 @@ json_info <- list("run_name" = project_name,
                   "sample_stats" = all_dup_lst)
                   
 fileConn<-file("data.js")
-writeLines(c("const run_data =", toJSON(json_info, pretty=TRUE, auto_unbox=TRUE)), fileConn)
+writeLines(c("const run_data =", toJSON(json_info, na='null',  pretty=TRUE, auto_unbox=TRUE)), fileConn)
 close(fileConn)
