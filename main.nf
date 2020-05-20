@@ -1707,7 +1707,7 @@ Process: finish_log
  Outputs:
     full_log - Final full pipeline log
     summary_log - Summary log
-    log_data - Logging info for experiment dash
+    log_data - Logging info for dashboards
 
 
  Pass through:
@@ -1715,15 +1715,15 @@ Process: finish_log
  Summary:
     Add parameter info to front of pipeline - allows restart when changing minor parameters
     Generate summary log
-    Generate log info for experimental dash
+    Generate log info for dashboards
 
  Downstream:
-    zip_up_log_data
+    END
 
  Published:
     full_log - Final full pipeline log
     summary_log - Summary log
-    log_data - Logging info for experiment dash
+    log_data - Logging info for dashboards
 
  Notes:
 
@@ -1807,7 +1807,7 @@ process finish_log {
     reads_in_cells=`cat \$filename | grep 'Total reads in cells with > 100 reads' | awk -F ':' '{sum += \$2} END {print sum}'`
 
     printf "
-            {
+            "${key}": {
             "sample": "${key}",
             "alignment_start" : \$align_start,
             "alignment_mapped" : \$align_mapped,
@@ -1848,46 +1848,6 @@ process finish_log {
 
 }
 
-/*************
-Process: zip_up_log_data
- Inputs:
-    log_txt_for_wrap - sample-wise tab delimited text files of log_data - collected
-
- Outputs:
-    all_log_data - concatenated table of log_data from all samples
-
- Summary:
-    Generate combined list of all log data files for dashboards
-
- Published:
-    all_log_data - concatenated table of log_data from all samples
-
- Upstream:
-    finish_log
-
- Downstream:
-     END
-
- Notes:
-
-*************/
-
-process zip_up_log_data {
-    cache 'lenient'
-    publishDir path: "${params.output_dir}/", pattern: "all_log_data.txt", mode: 'copy'
-
-    input:
-        file files from log_txt_for_wrap.collect()
-
-    output:
-        file "*ll_log_data.txt" into all_log_data
-
-    """
-
-     sed -s 1d $files > all_log_data.txt
-
-    """
-}
 
 workflow.onComplete {
 	println ( workflow.success ? "Done! Saving output" : "Oops .. something went wrong" )
