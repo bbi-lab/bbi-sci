@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+import matplotlib
+matplotlib.use('pdf')
 import scrublet as scr
 import scipy.io
 import numpy

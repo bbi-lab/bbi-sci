@@ -1266,9 +1266,9 @@ process apply_garnett {
 """
     cat ${logfile} > apply_garnett.log
     printf "** Start process 'apply_garnett' at: \$(date)\n\n" >> apply_garnett.log
-mkdir new_cds
-echo "No Garnett classifier provided for this sample" > garnett_error.txt
-if [ $params.garnett_file == 'false' ]
+    mkdir new_cds
+    echo "No Garnett classifier provided for this sample" > garnett_error.txt
+    if [ $params.garnett_file == 'false' ]
 then
     cp $cds_object new_cds/
 else
@@ -1513,6 +1513,7 @@ for_gen_qc = rscrub_out.join(umis_per_cell)
 save_knee = {params.output_dir + "/" + it - ~/_knee_plot.png/ + "/" + it}
 save_umap = {params.output_dir + "/" + it - ~/_UMAP.png/ + "/" + it}
 save_cellqc = {params.output_dir + "/" + it - ~/_cell_qc.png/ + "/" + it}
+save_garnett = {params.output_dir + "/" + it.split("_")[0] + "/" + it}
 
 process generate_qc_metrics {
     module 'modules:modules-init:modules-gs:gcc/8.1.0:R/3.6.1'
@@ -1521,6 +1522,7 @@ process generate_qc_metrics {
     publishDir path: "${params.output_dir}/", saveAs: save_umap, pattern: "*UMAP.png", mode: 'copy'
     publishDir path: "${params.output_dir}/", saveAs: save_knee, pattern: "*knee_plot.png", mode: 'copy'
     publishDir path: "${params.output_dir}/", saveAs: save_cellqc, pattern: "*cell_qc.png", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_garnett, pattern: "*Garnett.png", mode: 'copy'
 
     input:
         set key, file(cds_object), file(cell_qc), file(umis_per_cell) from for_gen_qc
@@ -1533,6 +1535,7 @@ process generate_qc_metrics {
     generate_qc.R\
         $cds_object $umis_per_cell $key \
         --specify_cutoff $params.umi_cutoff\
+
     """
 }
 

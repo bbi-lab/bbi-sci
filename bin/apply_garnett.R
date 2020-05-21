@@ -33,7 +33,7 @@ if (classifier_path == "NONE") {
     cds <- readRDS(args$cds_path)
     for (val in classifier_path) {
         classifier <- readRDS(as.character(val))
-        classifier_name <- stringr::str_split(val, "/")
+        classifier_name <- unlist(stringr::str_split(val, "/"))
         classifier_name <- classifier_name[length(classifier_name)]
         classifier_name <- gsub(".RDS", "", classifier_name)
 
