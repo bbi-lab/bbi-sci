@@ -773,6 +773,7 @@ Process: remove_dups_assign_genes
  Inputs:
     split_bam - bams split by reference (chromosome)
     gtf_path - path to gtf info folder
+    split_umi_count - file with count of umis in split bam
 
  Outputs:
     split_gene_assign - text file with 3 columns: sample|cell, gene, gene type (exonic, intronic)
@@ -813,7 +814,7 @@ Process: remove_dups_assign_genes
 process remove_dups_assign_genes {
     cache 'lenient'
     memory '4 GB'
-    module 'modules:modules-init:modules-gs:bedtools/2.26.0:python/3.6.4:coreutils/8.24'
+    module 'modules:modules-init:modules-gs:bedtools/2.26.0:python/3.6.4:coreutils/8.24:samtools/1.4'
 
     input:
         set key, file(split_bam), val(gtf_path) from split_bams
@@ -860,6 +861,8 @@ Process: merge_assignment
     split_gene_assign - text file with 3 columns: sample|cell, gene, gene type (exonic, intronic)
     split_bed - deduplicated sorted bed file
     logfile - running log
+    split_umi_count - file with count of umis in split bam
+    read_count - file with the total reads listed
 
  Outputs:
     key - sample id
@@ -867,6 +870,7 @@ Process: merge_assignment
     gene_assign - text file with 3 columns: sample|cell, gene, gene type (exonic, intronic)
     cell_gene_count - gzipped text file with a count of cell, gene pairs
     logfile - running log
+    dup_stats - file with duplication rate information for the sample
 
  Pass through:
 
@@ -874,9 +878,11 @@ Process: merge_assignment
     merge bed files by sample
     merge gene assignment files by sample
     make cell gene count file
+    calculate duplication rate
 
  Downstream:
     count_umis_by_sample
+    reformat_scrub
 
  Published:
 
@@ -928,90 +934,6 @@ process merge_assignment {
 
 /*************
 
-Process: calc_duplication_rate
-
- Inputs:
-    key - sample id
-    sample_bed - deduplicated sorted bed file
-    read_count - file with the total reads listed
-    logfile - running log
-
- Outputs:
-    key - sample id
-    dup_stats - file with duplication rate information for the sample
-    logfile - running log
-
- Pass through:
-    gene_assign - text file with 3 columns: sample|cell, gene, gene type (exonic, intronic)
-    cell_gene_count - gzipped text file with a count of cell, gene pairs
-
- Summary:
-    Calculate total umis
-    Calculate duplication rate
-
- Downstream:
-    count_umis_by_sample
-    reformat_scrub
-
- Published:
-
- Notes:
-    Potential speed up  - get UMI count from collapsed cell_gene_count instead of bed
-
-*************/
-
-merge_assignment_out.join(read_count).set{ calc_duplication_rate_in }
-
-process calc_duplication_rate {
-    cache 'lenient'
-    memory '20 GB'
-    module 'modules:modules-init:modules-gs:samtools/1.4:coreutils/8.24'
-
-    input:
-        set val(key), file(cell_gene_count), file(gene_assign), file(sample_bed), file(logfile), file(read_count) from calc_duplication_rate_in
-
-    output:
-        set val(key), file(cell_gene_count), file(gene_assign), file("calc_duplication_rate.log") into calc_dup_out
-        set val(key), file("*duplication_rate_stats.txt") into duplication_rate_out
-    """
-
-    cat ${logfile} > calc_duplication_rate.log
-    printf "** Start process 'calc_duplication_rate' at: \$(date)\n\n" >> calc_duplication_rate.log
-    printf "    Process versions:
-        \$(samtools --version | tr '\n' ' ')\n\n" >> calc_duplication_rate.log
-    echo '    Process command:
-    awk "{{ split(\$4, arr, "|")
-            if (!seen[arr[1]]) {{
-                seen[arr[1]] = 1; count[arr[2]]++;
-            }}
-            }} END {{
-                for (sample in count) {{
-                print sample "\\t" count[sample]
-                }}
-            }}" "$sample_bed" \
-    | sort -k1,1 -S 5G\
-    >"${key}.UMI_count.txt"
-
-    cat ${key}.UMI_count.txt \
-    | join - "${key}.read_count.txt" \
-    | awk "{{
-            printf "%-18s   %10d    %10d    %7.1f%\\n",
-                \$1, \$3, \$2, 100 * (1 - \$2/\$3);
-    }}" \
-    >"${key}.duplication_rate_stats.txt" \n'  >> calc_duplication_rate.log
-
-    umi=`awk '!seen[\$4]++' $sample_bed | wc -l`
-    read=`cut -f2 $read_count`
-    perc=\$(echo "100.0 * (1 - \$umi/\$read)" | bc -l)
-    printf "%-18s   %10d    %10d    %7.1f\\n" $key \$read \$umi \$perc \
-    >"${key}.duplication_rate_stats.txt"
-
-
-    """
-}
-
-/*************
-
 Process: count_umis_by_sample
 
  Inputs:
@@ -1054,7 +976,7 @@ process count_umis_by_sample {
     publishDir path: "${params.output_dir}/", saveAs: save_umi_per_cell, pattern: "*barcode.txt", mode: 'copy'
 
     input:
-        set val(key), file(cell_gene_count), file(gene_assign), file(logfile) from calc_dup_out
+        set val(key), file(cell_gene_count), file(gene_assign), file(logfile) from merge_assignment_out
 
     output:
         set key, file(cell_gene_count), file("count_umis_by_sample.log") into ubss_out
