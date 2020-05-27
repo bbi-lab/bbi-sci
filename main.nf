@@ -697,7 +697,7 @@ sample_bams.join(gtf_info).set{assign_prepped}
 
 process split_bam {
     cache 'lenient'
-    memory '1 GB'
+    memory '5 GB'
     module 'modules:modules-init:modules-gs:samtools/1.4:bamtools/2.2.3:bedtools/2.26.0:python/3.6.4'
 
     input:
@@ -812,17 +812,19 @@ Process: remove_dups_assign_genes
 
 process remove_dups_assign_genes {
     cache 'lenient'
-    memory '3 GB'
+    memory '4 GB'
     module 'modules:modules-init:modules-gs:bedtools/2.26.0:python/3.6.4:coreutils/8.24'
 
     input:
         set key, file(split_bam), val(gtf_path) from split_bams
 
     output:
-        set key, file("*.bed"), file("*.txt") into remove_dup_part_out
+        set key, file("*.bed"), file("*_ga.txt"), file("*_umi_count.txt") into remove_dup_part_out
 
     """
     rmdup.py --bam $split_bam --output_bam out.bam
+
+    samtools view -c out.bam > ${split_bam}_umi_count.txt
 
     bedtools bamtobed -i out.bam -split \
             | sort -k1,1 -k2,2n -k3,3n -S 5G \
@@ -843,7 +845,7 @@ process remove_dups_assign_genes {
             split(\$1, arr, "|")
             printf "%s_%s_%s\t%s\t%s\\n", arr[3], arr[4], arr[5], \$2, \$3
     }}' \
-    | sort -k1,1 -k2,2 -S 5G > "${split_bam}.txt"
+    | sort -k1,1 -k2,2 -S 5G > "${split_bam}_ga.txt"
 
     """
 
@@ -885,6 +887,7 @@ Process: merge_assignment
 remove_dup_part_out
     .groupTuple()
     .join(split_bam_log)
+    .join(read_count)
     .set { for_cat_dups }
 
 process merge_assignment {
@@ -893,20 +896,25 @@ process merge_assignment {
     module 'modules:modules-init:modules-gs:coreutils/8.24'
 
     input:
-        set key, file(split_bed), file(split_gene_assign), file(logfile) from for_cat_dups
+        set key, file(split_bed), file(split_gene_assign), file(split_umi_count), file(logfile), file(read_count) from for_cat_dups
 
     output:
         set key, file("*.gz"), file("*_ga.txt"), file("*.bed"), file("merge_assignment.log") into merge_assignment_out
-
+        set val(key), file("*duplication_rate_stats.txt") into duplication_rate_out
     """
     cat ${logfile} > merge_assignment.log
-
     cat $split_bed > "${key}.bed"
     sort -m -k1,1 -k2,2 $split_gene_assign > "${key}_ga.txt"
 
     datamash -g 1,2 count 2 < "${key}_ga.txt" \
     | gzip > "${key}.gz"
 
+
+    umi=`cat $split_umi_count | awk '{ sum += $1 } END { print sum }'`
+    read=`cut -f2 $read_count`
+    perc=\$(echo "100.0 * (1 - \$umi/\$read)" | bc -l)
+    printf "%-18s   %10d    %10d    %7.1f\\n" $key \$read \$umi \$perc \
+    >"${key}.duplication_rate_stats.txt"
 
     printf "
         remove_dups ending reads  : \$(wc -l ${key}.bed | awk '{print \$1;}')\n\n
@@ -963,7 +971,6 @@ process calc_duplication_rate {
         set val(key), file(cell_gene_count), file(gene_assign), file(sample_bed), file(logfile), file(read_count) from calc_duplication_rate_in
 
     output:
-        file "*.UMI_count.txt" into summarize_dup_out
         set val(key), file(cell_gene_count), file(gene_assign), file("calc_duplication_rate.log") into calc_dup_out
         set val(key), file("*duplication_rate_stats.txt") into duplication_rate_out
     """
@@ -993,14 +1000,13 @@ process calc_duplication_rate {
     }}" \
     >"${key}.duplication_rate_stats.txt" \n'  >> calc_duplication_rate.log
 
-    umi=`awk '!seen[\$4]++' test.bed | wc -l`
+    umi=`awk '!seen[\$4]++' $sample_bed | wc -l`
     read=`cut -f2 $read_count`
     perc=\$(echo "100.0 * (1 - \$umi/\$read)" | bc -l)
     printf "%-18s   %10d    %10d    %7.1f\\n" $key \$read \$umi \$perc \
     >"${key}.duplication_rate_stats.txt"
 
 
-    printf "\n** End process 'calc_duplication_rate' at: \$(date)\n\n" >> calc_duplication_rate.log
     """
 }
 
@@ -1273,7 +1279,7 @@ process run_scrublet {
     publishDir path: "${params.output_dir}/", saveAs: save_hist, pattern: "*png", mode: 'copy'
     cache 'lenient'
     module 'modules:java/latest:modules-init:modules-gs:python/3.6.4'
-    memory '20 GB'
+    memory '25 GB'
 
     input:
         set key, file(scrub_matrix), file(cds_object), file(cell_qc), file(logfile) from for_scrub
