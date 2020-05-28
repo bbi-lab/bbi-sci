@@ -916,7 +916,7 @@ process merge_assignment {
     | gzip > "${key}.gz"
 
 
-    umi=`cat $split_umi_count | awk '{ sum += $1 } END { print sum }'`
+    umi=`cat $split_umi_count | awk '{ sum += \$1 } END { print sum }'`
     read=`cut -f2 $read_count`
     perc=\$(echo "100.0 * (1 - \$umi/\$read)" | bc -l)
     printf "%-18s   %10d    %10d    %7.1f\\n" $key \$read \$umi \$perc \
