@@ -866,7 +866,6 @@ Process: merge_assignment
 
  Outputs:
     key - sample id
-    sample_bed - deduplicated sorted bed file
     gene_assign - text file with 3 columns: sample|cell, gene, gene type (exonic, intronic)
     cell_gene_count - gzipped text file with a count of cell, gene pairs
     logfile - running log
@@ -905,8 +904,10 @@ process merge_assignment {
         set key, file(split_bed), file(split_gene_assign), file(split_umi_count), file(logfile), file(read_count) from for_cat_dups
 
     output:
-        set key, file("*.gz"), file("*_ga.txt"), file("*.bed"), file("merge_assignment.log") into merge_assignment_out
+        set key, file("*.gz"), file("*_ga.txt"), file("merge_assignment.log") into merge_assignment_out
         set val(key), file("*duplication_rate_stats.txt") into duplication_rate_out
+        file "*.bed"  into temp_bed
+
     """
     cat ${logfile} > merge_assignment.log
     cat $split_bed > "${key}.bed"
@@ -916,7 +917,7 @@ process merge_assignment {
     | gzip > "${key}.gz"
 
 
-    umi=`cat $split_umi_count | awk '{ sum += $1 } END { print sum }'`
+    umi=`cat $split_umi_count | awk '{ sum += \$1 } END { print sum }'`
     read=`cut -f2 $read_count`
     perc=\$(echo "100.0 * (1 - \$umi/\$read)" | bc -l)
     printf "%-18s   %10d    %10d    %7.1f\\n" $key \$read \$umi \$perc \
