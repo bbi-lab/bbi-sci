@@ -1722,7 +1722,7 @@ process finish_log {
 
     printf "
             "${key}": {
-            "sample": "${key}",
+            "sample": "\\"${key}\\"",
             "alignment_start" : \$align_start,
             "alignment_mapped" : \$align_mapped,
             "align_multimapped" : \$align_multimapped,
