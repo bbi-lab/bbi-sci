@@ -722,6 +722,8 @@ process split_bam {
         bamtools split -in $merged_bam -reference -stub split_bams/split
 
         rmdup.py --bam in_bam --output_bam out.bam
+    
+        samtools view -c out.bam > split_bam_umi_count.txt
 
         bedtools bamtobed -i out.bam -split
                 | sort -k1,1 -k2,2n -k3,3n -S 5G
@@ -744,8 +746,11 @@ process split_bam {
         }}
         | sort -k2,2 -k1,1 -S 5G > in_bam.txt
 
-        cat in_bed > key.bed
-        sort -m -k2,2 -k1,1 in_assign | datamash -g 1,2 count 2
+        cat logfile > merge_assignment.log
+        cat split_bed > key.bed
+        sort -m -k1,1 -k2,2 split_gene_assign > key_ga.txt
+
+        datamash -g 1,2 count 2 < key_ga.txt 
         | gzip > key.gz
         ' >> remove_dups.log
 
@@ -759,7 +764,6 @@ process split_bam {
     ls | grep "_[0-9A-Za-z\\.]\\{3,\\}.bam\$" | samtools merge split.REFnonstand.bam -b -
     ls | grep "_[0-9A-Za-z\\.]\\{3,\\}.bam\$" | xargs -d"\\n" rm
     mv split.REFnonstand.bam split.REF_nonstand.bam
-
 
     """
 
@@ -1662,7 +1666,9 @@ process finish_log {
 
     """
     head -n 2 ${logfile} > ${key}_full.log
-    printf "Git Version, Commit ID, Session ID: $workflow.revision, $workflow.commitId, $workflow.sessionId\n" >> ${key}_full.log
+    printf "Nextflow version: $nextflow.version\n" >> ${key}_full.log
+    printf "Pipeline version: $workflow.manifest.version\n" >> ${key}_full.log
+    printf "Git Repository, Version, Commit ID, Session ID: $workflow.repository, $workflow.revision, $workflow.commitId, $workflow.sessionId\n\n" >> ${key}_full.log
     printf "Command:\n$workflow.commandLine\n\n" >> ${key}_full.log
     printf "***** PARAMETERS *****: \n\n" >> ${key}_full.log
     printf "    params.run_dir:               $params.run_dir\n" >> ${key}_full.log
