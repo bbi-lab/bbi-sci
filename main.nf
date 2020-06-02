@@ -1783,7 +1783,7 @@ process zip_up_log_data {
 
     for file in \$logfile_key;
     do
-    cat \$file/"\${logfile_key}_log_data.txt" >> log_data.js
+    cat "\${logfile_key}_log_data.txt" >> log_data.js
     echo ',' >> log_data.js
     echo -n \$logfile_key >> temp_samp.txt
     echo -n '", "' >> temp_samp.txt
