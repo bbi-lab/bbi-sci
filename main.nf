@@ -1767,13 +1767,13 @@ process zip_up_log_data {
     publishDir path: "${params.output_dir}/", pattern: "log_data.js", mode: 'copy'
 
     input:
-        file files from log_txt_for_wrap.collect()
+        set key, file files from log_txt_for_wrap.collect()
 
     output:
         file "*og_data.js" into all_log_data
 
     """
-    logfile_key=${key}_log_data.txt
+    logfile_key=${key}
 
     echo 'const log_data = {' > log_data.js
     echo -n '"sample_list" : ["' > temp_samp.txt
