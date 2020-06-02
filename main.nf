@@ -1794,8 +1794,6 @@ process zip_up_log_data {
     echo '}' >> log_data.js
     sed -i 'H;1h;\$!d;g;s_\\(.*\\), "_\\1],_' temp_samp.txt
     sed -i '1 r temp_samp.txt' log_data.js
-
-    cp log_data.js exp_dash/js/
     """
 }
 
