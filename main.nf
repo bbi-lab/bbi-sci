@@ -1659,7 +1659,6 @@ process finish_log {
         file("*_full.log") into full_log
         file("*_read_metrics.log") into summary_log
         file("*log_data.txt") into log_txt_for_wrap
-        set key into get_sample_key
 
     """
     head -n 2 ${logfile} > ${key}_full.log
@@ -1765,37 +1764,25 @@ process finish_log {
 
 process zip_up_log_data {
     cache 'lenient'
-    publishDir path: "${params.output_dir}/", pattern: "log_data.js", mode: 'copy'
+    publishDir path: "${params.output_dir}/", pattern: "all_log_data.txt", mode: 'copy'
 
     input:
-        set key from get_sample_key
         file files from log_txt_for_wrap.collect()
 
     output:
-        file "*og_data.js" into all_log_data
+        file "*ll_log_data.txt" into all_log_data
 
     """
-    logfile_key=${key}
+     sed -s 1d $files > all_log_data.txt
 
-    echo 'const log_data = {' > log_data.js
-    echo -n '"sample_list" : ["' > temp_samp.txt
-    echo -e '\n"readmetrics_stats": {' >> log_data.js
+     echo 'const log_data = {' > log_data.js
+     echo '"readmetrics_stats": {' >> log_data.js
+     cat all_log_data.txt | sed 's/\(}\)/ \1 ,/' >> log_data.js
+     sed -i 'H;1h;\$!d;g;s_\\(.*\\),_\\1 _' log_data.js
+     echo '  }' >> log_data.js
+     echo '}' >> log_data.js
 
-    for file in \$logfile_key;
-    do
-    cat "\${logfile_key}_log_data.txt" >> log_data.js
-    echo ',' >> log_data.js
-    echo -n \$logfile_key >> temp_samp.txt
-    echo -n '", "' >> temp_samp.txt
-    done
-
-    sed -i '\$ d' log_data.js
-    echo '  }' >> log_data.js
-    echo '}' >> log_data.js
-    sed -i 'H;1h;\$!d;g;s_\\(.*\\), "_\\1],_' temp_samp.txt
-    sed -i '1 r temp_samp.txt' log_data.js
-
-    cp log_data.js ${params.output_dir}/exp_dash/js/
+     cp log_data.js ${params.output_dir}/exp_dash/js/
     """
 }
 
