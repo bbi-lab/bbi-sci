@@ -1762,6 +1762,38 @@ process finish_log {
 
 }
 
+process zip_up_log_data {
+    cache 'lenient'
+    publishDir path: "${params.output_dir}/", pattern: "log_data.js", mode: 'copy'
+
+    input:
+        file files from log_txt_for_wrap.collect()
+
+    output:
+        file "*og_data.js" into all_log_data
+
+    """
+    logfile_key=${key}
+
+    echo 'const log_data = {' > log_data.js
+    echo -n '"sample_list" : ["' > temp_samp.txt
+    echo -e '\n"readmetrics_stats": {' >> log_data.js
+
+    for file in \$logfile_key;
+    do
+    cat \$file/"\$logfile_key_log_data.txt" >> log_data.js
+    echo ',' >> log_data.js
+    echo -n \$logfile_key >> temp_samp.txt
+    echo -n '", "' >> temp_samp.txt
+    done
+    sed -i '\$ d' log_data.js
+    echo '  }' >> log_data.js
+    echo '}' >> log_data.js
+    sed -i 'H;1h;\$!d;g;s_\\(.*\\), "_\\1],_' temp_samp.txt
+    sed -i '1 r temp_samp.txt' log_data.js
+    cp log_data.js exp_dash/js/
+    """
+}
 
 workflow.onComplete {
 	println ( workflow.success ? "Done! Saving output" : "Oops .. something went wrong" )
