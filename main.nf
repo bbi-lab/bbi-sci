@@ -1777,7 +1777,7 @@ process zip_up_log_data {
 
      echo 'const log_data = {' > log_data.js
      echo '"readmetrics_stats": {' >> log_data.js
-     cat all_log_data.txt | sed 's/\(}\)/ \1 ,/' >> log_data.js
+     cat all_log_data.txt | sed 's/\\(}\\)/ \\1 ,/' >> log_data.js
      sed -i 'H;1h;\$!d;g;s_\\(.*\\),_\\1 _' log_data.js
      echo '  }' >> log_data.js
      echo '}' >> log_data.js
