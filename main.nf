@@ -1773,7 +1773,7 @@ process zip_up_log_data {
         file "*og_data.js" into all_log_data
 
     """
-    logfile_key=${key}
+    logfile_key=${key}_log_data.txt
 
     echo 'const log_data = {' > log_data.js
     echo -n '"sample_list" : ["' > temp_samp.txt
@@ -1786,11 +1786,13 @@ process zip_up_log_data {
     echo -n \$logfile_key >> temp_samp.txt
     echo -n '", "' >> temp_samp.txt
     done
+
     sed -i '\$ d' log_data.js
     echo '  }' >> log_data.js
     echo '}' >> log_data.js
     sed -i 'H;1h;\$!d;g;s_\\(.*\\), "_\\1],_' temp_samp.txt
     sed -i '1 r temp_samp.txt' log_data.js
+
     cp log_data.js exp_dash/js/
     """
 }
