@@ -1659,6 +1659,7 @@ process finish_log {
         file("*_full.log") into full_log
         file("*_read_metrics.log") into summary_log
         file("*log_data.txt") into log_txt_for_wrap
+        set key into get_sample_key
 
     """
     head -n 2 ${logfile} > ${key}_full.log
@@ -1762,7 +1763,6 @@ process finish_log {
 
 }
 
-pipe_log.set {get_sample_key}
 process zip_up_log_data {
     cache 'lenient'
     publishDir path: "${params.output_dir}/", pattern: "log_data.js", mode: 'copy'
