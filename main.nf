@@ -1658,8 +1658,7 @@ process finish_log {
     output:
         file("*_full.log") into full_log
         file("*_read_metrics.log") into summary_log
-        file("*log_data.txt") into log_txt_for_wrap
-        set key into get_sample_key
+        set key, file("*log_data.txt") into log_txt_for_wrap
 
     """
     head -n 2 ${logfile} > ${key}_full.log
@@ -1768,8 +1767,7 @@ process zip_up_log_data {
     publishDir path: "${params.output_dir}/", pattern: "log_data.js", mode: 'copy'
 
     input:
-        set key from get_sample_key
-        file files from log_txt_for_wrap.collect()
+        set key, file files from log_txt_for_wrap.collect()
 
     output:
         file "*og_data.js" into all_log_data
