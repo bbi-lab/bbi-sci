@@ -1767,7 +1767,8 @@ process zip_up_log_data {
     publishDir path: "${params.output_dir}/", pattern: "log_data.js", mode: 'copy'
 
     input:
-        set key, file files from log_txt_for_wrap.collect()
+        set key from pipe_log
+        file files from log_txt_for_wrap.collect()
 
     output:
         file "*og_data.js" into all_log_data
