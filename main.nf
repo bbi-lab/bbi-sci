@@ -1762,12 +1762,13 @@ process finish_log {
 
 }
 
+pipe_log.into {get_sample_key}
 process zip_up_log_data {
     cache 'lenient'
     publishDir path: "${params.output_dir}/", pattern: "log_data.js", mode: 'copy'
 
     input:
-        set key from pipe_log
+        set key from get_sample_key
         file files from log_txt_for_wrap.collect()
 
     output:
