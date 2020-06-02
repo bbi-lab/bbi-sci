@@ -1762,7 +1762,7 @@ process finish_log {
 
 }
 
-pipe_log.into {get_sample_key}
+pipe_log.set {get_sample_key}
 process zip_up_log_data {
     cache 'lenient'
     publishDir path: "${params.output_dir}/", pattern: "log_data.js", mode: 'copy'
