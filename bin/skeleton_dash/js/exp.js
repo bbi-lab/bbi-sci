@@ -38,7 +38,8 @@ function Header(props) {
 
 function Sample(props) {
   var safe_name = "hp" + props.sample_id.replace(".", "");
-  console.log(safe_name);
+  console.log(props.garnett_model == null);
+  console.log(Array.isArray(props.garnett_model));
   return React.createElement(
     "div",
     { className: "tab-pane fade", id: safe_name, role: "tabpanel",
@@ -117,6 +118,16 @@ function Sample(props) {
             "aria-selected": "false" },
           "UMAP"
         ),
+        props.garnett_model != null && React.createElement(
+          "a",
+          {
+            className: "nav-item nav-link",
+            id: "nav" + safe_name + "-garnett-tab",
+            "data-toggle": "tab", href: "#nav" + safe_name + "-garnett",
+            role: "tab", "aria-controls": "nav" + safe_name + "-garnett",
+            "aria-selected": "false" },
+          "Garnett"
+        ),
         React.createElement(
           "a",
           {
@@ -126,6 +137,16 @@ function Sample(props) {
             role: "tab", "aria-controls": "nav" + safe_name + "-stats",
             "aria-selected": "false" },
           "Sample Stats"
+        ),
+        React.createElement(
+          "a",
+          {
+            className: "nav-item nav-link",
+            id: "nav" + safe_name + "-readmetrics-tab",
+            "data-toggle": "tab", href: "#nav" + safe_name + "-readmetrics",
+            role: "tab", "aria-controls": "nav" + safe_name + "-readmetrics",
+            "aria-selected": "false" },
+          "Read Metrics"
         )
       )
     ),
@@ -137,7 +158,9 @@ function Sample(props) {
       React.createElement(ScrubPane, { sample_id: props.sample_id, sample_stats: run_data.sample_stats }),
       React.createElement(QCPane, { sample_id: props.sample_id }),
       React.createElement(UMAPPane, { sample_id: props.sample_id }),
-      React.createElement(StatsPane, { sample_id: props.sample_id, sample_stats: run_data.sample_stats })
+      props.garnett_model != null && React.createElement(GarnettPane, { sample_id: props.sample_id, garnett_model: props.garnett_model }),
+      React.createElement(StatsPane, { sample_id: props.sample_id, sample_stats: run_data.sample_stats }),
+      React.createElement(ReadMetricsPane, { sample_id: props.sample_id, readmetrics_stats: log_data.readmetrics_stats })
     )
   );
 }
@@ -225,6 +248,145 @@ function StatsPane(props) {
   );
 }
 
+function ReadMetricsPane(props) {
+  var safe_name = "hp" + props.sample_id.replace(".", "");
+  var read_metric = props.readmetrics_stats[props.sample_id];
+  var readmetrics_list = ["Reads after trimming", "Reads uniquely mapped", "Reads multi-mapped", "Reads too short", "Reads after alignment", "Reads after filtering", "Reads before deduplication", "Reads after deduplication", "Exonic reads", "Intronic reads", "Total reads in cells"];
+
+  return React.createElement(
+    "div",
+    { className: "tab-pane fade", id: "nav" + safe_name + "-readmetrics", role: "tabpanel", "aria-labelledby": "nav" + safe_name + "-readmetrics-tab" },
+    React.createElement(
+      "table",
+      { className: "table table-hover" },
+      React.createElement(
+        "thead",
+        null,
+        React.createElement(
+          "tr",
+          null,
+          React.createElement("th", { scope: "col" }),
+          React.createElement(TitleRow, { samp: props.sample_id })
+        )
+      ),
+      React.createElement(
+        "tbody",
+        null,
+        React.createElement(
+          "tr",
+          null,
+          React.createElement(
+            "th",
+            { scope: "row" },
+            "Reads after trimming"
+          ),
+          React.createElement(RegRow, { val: read_metric["alignment_start"] })
+        ),
+        React.createElement(
+          "tr",
+          null,
+          React.createElement(
+            "th",
+            { scope: "row" },
+            "Reads uniquely mapped"
+          ),
+          React.createElement(RegRow, { val: read_metric["alignment_mapped"] })
+        ),
+        React.createElement(
+          "tr",
+          null,
+          React.createElement(
+            "th",
+            { scope: "row" },
+            "Reads multi-mapped"
+          ),
+          React.createElement(RegRow, { val: read_metric["align_multimapped"] })
+        ),
+        React.createElement(
+          "tr",
+          null,
+          React.createElement(
+            "th",
+            { scope: "row" },
+            "Reads too short"
+          ),
+          React.createElement(RegRow, { val: read_metric["align_too_short"] })
+        ),
+        React.createElement(
+          "tr",
+          null,
+          React.createElement(
+            "th",
+            { scope: "row" },
+            "Reads after alignment"
+          ),
+          React.createElement(RegRow, { val: read_metric["sf_start"] })
+        ),
+        React.createElement(
+          "tr",
+          null,
+          React.createElement(
+            "th",
+            { scope: "row" },
+            "Reads after filtering"
+          ),
+          React.createElement(RegRow, { val: read_metric["sf_end"] })
+        ),
+        React.createElement(
+          "tr",
+          null,
+          React.createElement(
+            "th",
+            { scope: "row" },
+            "Reads before deduplication"
+          ),
+          React.createElement(RegRow, { val: read_metric["dup_start"] })
+        ),
+        React.createElement(
+          "tr",
+          null,
+          React.createElement(
+            "th",
+            { scope: "row" },
+            "Reads after deduplication"
+          ),
+          React.createElement(RegRow, { val: read_metric["dup_end"] })
+        ),
+        React.createElement(
+          "tr",
+          null,
+          React.createElement(
+            "th",
+            { scope: "row" },
+            "Exonic reads"
+          ),
+          React.createElement(RegRow, { val: read_metric["assigned_exonic"] })
+        ),
+        React.createElement(
+          "tr",
+          null,
+          React.createElement(
+            "th",
+            { scope: "row" },
+            "Intronic reads"
+          ),
+          React.createElement(RegRow, { val: read_metric["assigned_intronic"] })
+        ),
+        React.createElement(
+          "tr",
+          null,
+          React.createElement(
+            "th",
+            { scope: "row" },
+            "Total reads in cells"
+          ),
+          React.createElement(RegRow, { val: read_metric["reads_in_cells"] })
+        )
+      )
+    )
+  );
+}
+
 function BarnyardPane(props) {
   var safe_name = "hp" + props.sample_id.replace(".", "");
   return React.createElement(Pane, {
@@ -275,6 +437,35 @@ function UMAPPane(props) {
     text: [''],
     plot: "img/" + props.sample_id + "_UMAP.png"
   });
+}
+
+function GarnettPane(props) {
+  var safe_name = "hp" + props.sample_id.replace(".", "");
+  return React.createElement(
+    "div",
+    { className: "tab-pane fade", id: "nav" + safe_name + "-garnett", role: "tabpanel", "aria-labelledby": "nav" + safe_name + "-garnett-tab" },
+    Array.isArray(props.garnett_model) ? props.garnett_model.map(function (model, index) {
+      return React.createElement(
+        "span",
+        { key: index },
+        React.createElement(
+          "p",
+          null,
+          'Garnett model run: ' + model
+        ),
+        React.createElement("img", { src: "img/" + props.sample_id + "_" + model + "_Garnett.png", className: "rounded mx-auto d-block", alt: "...", style: { maxHeight: "50vh", width: "auto" } })
+      );
+    }) : React.createElement(
+      "span",
+      null,
+      React.createElement(
+        "p",
+        null,
+        'Garnett model run: ' + props.garnett_model
+      ),
+      React.createElement("img", { src: "img/" + props.sample_id + "_" + props.garnett_model + "_Garnett.png", className: "rounded mx-auto d-block", alt: "...", style: { maxHeight: "50vh", width: "auto" } })
+    )
+  );
 }
 
 function SamplePill(props) {
@@ -677,7 +868,7 @@ function ExperimentPage(props) {
 }
 
 var sampList = run_data.sample_list.map(function (samp) {
-  return React.createElement(Sample, { key: samp, sample_id: samp });
+  return React.createElement(Sample, { key: samp, sample_id: samp, garnett_model: run_data.sample_stats[samp].Garnett_model });
 });
 
 var sampPills = run_data.sample_list.map(function (samp) {
