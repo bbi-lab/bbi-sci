@@ -9,6 +9,7 @@ params.rt_barcode_file="default"
 params.max_cores = 16
 params.hash_list = false
 params.max_wells_per_sample = 20
+params.garnett_file = false 
 
 //print usage
 if (params.help) {
@@ -42,6 +43,7 @@ if (params.help) {
     log.info '    params.umi_cutoff = 100                    The umi cutoff to be called a cell in matrix output.'
     log.info '    params.hash_list = false                   Path to a tab-delimited file with at least two columns, first the hash name and second the hash barcode sequence. Default is false to indicate no hashing.'
     log.info '    params.max_wells_per_sample = 20           The maximum number of wells per sample - if a sample is in more wells, the fastqs will be split then reassembled for efficiency.'
+    log.info '    params.garnett_file = false                Path to a csv with two columns, first is the sample name, and second is a path to the Garnett classifier to be applied to that sample. Default is false - no classification.'
     log.info ''
     log.info 'Issues? Contact hpliner@uw.edu'
     exit 1
@@ -1133,7 +1135,7 @@ process make_cds {
         set key, file(cell_data), file(umi_matrix), file(gene_data), val(gtf_path), file(logfile) from mat_output
 
     output:
-        set key, file("*for_scrub.mtx"), file("*.RDS"), file("*cell_qc.csv"), file("make_cds.log") into for_scrub
+        set key, file("*for_scrub.mtx"), file("*.RDS"), file("*cell_qc.csv"), file("make_cds.log") into cds_out
         file("*cell_qc.csv") into cell_qcs
 
     """
@@ -1163,6 +1165,38 @@ process make_cds {
 
     printf "** End process 'make_cds' at: \$(date)\n\n" >> make_cds.log
     """
+}
+
+
+process apply_garnett {
+    cache 'lenient'
+    module 'modules:modules-init:modules-gs:gcc/8.1.0:R/3.6.1'
+    memory '15 GB'
+
+    input:
+        set key, file(scrub_matrix), file(cds_object), file(cell_qc), file(logfile) from cds_out
+
+    output:
+        set key, file(scrub_matrix), file("new_cds/*.RDS"), file(cell_qc), file("apply_garnett.log") into for_scrub
+
+"""
+    cat ${logfile} > apply_garnett.log
+    printf "** Start process 'apply_garnett' at: \$(date)\n\n" >> apply_garnett.log
+    mkdir new_cds
+    echo "No Garnett classifier provided for this sample" > garnett_error.txt
+    if [ $params.garnett_file == 'false' ]
+then
+    cp $cds_object new_cds/
+else
+    apply_garnett.R $cds_object $params.garnett_file $key
+fi
+
+cat garnett_error.txt >> apply_garnett.log
+printf "\n** End process 'apply_garnett' at: \$(date)\n\n" >> apply_garnett.log
+
+"""
+
+
 }
 
 
@@ -1395,6 +1429,7 @@ for_gen_qc = rscrub_out.join(umis_per_cell)
 save_knee = {params.output_dir + "/" + it - ~/_knee_plot.png/ + "/" + it}
 save_umap = {params.output_dir + "/" + it - ~/_UMAP.png/ + "/" + it}
 save_cellqc = {params.output_dir + "/" + it - ~/_cell_qc.png/ + "/" + it}
+save_garnett = {params.output_dir + "/" + it.split("_")[0] + "/" + it}
 
 process generate_qc_metrics {
     module 'modules:modules-init:modules-gs:gcc/8.1.0:R/3.6.1'
@@ -1403,6 +1438,7 @@ process generate_qc_metrics {
     publishDir path: "${params.output_dir}/", saveAs: save_umap, pattern: "*UMAP.png", mode: 'copy'
     publishDir path: "${params.output_dir}/", saveAs: save_knee, pattern: "*knee_plot.png", mode: 'copy'
     publishDir path: "${params.output_dir}/", saveAs: save_cellqc, pattern: "*cell_qc.png", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_garnett, pattern: "*Garnett.png", mode: 'copy'
 
     input:
         set key, file(cds_object), file(cell_qc), file(umis_per_cell) from for_gen_qc
@@ -1415,6 +1451,7 @@ process generate_qc_metrics {
     generate_qc.R\
         $cds_object $umis_per_cell $key \
         --specify_cutoff $params.umi_cutoff\
+
     """
 }
 
@@ -1564,6 +1601,7 @@ Process: generate_dashboard
     knee_png - png sample knee plot - combined as qc_plots
     qc_png - png of cell qc stats - combined as qc_plots
     scrublet_png - png histogram of scrublet scores
+    params.garnett_file
 
  Outputs:
     exp_dash - experimental dashboard
@@ -1601,7 +1639,7 @@ process generate_dashboard {
         file exp_dash into exp_dash_out
 
     """
-    generate_dash_data.R $all_sample_stats $params.output_dir $cell_counts $all_collision
+    generate_dash_data.R $all_sample_stats $params.output_dir $cell_counts $all_collision $params.garnett_file
 
     mkdir exp_dash
     cp -R $baseDir/bin/skeleton_dash/* exp_dash/

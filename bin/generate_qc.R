@@ -241,6 +241,7 @@ plot_cells_simp <- function(cds,
 
 gen_plots <- function(sample_name, sample_path) {
   samp_cds <- readRDS(sample_path)
+  garnett_mods <- names(colData(samp_cds))[grepl("garnett_type", names(colData(samp_cds)))]
   tryCatch({
     samp_cds <- preprocess_cds(samp_cds)
     samp_cds <- reduce_dimension(samp_cds)
@@ -249,6 +250,12 @@ gen_plots <- function(sample_name, sample_path) {
     png(paste0(sample_name, "_UMAP.png"), width = 5, height = 5, res = 600, units = "in")
     print(suppressMessages(plot_cells_simp(samp_cds) + theme(text = element_text(size = 8))))
     dev.off()
+
+    for (mod in garnett_mods) {
+      png(paste0(sample_name, "_", gsub("garnett_type_", "", mod) ,"_Garnett.png"), width = 5, height = 5, res = 600, units = "in")
+      print(suppressMessages(plot_cells_simp(samp_cds, color_cells_by = mod) + theme(text = element_text(size = 8))))
+      dev.off()
+    }
     
     samp_cds
   }, error = function(e) {
@@ -256,7 +263,13 @@ gen_plots <- function(sample_name, sample_path) {
     png(paste0(sample_name, "_UMAP.png"), width = 5, height = 5, res = 600, units = "in")
     print(ggplot() + geom_text(aes(x = 1, y = 1, label = "Insufficient cells for UMAP")) + monocle3:::monocle_theme_opts() + labs(x="UMAP 1", y = "UMAP 2"))
     dev.off()
-    samp_cds
+
+    for (mod in garnett_mods) {
+      png(paste0(sample_name, "_", gsub("garnett_type_", "", mod) ,"_Garnett.png"), width = 5, height = 5, res = 600, units = "in")
+      print(ggplot() + geom_text(aes(x = 1, y = 1, label = "Insufficient cells for UMAP")) + monocle3:::monocle_theme_opts() + labs(x="UMAP 1", y = "UMAP 2"))
+      dev.off()
+    }
+    samp_cds  
   })
 
   plot <- ggplot(as.data.frame(pData(samp_cds)), aes(n.umi, perc_mitochondrial_umis)) +
