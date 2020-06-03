@@ -1636,7 +1636,7 @@ Process: finish_log
     Generate log info for dashboards
 
  Downstream:
-    END
+    zip_up_log_data
 
  Published:
     full_log - Final full pipeline log
@@ -1740,7 +1740,7 @@ process finish_log {
             "assigned_exonic" : \$assigned_exonic,
             "assigned_intronic" : \$assigned_intronic,
             "reads_in_cells" : \$reads_in_cells }
-    " > ${key}_log_data.txt
+      " > ${key}_log_data.txt
 
 
     printf "***** PIPELINE READ STATS *****: \n\n" >> ${key}_read_metrics.log
@@ -1768,6 +1768,46 @@ process finish_log {
 
 }
 
+/*************
+Process: zip_up_log_data
+ Inputs:
+    log_txt_for_wrap - sample-wise tab delimited text files of log_data - collected
+ Outputs:
+    all_log_data - concatenated file of log_data from all samples generated as log_data.js
+ Summary:
+    Generate combined list of all log data files for dashboards
+ Published:
+    all_log_data - concatenated table of log_data from all samples
+ Upstream:
+    finish_log
+ Downstream:
+     END
+ Notes:
+*************/
+
+process zip_up_log_data {
+    cache 'lenient'
+    publishDir path: "${params.output_dir}/", pattern: "all_log_data.txt", mode: 'copy'
+
+    input:
+        file files from log_txt_for_wrap.collect()
+
+    output:
+        file "*ll_log_data.txt" into all_log_data
+
+    """
+     sed -s 1d $files > all_log_data.txt
+
+     echo 'const log_data = {' > log_data.js
+     echo '"readmetrics_stats": {' >> log_data.js
+     cat all_log_data.txt | sed 's/\\(}\\)/ \\1 ,/' >> log_data.js
+     sed -i 'H;1h;\$!d;g;s_\\(.*\\),_\\1 _' log_data.js
+     echo '  }' >> log_data.js
+     echo '}' >> log_data.js
+
+     cp log_data.js ${params.output_dir}/exp_dash/js/
+    """
+}
 
 workflow.onComplete {
 	println ( workflow.success ? "Done! Saving output" : "Oops .. something went wrong" )
