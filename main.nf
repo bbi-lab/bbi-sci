@@ -1632,7 +1632,7 @@ Process: finish_log
     Generate log info for dashboards
 
  Downstream:
-    END
+    zip_up_log_data
 
  Published:
     full_log - Final full pipeline log
@@ -1761,6 +1761,23 @@ process finish_log {
     """
 
 }
+
+/*************
+Process: zip_up_log_data
+ Inputs:
+    log_txt_for_wrap - sample-wise tab delimited text files of log_data - collected
+ Outputs:
+    all_log_data - concatenated file of log_data from all samples generated as log_data.js
+ Summary:
+    Generate combined list of all log data files for dashboards
+ Published:
+    all_log_data - concatenated table of log_data from all samples
+ Upstream:
+    finish_log
+ Downstream:
+     END
+ Notes:
+*************/
 
 process zip_up_log_data {
     cache 'lenient'
