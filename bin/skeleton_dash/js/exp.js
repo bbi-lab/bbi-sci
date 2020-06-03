@@ -38,8 +38,6 @@ function Header(props) {
 
 function Sample(props) {
   var safe_name = "hp" + props.sample_id.replace(".", "");
-  console.log(props.garnett_model == null);
-  console.log(Array.isArray(props.garnett_model));
   return React.createElement(
     "div",
     { className: "tab-pane fade", id: safe_name, role: "tabpanel",
