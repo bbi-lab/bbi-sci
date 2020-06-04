@@ -1765,7 +1765,7 @@ process finish_log {
     # In real cells:
     reads_in_cells=`cat \$filename | grep 'Total reads in cells with > 100 reads' | awk -F ':' '{sum += \$2} END {print sum}'`
 
-    printf "
+    printf '
             "${key}": {
             "sample": "\\"${key}\\"",
             "alignment_start" : \$align_start,
@@ -1779,7 +1779,7 @@ process finish_log {
             "assigned_exonic" : \$assigned_exonic,
             "assigned_intronic" : \$assigned_intronic,
             "reads_in_cells" : \$reads_in_cells }
-      " > ${key}_log_data.txt
+      ' > ${key}_log_data.txt
 
 
     printf "***** PIPELINE READ STATS *****: \n\n" >> ${key}_read_metrics.log
