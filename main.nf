@@ -763,7 +763,7 @@ process split_bam {
     mkdir split_bams
     bamtools split -in $merged_bam -reference -stub split_bams/split
     cd split_bams
-    if [[ \$(ls | grep "_[0-9A-Za-z\.]\{3,\}.bam\$") ]]; then 
+    if [[ \$(ls | grep "_[0-9A-Za-z\\.]\\{3,\\}.bam\$") ]]; then 
         ls | grep "_[0-9A-Za-z\\.]\\{3,\\}.bam\$" | samtools merge split.REFnonstand.bam -b -
         ls | grep "_[0-9A-Za-z\\.]\\{3,\\}.bam\$" | xargs -d"\\n" rm
         mv split.REFnonstand.bam split.REF_nonstand.bam
