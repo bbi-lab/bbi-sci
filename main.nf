@@ -106,7 +106,9 @@ process check_sample_sheet {
     printf "    Process versions:
         \$(python --version)\n\n" >> start.log
     printf "    Process command:
-        check_sample_sheet.py --sample_sheet $params.sample_sheet --star_file $params.star_file
+        check_sample_sheet.py 
+            --sample_sheet $params.sample_sheet 
+            --star_file $params.star_file
             --level $params.level --rt_barcode_file $params.rt_barcode_file
             --max_wells_per_samp $params.max_wells_per_sample\n\n" >> start.log
 
@@ -414,8 +416,9 @@ process align_reads {
 
     printf "    Process command:
         STAR --runThreadN $cores_align --genomeDir $star_path
-            --readFilesIn $trimmed_fastq --readFilesCommand zcat --outFileNamePrefix ./align_out/${name}
-            --outSAMtype BAM Unsorted --outSAMmultNmax 1 --outSAMstrandField intronMotif\n
+            --readFilesIn $trimmed_fastq --readFilesCommand zcat 
+            --outFileNamePrefix ./align_out/${name} --outSAMtype BAM Unsorted 
+            --outSAMmultNmax 1 --outSAMstrandField intronMotif\n
 
     Reference genome information:
       \$(grep fastq_url $star_path/../*gsrc/record.out | awk '{\$1=\$2=""; print \$0}')
@@ -1078,7 +1081,9 @@ process make_matrix {
     printf "** Start process 'make_matrix' at: \$(date)\n\n" >> make_matrix.log
 
     echo '    Process command:
-        make_matrix.py <(zcat $cell_gene_count) --gene_annotation "${gtf_path}/latest.gene.annotations" --key "$key"
+        make_matrix.py <(zcat $cell_gene_count) 
+            --gene_annotation "${gtf_path}/latest.gene.annotations" 
+            --key "$key"
         cat ${gtf_path}/latest.gene.annotations > "${key}.gene_annotations.txt"  ' >> make_matrix.log
 
 
@@ -1666,7 +1671,6 @@ Process: finish_log
     summary_log - Summary log
     log_data - Logging info for dashboards
 
-
  Pass through:
 
  Summary:
@@ -1747,7 +1751,7 @@ process finish_log {
     do
         echo "\${align_too_short_arr[\$a]} * \${align_totals[\$a]}" | bc
         a=\$((a+1))
-    done | awk '{sum += \$1} END {print sum}'`
+    done | awk '{sum += \$1} END {printf "%1.0f", sum}'`
 
     # Sort and Filter:
     sf_start=`cat \$filename | grep 'sort_and_filter starting reads' | awk -F ':' '{sum += \$2} END {print sum}'`
@@ -1808,43 +1812,66 @@ process finish_log {
 }
 
 /*************
+
 Process: zip_up_log_data
+
  Inputs:
-    log_txt_for_wrap - sample-wise tab delimited text files of log_data - collected
+    summary_log - collected summary log files
+    full_log - collected full log files
+
  Outputs:
-    all_log_data - concatenated file of log_data from all samples generated as log_data.js
+    log_js - Logging info in a js format for dashboards
+
+ Pass through:
+
  Summary:
-    Generate combined list of all log data files for dashboards
- Published:
-    all_log_data - concatenated table of log_data from all samples
- Upstream:
-    finish_log
+    Generate log data js file for dashboard
+
  Downstream:
-     END
+    End
+
+ Published:
+    log_data.js - Logging info for dashboards
+
  Notes:
+
 *************/
 
 process zip_up_log_data {
     cache 'lenient'
-    publishDir path: "${params.output_dir}/", pattern: "all_log_data.txt", mode: 'copy'
+    publishDir path: "${params.output_dir}/exp_dash/js/", pattern: "*.js", mode: 'copy'
 
     input:
-        file files from log_txt_for_wrap.collect()
+        file summary_log from summary_log.collect()
+        file full_log from full_log.collect()
 
     output:
-        file "*ll_log_data.txt" into all_log_data
+        file "*.js" into log_js
 
     """
-     sed -s 1d $files > all_log_data.txt
 
-     echo 'const log_data = {' > log_data.js
-     echo '"readmetrics_stats": {' >> log_data.js
-     cat all_log_data.txt | sed 's/\\(}\\)/ \\1 ,/' >> log_data.js
-     sed -i 'H;1h;\$!d;g;s_\\(.*\\),_\\1 _' log_data.js
-     echo '  }' >> log_data.js
-     echo '}' >> log_data.js
+    echo 'const log_data = {' > log_data.js
+    for file in $summary_log
+    do
+        samp_name=\$(basename \$file | sed 's/_read_metrics.log//')
+        echo "\\"\$samp_name\\" :  \\`" >> log_data.js
+        cat \$file >> log_data.js
+        echo "\\`," >> log_data.js
+    done
+    sed -i '\$ s/,\$//' log_data.js
+    echo '}' >> log_data.js
 
-     cp log_data.js ${params.output_dir}/exp_dash/js/
+    echo 'const full_log_data = {' >> log_data.js
+    for file in $full_log 
+    do  
+        samp_name=\$(basename \$file | sed 's/_full.log//')
+        echo "\\"\$samp_name\\" :  \\`" >> log_data.js
+        cat \$file >> log_data.js
+        echo "\\`," >> log_data.js
+    done
+    sed -i '\$ s/,\$//' log_data.js
+    echo '}' >> log_data.js
+
     """
 }
 

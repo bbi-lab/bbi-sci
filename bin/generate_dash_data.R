@@ -65,6 +65,10 @@ if (args$garnett_csv != "false") {
   for (samp in all_dups$Sample) {
     if (samp %in% garnett_file$V1) {
       all_dups$Garnett_model[all_dups$Sample == samp] <- list(garnett_file[garnett_file$V1 == samp, "V2"])
+    
+      if (all_dups$Cells_100_UMIs[all_dups$Sample == samp] == 0) {
+        all_dups$Garnett_model[all_dups$Sample == samp] <- "no_cells"
+      }
     }
   }
 }

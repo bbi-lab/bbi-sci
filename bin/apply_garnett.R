@@ -31,6 +31,9 @@ if (classifier_path == "NONE") {
 } else {
     tryCatch({
     cds <- readRDS(args$cds_path)
+    if (nrow(pData(cds)) == 0) {
+        stop("No cells in cds")
+    }
     for (val in classifier_path) {
         classifier <- readRDS(as.character(val))
         classifier_name <- unlist(stringr::str_split(val, "/"))
