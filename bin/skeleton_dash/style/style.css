@@ -78,7 +78,9 @@ pre {
     height: 275px;
 }
 .tab-content {
+	height: 78vh;
 	padding: 10px;
+	overflow: auto;
 }
 /******** quick styles ***********/
 .clear{clear:both;}
