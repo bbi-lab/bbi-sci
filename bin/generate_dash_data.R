@@ -62,9 +62,13 @@ if (args$garnett_csv != "false") {
      y[length(y)]
   })
   all_dups$Garnett_model <- NA
+  garnett_file$samp_fixed <- garnett_file$V1
+  garnett_file$samp_fixed <- gsub("_", ".", garnett_file$samp_fixed)
+  garnett_file$samp_fixed <- gsub("-", ".", garnett_file$samp_fixed)
+  garnett_file$samp_fixed <- gsub(" ", ".", garnett_file$samp_fixed)
   for (samp in all_dups$Sample) {
-    if (samp %in% garnett_file$V1) {
-      all_dups$Garnett_model[all_dups$Sample == samp] <- list(garnett_file[garnett_file$V1 == samp, "V2"])
+    if (samp %in% garnett_file$V1 | samp %in% garnett_file$samp_fixed) {
+      all_dups$Garnett_model[all_dups$Sample == samp] <- list(garnett_file[garnett_file$V1 == samp | garnett_file$samp_fixed == samp, "V2"])
     
       if (all_dups$Cells_100_UMIs[all_dups$Sample == samp] == 0) {
         all_dups$Garnett_model[all_dups$Sample == samp] <- "no_cells"
