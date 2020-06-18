@@ -145,6 +145,16 @@ function Sample(props) {
             role: "tab", "aria-controls": "nav" + safe_name + "-readmetrics",
             "aria-selected": "false" },
           "Read Metrics"
+        ),
+        React.createElement(
+          "a",
+          {
+            className: "nav-item nav-link",
+            id: "nav" + safe_name + "-fulllog-tab",
+            "data-toggle": "tab", href: "#nav" + safe_name + "-fulllog",
+            role: "tab", "aria-controls": "nav" + safe_name + "-fulllog",
+            "aria-selected": "false" },
+          "Full Log"
         )
       )
     ),
@@ -158,7 +168,8 @@ function Sample(props) {
       React.createElement(UMAPPane, { sample_id: props.sample_id }),
       props.garnett_model != null && React.createElement(GarnettPane, { sample_id: props.sample_id, garnett_model: props.garnett_model }),
       React.createElement(StatsPane, { sample_id: props.sample_id, sample_stats: run_data.sample_stats }),
-      React.createElement(ReadMetricsPane, { sample_id: props.sample_id, readmetrics_stats: log_data.readmetrics_stats })
+      React.createElement(ReadMetricsPane, { sample_id: props.sample_id, log: log_data[props.sample_id] }),
+      React.createElement(FullLogPane, { sample_id: props.sample_id, log: full_log_data[props.sample_id] })
     )
   );
 }
@@ -246,142 +257,33 @@ function StatsPane(props) {
   );
 }
 
+function CodeChunk(props) {
+  return React.createElement(
+    "pre",
+    { style: { paddingLeft: '20px', paddingRight: '20px' } },
+    React.createElement(
+      "code",
+      null,
+      '\n' + props.text + '\n\n'
+    )
+  );
+}
+
 function ReadMetricsPane(props) {
   var safe_name = "hp" + props.sample_id.replace(".", "");
-  var read_metric = props.readmetrics_stats[props.sample_id];
-  var readmetrics_list = ["Reads after trimming", "Reads uniquely mapped", "Reads multi-mapped", "Reads too short", "Reads after alignment", "Reads after filtering", "Reads before deduplication", "Reads after deduplication", "Exonic reads", "Intronic reads", "Total reads in cells"];
-
   return React.createElement(
     "div",
     { className: "tab-pane fade", id: "nav" + safe_name + "-readmetrics", role: "tabpanel", "aria-labelledby": "nav" + safe_name + "-readmetrics-tab" },
-    React.createElement(
-      "table",
-      { className: "table table-hover" },
-      React.createElement(
-        "thead",
-        null,
-        React.createElement(
-          "tr",
-          null,
-          React.createElement("th", { scope: "col" }),
-          React.createElement(TitleRow, { samp: props.sample_id })
-        )
-      ),
-      React.createElement(
-        "tbody",
-        null,
-        React.createElement(
-          "tr",
-          null,
-          React.createElement(
-            "th",
-            { scope: "row" },
-            "Reads after trimming"
-          ),
-          React.createElement(RegRow, { val: read_metric["alignment_start"] })
-        ),
-        React.createElement(
-          "tr",
-          null,
-          React.createElement(
-            "th",
-            { scope: "row" },
-            "Reads uniquely mapped"
-          ),
-          React.createElement(RegRow, { val: read_metric["alignment_mapped"] })
-        ),
-        React.createElement(
-          "tr",
-          null,
-          React.createElement(
-            "th",
-            { scope: "row" },
-            "Reads multi-mapped"
-          ),
-          React.createElement(RegRow, { val: read_metric["align_multimapped"] })
-        ),
-        React.createElement(
-          "tr",
-          null,
-          React.createElement(
-            "th",
-            { scope: "row" },
-            "Reads too short"
-          ),
-          React.createElement(RegRow, { val: read_metric["align_too_short"] })
-        ),
-        React.createElement(
-          "tr",
-          null,
-          React.createElement(
-            "th",
-            { scope: "row" },
-            "Reads after alignment"
-          ),
-          React.createElement(RegRow, { val: read_metric["sf_start"] })
-        ),
-        React.createElement(
-          "tr",
-          null,
-          React.createElement(
-            "th",
-            { scope: "row" },
-            "Reads after filtering"
-          ),
-          React.createElement(RegRow, { val: read_metric["sf_end"] })
-        ),
-        React.createElement(
-          "tr",
-          null,
-          React.createElement(
-            "th",
-            { scope: "row" },
-            "Reads before deduplication"
-          ),
-          React.createElement(RegRow, { val: read_metric["dup_start"] })
-        ),
-        React.createElement(
-          "tr",
-          null,
-          React.createElement(
-            "th",
-            { scope: "row" },
-            "Reads after deduplication"
-          ),
-          React.createElement(RegRow, { val: read_metric["dup_end"] })
-        ),
-        React.createElement(
-          "tr",
-          null,
-          React.createElement(
-            "th",
-            { scope: "row" },
-            "Exonic reads"
-          ),
-          React.createElement(RegRow, { val: read_metric["assigned_exonic"] })
-        ),
-        React.createElement(
-          "tr",
-          null,
-          React.createElement(
-            "th",
-            { scope: "row" },
-            "Intronic reads"
-          ),
-          React.createElement(RegRow, { val: read_metric["assigned_intronic"] })
-        ),
-        React.createElement(
-          "tr",
-          null,
-          React.createElement(
-            "th",
-            { scope: "row" },
-            "Total reads in cells"
-          ),
-          React.createElement(RegRow, { val: read_metric["reads_in_cells"] })
-        )
-      )
-    )
+    React.createElement(CodeChunk, { text: props.log })
+  );
+}
+
+function FullLogPane(props) {
+  var safe_name = "hp" + props.sample_id.replace(".", "");
+  return React.createElement(
+    "div",
+    { className: "tab-pane fade", id: "nav" + safe_name + "-fulllog", role: "tabpanel", "aria-labelledby": "nav" + safe_name + "-fulllog-tab" },
+    React.createElement(CodeChunk, { text: props.log })
   );
 }
 
@@ -453,7 +355,11 @@ function GarnettPane(props) {
         ),
         React.createElement("img", { src: "img/" + props.sample_id + "_" + model + "_Garnett.png", className: "rounded mx-auto d-block", alt: "...", style: { maxHeight: "50vh", width: "auto" } })
       );
-    }) : React.createElement(
+    }) : props.garnett_model == "no_cells" ? React.createElement(
+      "p",
+      null,
+      "No cells to apply Garnett models."
+    ) : React.createElement(
       "span",
       null,
       React.createElement(

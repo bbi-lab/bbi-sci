@@ -9,6 +9,7 @@ params.rt_barcode_file="default"
 params.max_cores = 16
 params.hash_list = false
 params.max_wells_per_sample = 20
+params.garnett_file = false 
 
 //print usage
 if (params.help) {
@@ -42,6 +43,7 @@ if (params.help) {
     log.info '    params.umi_cutoff = 100                    The umi cutoff to be called a cell in matrix output.'
     log.info '    params.hash_list = false                   Path to a tab-delimited file with at least two columns, first the hash name and second the hash barcode sequence. Default is false to indicate no hashing.'
     log.info '    params.max_wells_per_sample = 20           The maximum number of wells per sample - if a sample is in more wells, the fastqs will be split then reassembled for efficiency.'
+    log.info '    params.garnett_file = false                Path to a csv with two columns, first is the sample name, and second is a path to the Garnett classifier to be applied to that sample. Default is false - no classification.'
     log.info ''
     log.info 'Issues? Contact hpliner@uw.edu'
     exit 1
@@ -104,7 +106,9 @@ process check_sample_sheet {
     printf "    Process versions:
         \$(python --version)\n\n" >> start.log
     printf "    Process command:
-        check_sample_sheet.py --sample_sheet $params.sample_sheet --star_file $params.star_file
+        check_sample_sheet.py 
+            --sample_sheet $params.sample_sheet 
+            --star_file $params.star_file
             --level $params.level --rt_barcode_file $params.rt_barcode_file
             --max_wells_per_samp $params.max_wells_per_sample\n\n" >> start.log
 
@@ -412,8 +416,9 @@ process align_reads {
 
     printf "    Process command:
         STAR --runThreadN $cores_align --genomeDir $star_path
-            --readFilesIn $trimmed_fastq --readFilesCommand zcat --outFileNamePrefix ./align_out/${name}
-            --outSAMtype BAM Unsorted --outSAMmultNmax 1 --outSAMstrandField intronMotif\n
+            --readFilesIn $trimmed_fastq --readFilesCommand zcat 
+            --outFileNamePrefix ./align_out/${name} --outSAMtype BAM Unsorted 
+            --outSAMmultNmax 1 --outSAMstrandField intronMotif\n
 
     Reference genome information:
       \$(grep fastq_url $star_path/../*gsrc/record.out | awk '{\$1=\$2=""; print \$0}')
@@ -761,10 +766,11 @@ process split_bam {
     mkdir split_bams
     bamtools split -in $merged_bam -reference -stub split_bams/split
     cd split_bams
-    ls | grep "_[0-9A-Za-z\\.]\\{3,\\}.bam\$" | samtools merge split.REFnonstand.bam -b -
-    ls | grep "_[0-9A-Za-z\\.]\\{3,\\}.bam\$" | xargs -d"\\n" rm
-    mv split.REFnonstand.bam split.REF_nonstand.bam
-
+    if [[ \$(ls | grep "_[0-9A-Za-z\\.]\\{3,\\}.bam\$") ]]; then 
+        ls | grep "_[0-9A-Za-z\\.]\\{3,\\}.bam\$" | samtools merge split.REFnonstand.bam -b -
+        ls | grep "_[0-9A-Za-z\\.]\\{3,\\}.bam\$" | xargs -d"\\n" rm
+        mv split.REFnonstand.bam split.REF_nonstand.bam
+    fi
     """
 
 }
@@ -1075,7 +1081,9 @@ process make_matrix {
     printf "** Start process 'make_matrix' at: \$(date)\n\n" >> make_matrix.log
 
     echo '    Process command:
-        make_matrix.py <(zcat $cell_gene_count) --gene_annotation "${gtf_path}/latest.gene.annotations" --key "$key"
+        make_matrix.py <(zcat $cell_gene_count) 
+            --gene_annotation "${gtf_path}/latest.gene.annotations" 
+            --key "$key"
         cat ${gtf_path}/latest.gene.annotations > "${key}.gene_annotations.txt"  ' >> make_matrix.log
 
 
@@ -1133,7 +1141,7 @@ process make_cds {
         set key, file(cell_data), file(umi_matrix), file(gene_data), val(gtf_path), file(logfile) from mat_output
 
     output:
-        set key, file("*for_scrub.mtx"), file("*.RDS"), file("*cell_qc.csv"), file("make_cds.log") into for_scrub
+        set key, file("*for_scrub.mtx"), file("*.RDS"), file("*cell_qc.csv"), file("make_cds.log") into cds_out
         file("*cell_qc.csv") into cell_qcs
 
     """
@@ -1163,6 +1171,38 @@ process make_cds {
 
     printf "** End process 'make_cds' at: \$(date)\n\n" >> make_cds.log
     """
+}
+
+
+process apply_garnett {
+    cache 'lenient'
+    module 'modules:modules-init:modules-gs:gcc/8.1.0:R/3.6.1'
+    memory '15 GB'
+
+    input:
+        set key, file(scrub_matrix), file(cds_object), file(cell_qc), file(logfile) from cds_out
+
+    output:
+        set key, file(scrub_matrix), file("new_cds/*.RDS"), file(cell_qc), file("apply_garnett.log") into for_scrub
+
+"""
+    cat ${logfile} > apply_garnett.log
+    printf "** Start process 'apply_garnett' at: \$(date)\n\n" >> apply_garnett.log
+    mkdir new_cds
+    echo "No Garnett classifier provided for this sample" > garnett_error.txt
+    if [ $params.garnett_file == 'false' ]
+then
+    cp $cds_object new_cds/
+else
+    apply_garnett.R $cds_object $params.garnett_file $key
+fi
+
+cat garnett_error.txt >> apply_garnett.log
+printf "\n** End process 'apply_garnett' at: \$(date)\n\n" >> apply_garnett.log
+
+"""
+
+
 }
 
 
@@ -1395,6 +1435,7 @@ for_gen_qc = rscrub_out.join(umis_per_cell)
 save_knee = {params.output_dir + "/" + it - ~/_knee_plot.png/ + "/" + it}
 save_umap = {params.output_dir + "/" + it - ~/_UMAP.png/ + "/" + it}
 save_cellqc = {params.output_dir + "/" + it - ~/_cell_qc.png/ + "/" + it}
+save_garnett = {params.output_dir + "/" + it.split("_")[0] + "/" + it}
 
 process generate_qc_metrics {
     module 'modules:modules-init:modules-gs:gcc/8.1.0:R/3.6.1'
@@ -1403,6 +1444,7 @@ process generate_qc_metrics {
     publishDir path: "${params.output_dir}/", saveAs: save_umap, pattern: "*UMAP.png", mode: 'copy'
     publishDir path: "${params.output_dir}/", saveAs: save_knee, pattern: "*knee_plot.png", mode: 'copy'
     publishDir path: "${params.output_dir}/", saveAs: save_cellqc, pattern: "*cell_qc.png", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_garnett, pattern: "*Garnett.png", mode: 'copy'
 
     input:
         set key, file(cds_object), file(cell_qc), file(umis_per_cell) from for_gen_qc
@@ -1415,6 +1457,7 @@ process generate_qc_metrics {
     generate_qc.R\
         $cds_object $umis_per_cell $key \
         --specify_cutoff $params.umi_cutoff\
+
     """
 }
 
@@ -1564,6 +1607,7 @@ Process: generate_dashboard
     knee_png - png sample knee plot - combined as qc_plots
     qc_png - png of cell qc stats - combined as qc_plots
     scrublet_png - png histogram of scrublet scores
+    params.garnett_file
 
  Outputs:
     exp_dash - experimental dashboard
@@ -1601,7 +1645,7 @@ process generate_dashboard {
         file exp_dash into exp_dash_out
 
     """
-    generate_dash_data.R $all_sample_stats $params.output_dir $cell_counts $all_collision
+    generate_dash_data.R $all_sample_stats $params.output_dir $cell_counts $all_collision $params.garnett_file
 
     mkdir exp_dash
     cp -R $baseDir/bin/skeleton_dash/* exp_dash/
@@ -1626,7 +1670,6 @@ Process: finish_log
     full_log - Final full pipeline log
     summary_log - Summary log
     log_data - Logging info for dashboards
-
 
  Pass through:
 
@@ -1708,7 +1751,7 @@ process finish_log {
     do
         echo "\${align_too_short_arr[\$a]} * \${align_totals[\$a]}" | bc
         a=\$((a+1))
-    done | awk '{sum += \$1} END {print sum}'`
+    done | awk '{sum += \$1} END {printf "%1.0f", sum}'`
 
     # Sort and Filter:
     sf_start=`cat \$filename | grep 'sort_and_filter starting reads' | awk -F ':' '{sum += \$2} END {print sum}'`
@@ -1727,19 +1770,19 @@ process finish_log {
     reads_in_cells=`cat \$filename | grep 'Total reads in cells with > 100 reads' | awk -F ':' '{sum += \$2} END {print sum}'`
 
     printf "
-            "${key}": {
-            "sample": "\\"${key}\\"",
-            "alignment_start" : \$align_start,
-            "alignment_mapped" : \$align_mapped,
-            "align_multimapped" : \$align_multimapped,
-            "align_too_short" : \$align_too_short,
-            "sf_start" : \$sf_start,
-            "sf_end" : \$sf_end,
-            "dup_start" : \$dup_start,
-            "dup_end" : \$dup_end,
-            "assigned_exonic" : \$assigned_exonic,
-            "assigned_intronic" : \$assigned_intronic,
-            "reads_in_cells" : \$reads_in_cells }
+            \\"${key}\\": {
+            \\"sample\\": \\"${key}\\",
+            \\"alignment_start\\" : \\"\$align_start\\",
+            \\"alignment_mapped\\" : \\"\$align_mapped\\",
+            \\"align_multimapped\\" : \\"\$align_multimapped\\",
+            \\"align_too_short\\" : \\"\$align_too_short\\",
+            \\"sf_start\\" : \\"\$sf_start\\",
+            \\"sf_end\\" : \\"\$sf_end\\",
+            \\"dup_start\\" : \\"\$dup_start\\",
+            \\"dup_end\\" : \\"\$dup_end\\",
+            \\"assigned_exonic\\" : \\"\$assigned_exonic\\",
+            \\"assigned_intronic\\" : \\"\$assigned_intronic\\",
+            \\"reads_in_cells\\" : \\"\$reads_in_cells\\" }
       " > ${key}_log_data.txt
 
 
@@ -1769,43 +1812,66 @@ process finish_log {
 }
 
 /*************
+
 Process: zip_up_log_data
+
  Inputs:
-    log_txt_for_wrap - sample-wise tab delimited text files of log_data - collected
+    summary_log - collected summary log files
+    full_log - collected full log files
+
  Outputs:
-    all_log_data - concatenated file of log_data from all samples generated as log_data.js
+    log_js - Logging info in a js format for dashboards
+
+ Pass through:
+
  Summary:
-    Generate combined list of all log data files for dashboards
- Published:
-    all_log_data - concatenated table of log_data from all samples
- Upstream:
-    finish_log
+    Generate log data js file for dashboard
+
  Downstream:
-     END
+    End
+
+ Published:
+    log_data.js - Logging info for dashboards
+
  Notes:
+
 *************/
 
 process zip_up_log_data {
     cache 'lenient'
-    publishDir path: "${params.output_dir}/", pattern: "all_log_data.txt", mode: 'copy'
+    publishDir path: "${params.output_dir}/exp_dash/js/", pattern: "*.js", mode: 'copy'
 
     input:
-        file files from log_txt_for_wrap.collect()
+        file summary_log from summary_log.collect()
+        file full_log from full_log.collect()
 
     output:
-        file "*ll_log_data.txt" into all_log_data
+        file "*.js" into log_js
 
     """
-     sed -s 1d $files > all_log_data.txt
 
-     echo 'const log_data = {' > log_data.js
-     echo '"readmetrics_stats": {' >> log_data.js
-     cat all_log_data.txt | sed 's/\\(}\\)/ \\1 ,/' >> log_data.js
-     sed -i 'H;1h;\$!d;g;s_\\(.*\\),_\\1 _' log_data.js
-     echo '  }' >> log_data.js
-     echo '}' >> log_data.js
+    echo 'const log_data = {' > log_data.js
+    for file in $summary_log
+    do
+        samp_name=\$(basename \$file | sed 's/_read_metrics.log//')
+        echo "\\"\$samp_name\\" :  \\`" >> log_data.js
+        cat \$file >> log_data.js
+        echo "\\`," >> log_data.js
+    done
+    sed -i '\$ s/,\$//' log_data.js
+    echo '}' >> log_data.js
 
-     cp log_data.js ${params.output_dir}/exp_dash/js/
+    echo 'const full_log_data = {' >> log_data.js
+    for file in $full_log 
+    do  
+        samp_name=\$(basename \$file | sed 's/_full.log//')
+        echo "\\"\$samp_name\\" :  \\`" >> log_data.js
+        cat \$file >> log_data.js
+        echo "\\`," >> log_data.js
+    done
+    sed -i '\$ s/,\$//' log_data.js
+    echo '}' >> log_data.js
+
     """
 }
 
