@@ -6,7 +6,9 @@ This pipeline is the under-construction pipe for processing 2-level and 3-level 
 The pipeline is run in two parts, the first is [bbi-dmux](https://github.com/bbi-lab/bbi-dmux) which runs the demultiplexing, and the second is [bbi-sci](https://github.com/bbi-lab/bbi-sci/) which completes the preprocessing. The instructions below apply to both pipelines, and both pipelines can use the same configuration file.
 
 ## Prerequisites
-1. As the Nextflow pipeline is run interactively, please use a terminal multiplexer such as tmux. tmux sessions are persistent which means that programs in tmux will continue to run even if you get disconnected. You can start a tmux session by using:
+1. This script requires Nextflow version >= 20.
+
+2. As the Nextflow pipeline is run interactively, please use a terminal multiplexer such as tmux. tmux sessions are persistent which means that programs in tmux will continue to run even if you get disconnected. You can start a tmux session by using:
 ```
 module load tmux/latest
 tmux
@@ -17,7 +19,7 @@ tmux attach
 ```
 which will return you to your session. See a handy tmux tutorial [here](https://www.hostinger.com/tutorials/tmux-beginners-guide-and-cheat-sheet/).
 
-2. Always start with a qlogin session before you begin the pipeline. This can be done by
+3. Always start with a qlogin session before you begin the pipeline. This can be done by
 ```
 qlogin -l mfree=20G
 ```

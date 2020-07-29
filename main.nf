@@ -1,3 +1,10 @@
+/*
+** Check that Nextflow version meets minimum version requirements.
+*/
+def minMajorVersion = 20
+def minMinorVersion = 0
+checkNextflowVersion( minMajorVersion, minMinorVersion )
+
 
 // Parse input parameters
 params.help = false
@@ -1878,3 +1885,32 @@ process zip_up_log_data {
 workflow.onComplete {
 	println ( workflow.success ? "Done! Saving output" : "Oops .. something went wrong" )
 }
+
+
+/*************
+Groovy functions
+*************/
+
+def checkNextflowVersion( Integer minMajorVersion, Integer minMinorVersion )
+{
+  def sVersion = nextflow.version.toString()
+  def aVersion = sVersion.split( /[.]/ )
+  def majorVersion = aVersion[0].toInteger()
+  def minorVersion = aVersion[1].toInteger()
+  if( majorVersion < minMajorVersion || minorVersion < minMinorVersion )
+  {
+    def serr = "This pipeline requires Nextflow version at least %s.%s: you have version %s."
+    println()
+    println( '****  ' + String.format( serr, minMajorVersion, minMinorVersion, sVersion ) + '  ****' )
+    println()
+    System.exit( -1 )
+    /*
+    ** An exception produces an exceptionally verbose block of confusing text. I leave
+    ** the command here in case the println() output is obscured by fancy Nextflow tables.
+    **
+    ** throw new Exception( String.format( serr, minMajorVersion, minMinorVersion, sVersion ) )
+    */
+  }
+  return( 0 )
+}
+
