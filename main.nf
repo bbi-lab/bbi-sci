@@ -106,7 +106,6 @@ Process: check_sample_sheet
 
 process check_sample_sheet {
     cache 'lenient'
-    module 'modules:modules-init:modules-gs:python/3.6.4'
 
     output:
         file "*.csv" into good_sample_sheet
@@ -190,8 +189,6 @@ Process: trim_fastqs
 
 process trim_fastqs {
     cache 'lenient'
-    memory '12G'
-    module 'modules:modules-init:modules-gs:python/2.7.3:cutadapt/1.8.3:trim_galore/0.4.1'
 
     input:
         file input_fastq from Channel.fromPath("${params.demux_out}/*.fastq.gz")
@@ -282,8 +279,6 @@ Process: gather_info
 
 process gather_info {
     cache 'lenient'
-    memory '1G'
-    module 'modules:modules-init:modules-gs:python/3.6.4'
 
     input:
         file good_sample_sheet
@@ -348,8 +343,6 @@ save_hash_mtx = {params.output_dir + "/" + it - ~/.hashumis.mtx/ + "/" + it}
 
 process process_hashes {
     cache 'lenient'
-    memory '12G'
-    module 'modules:modules-init:modules-gs:python/3.6.4'
     publishDir path: "${params.output_dir}/", saveAs: save_hash_cell, pattern: "*hashumis_cells.txt", mode: 'copy'
     publishDir path: "${params.output_dir}/", saveAs: save_hash_hash, pattern: "*hashumis_hashes.txt", mode: 'copy'
     publishDir path: "${params.output_dir}/", saveAs: save_hash_mtx, pattern: "*.mtx", mode: 'copy'
@@ -408,17 +401,11 @@ Process: align_reads
 *************/
 
 // Cores for alignment set at 8 unless limit is lower
-if (params.max_cores < 8) {
-    cores_align = params.max_cores
-} else {
-    cores_align = 8
-}
+cores_align = params.max_cores < 8 ? params.max_cores : 8
 
 process align_reads {
     cache 'lenient'
-    module 'modules:modules-init:modules-gs:STAR/2.5.2b'
     memory { star_mem.toInteger()/cores_align + " GB" }
-    penv 'serial'
     cpus cores_align
 
     input:
@@ -510,17 +497,10 @@ Process: sort_and_filter
 *************/
 
 // Cores for sort and filter set at 10 unless limit is lower
-if (params.max_cores < 10) {
-    cores_sf = params.max_cores
-} else {
-    cores_sf = 10
-}
+cores_sf = params.max_cores < 10 ? params.max_cores : 10
 
 process sort_and_filter {
     cache 'lenient'
-    module 'modules:modules-init:modules-gs:samtools/1.4'
-    memory '1 GB'
-    penv 'serial'
     cpus cores_sf
 
     input:
@@ -589,8 +569,6 @@ log_pieces
 
 process combine_logs {
     cache 'lenient'
-    module 'modules:modules-init:modules-gs'
-    memory '1 GB'
 
     input:
         file log_piece1
@@ -639,11 +617,7 @@ Process: merge_bams
 
 *************/
 
-if (params.max_cores < 8) {
-    cores_merge = params.max_cores
-} else {
-    cores_merge = 8
-}
+cores_merge = params.max_cores < 8 ? params.max_cores : 8
 
 sorted_bams
     .groupTuple()
@@ -655,10 +629,8 @@ save_bam = {params.output_dir + "/" + it - ~/.bam/ + "/" + it}
 
 process merge_bams {
     cache 'lenient'
-    module 'modules:modules-init:modules-gs:samtools/1.4'
-    publishDir path: "${params.output_dir}/", saveAs: save_bam, pattern: "*.bam", mode: 'copy'
-    penv 'serial'
     cpus cores_merge
+    publishDir path: "${params.output_dir}/", saveAs: save_bam, pattern: "*.bam", mode: 'copy'
 
     input:
         set key, file(logfile), file(sorted_bam) from for_merge_bams
@@ -722,8 +694,6 @@ sample_bams.join(gtf_info).set{assign_prepped}
 
 process split_bam {
     cache 'lenient'
-    memory '5 GB'
-    module 'modules:modules-init:modules-gs:samtools/1.4:bamtools/2.2.3:bedtools/2.26.0:python/3.6.4'
 
     input:
         set key, file(merged_bam), file(logfile), val(gtf_path) from assign_prepped
@@ -843,8 +813,6 @@ Process: remove_dups_assign_genes
 
 process remove_dups_assign_genes {
     cache 'lenient'
-    memory '4 GB'
-    module 'modules:modules-init:modules-gs:bedtools/2.26.0:python/3.6.4:coreutils/8.24:samtools/1.4'
 
     input:
         set key, file(split_bam), val(gtf_path) from split_bams
@@ -927,8 +895,6 @@ remove_dup_part_out
 
 process merge_assignment {
     cache 'lenient'
-    memory '1 GB'
-    module 'modules:modules-init:modules-gs:coreutils/8.24'
 
     input:
         set key, file(split_bed), file(split_gene_assign), file(split_umi_count), file(logfile), file(read_count) from for_cat_dups
@@ -1000,9 +966,7 @@ save_umi_per_cell = {params.output_dir + "/" + it - ~/.UMIs.per.cell.barcode.txt
 save_umi_per_int = {params.output_dir + "/" + it - ~/.UMIs.per.cell.barcode.intronic.txt/ + "/intronic_umis_per_cell_barcode.txt"}
 
 process count_umis_by_sample {
-    module 'modules:modules-init:modules-gs:python/3.6.4'
     cache 'lenient'
-    memory '8 GB'
     publishDir path: "${params.output_dir}/", saveAs: save_umi_per_int, pattern: "*intronic.txt", mode: 'copy'
     publishDir path: "${params.output_dir}/", saveAs: save_umi_per_cell, pattern: "*barcode.txt", mode: 'copy'
 
@@ -1085,7 +1049,6 @@ save_gene_anno = {params.output_dir + "/" + it - ~/.gene_annotations.txt/ + "/ge
 
 process make_matrix {
     cache 'lenient'
-    memory '15 GB'
     publishDir path: "${params.output_dir}/", saveAs: save_umi, pattern: "*umi_counts.mtx", mode: 'copy'
     publishDir path: "${params.output_dir}/", saveAs: save_cell_anno, pattern: "*cell_annotations.txt", mode: 'copy'
     publishDir path: "${params.output_dir}/", saveAs: save_gene_anno, pattern: "*gene_annotations.txt", mode: 'copy'
@@ -1154,8 +1117,6 @@ Process: make_cds
 
 process make_cds {
     cache 'lenient'
-    module 'modules:modules-init:modules-gs:gcc/8.1.0:R/3.6.1'
-    memory '15 GB'
 
     input:
         set key, file(cell_data), file(umi_matrix), file(gene_data), val(gtf_path), file(logfile) from mat_output
@@ -1196,8 +1157,6 @@ process make_cds {
 
 process apply_garnett {
     cache 'lenient'
-    module 'modules:modules-init:modules-gs:gcc/8.1.0:R/3.6.1'
-    memory '15 GB'
 
     input:
         set key, file(scrub_matrix), file(cds_object), file(cell_qc), file(logfile) from cds_out
@@ -1263,10 +1222,8 @@ Process: run_scrublet
 save_hist = {params.output_dir + "/" + it - ~/_scrublet_hist.png/ + "/" + it}
 
 process run_scrublet {
-    publishDir path: "${params.output_dir}/", saveAs: save_hist, pattern: "*png", mode: 'copy'
     cache 'lenient'
-    module 'modules:modules-init:modules-gs:python/3.6.4'
-    memory '25 GB'
+    publishDir path: "${params.output_dir}/", saveAs: save_hist, pattern: "*png", mode: 'copy'
 
     input:
         set key, file(scrub_matrix), file(cds_object), file(cell_qc), file(logfile) from for_scrub
@@ -1344,8 +1301,6 @@ save_samp_stats = {params.output_dir + "/" + it - ~/_sample_stats.csv/ + "/" + i
 
 process reformat_scrub {
     cache 'lenient'
-    module 'modules:modules-init:modules-gs:python/3.6.4:gcc/8.1.0:R/3.6.1'
-    memory '10 GB'
     publishDir path: "${params.output_dir}/", saveAs: save_cds, pattern: "temp_fold/*cds.RDS", mode: 'copy'
     publishDir path: "${params.output_dir}/", saveAs: save_cell_qc, pattern: "temp_fold/*cell_qc.csv", mode: 'copy'
     publishDir path: "${params.output_dir}/", saveAs: save_samp_stats, pattern: "*sample_stats.csv", mode: 'copy'
@@ -1458,8 +1413,6 @@ save_cellqc = {params.output_dir + "/" + it - ~/_cell_qc.png/ + "/" + it}
 save_garnett = {params.output_dir + "/" + it.split("_")[0] + "/" + it}
 
 process generate_qc_metrics {
-    module 'modules:modules-init:modules-gs:gcc/8.1.0:R/3.6.1'
-    memory '10 GB'
     cache 'lenient'
     publishDir path: "${params.output_dir}/", saveAs: save_umap, pattern: "*UMAP.png", mode: 'copy'
     publishDir path: "${params.output_dir}/", saveAs: save_knee, pattern: "*knee_plot.png", mode: 'copy'
@@ -1549,7 +1502,6 @@ Process: calc_cell_totals
 *************/
 
 process calc_cell_totals {
-    memory '1 GB'
     cache 'lenient'
 
     input:
@@ -1597,7 +1549,6 @@ Process: collapse_collision
 *************/
 
 process collapse_collision {
-    memory '1 GB'
     cache 'lenient'
 
     input:
@@ -1649,9 +1600,7 @@ Process: generate_dashboard
 *************/
 
 process generate_dashboard {
-    module 'modules:modules-init:modules-gs:gcc/8.1.0:R/3.6.1'
     cache 'lenient'
-    memory '1 GB'
     publishDir path: "${params.output_dir}/", pattern: "exp_dash", mode: 'copy'
 
     input:
