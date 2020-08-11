@@ -9,7 +9,7 @@ params.rt_barcode_file="default"
 params.max_cores = 16
 params.hash_list = false
 params.max_wells_per_sample = 20
-params.garnett_file = false 
+params.garnett_file = false
 
 //print usage
 if (params.help) {
@@ -106,8 +106,8 @@ process check_sample_sheet {
     printf "    Process versions:
         \$(python --version)\n\n" >> start.log
     printf "    Process command:
-        check_sample_sheet.py 
-            --sample_sheet $params.sample_sheet 
+        check_sample_sheet.py
+            --sample_sheet $params.sample_sheet
             --star_file $params.star_file
             --level $params.level --rt_barcode_file $params.rt_barcode_file
             --max_wells_per_samp $params.max_wells_per_sample\n\n" >> start.log
@@ -276,7 +276,7 @@ process gather_info {
 
     """
 
-    spec=`awk 'BEGIN {FS=",";OFS=","};{gsub(" ", ".", \$2);gsub("/", ".", \$2);gsub("-", ".", \$2);split(\$2,a,"_fq_part");gsub("_", ".", \$2);print(\$1, a[1], \$3)}' $good_sample_sheet | awk 'BEGIN {FS=","}; \$2=="$key" {print \$3}' | uniq`
+    spec=`awk 'BEGIN {FS=",";OFS=","};{gsub(" ", ".", \$2);gsub("/", ".", \$2);gsub("-", ".", \$2);split(\$2,a,"_fq_part");gsub("_", ".", a[1]);print(\$1, a[1], \$3)}' $good_sample_sheet | awk 'BEGIN {FS=","}; \$2=="$key" {print \$3}' | uniq`
     star_mem=`awk -v var="\$spec" '\$1==var {print \$3}' $params.star_file | uniq`
     star_path=`awk -v var="\$spec" '\$1==var {print \$2}' $params.star_file | uniq`
     gtf_path=`awk -v var="\$spec" '\$1==var {print \$2}' $params.gene_file | uniq`
@@ -416,8 +416,8 @@ process align_reads {
 
     printf "    Process command:
         STAR --runThreadN $cores_align --genomeDir $star_path
-            --readFilesIn $trimmed_fastq --readFilesCommand zcat 
-            --outFileNamePrefix ./align_out/${name} --outSAMtype BAM Unsorted 
+            --readFilesIn $trimmed_fastq --readFilesCommand zcat
+            --outFileNamePrefix ./align_out/${name} --outSAMtype BAM Unsorted
             --outSAMmultNmax 1 --outSAMstrandField intronMotif\n
 
     Reference genome information:
@@ -727,7 +727,7 @@ process split_bam {
         bamtools split -in $merged_bam -reference -stub split_bams/split
 
         rmdup.py --bam in_bam --output_bam out.bam
-    
+
         samtools view -c out.bam > split_bam_umi_count.txt
 
         bedtools bamtobed -i out.bam -split
@@ -755,7 +755,7 @@ process split_bam {
         cat split_bed > key.bed
         sort -m -k1,1 -k2,2 split_gene_assign > key_ga.txt
 
-        datamash -g 1,2 count 2 < key_ga.txt 
+        datamash -g 1,2 count 2 < key_ga.txt
         | gzip > key.gz
         ' >> remove_dups.log
 
@@ -766,7 +766,7 @@ process split_bam {
     mkdir split_bams
     bamtools split -in $merged_bam -reference -stub split_bams/split
     cd split_bams
-    if [[ \$(ls | grep "_[0-9A-Za-z\\.]\\{3,\\}.bam\$") ]]; then 
+    if [[ \$(ls | grep "_[0-9A-Za-z\\.]\\{3,\\}.bam\$") ]]; then
         ls | grep "_[0-9A-Za-z\\.]\\{3,\\}.bam\$" | samtools merge split.REFnonstand.bam -b -
         ls | grep "_[0-9A-Za-z\\.]\\{3,\\}.bam\$" | xargs -d"\\n" rm
         mv split.REFnonstand.bam split.REF_nonstand.bam
@@ -1081,8 +1081,8 @@ process make_matrix {
     printf "** Start process 'make_matrix' at: \$(date)\n\n" >> make_matrix.log
 
     echo '    Process command:
-        make_matrix.py <(zcat $cell_gene_count) 
-            --gene_annotation "${gtf_path}/latest.gene.annotations" 
+        make_matrix.py <(zcat $cell_gene_count)
+            --gene_annotation "${gtf_path}/latest.gene.annotations"
             --key "$key"
         cat ${gtf_path}/latest.gene.annotations > "${key}.gene_annotations.txt"  ' >> make_matrix.log
 
@@ -1862,8 +1862,8 @@ process zip_up_log_data {
     echo '}' >> log_data.js
 
     echo 'const full_log_data = {' >> log_data.js
-    for file in $full_log 
-    do  
+    for file in $full_log
+    do
         samp_name=\$(basename \$file | sed 's/_full.log//')
         echo "\\"\$samp_name\\" :  \\`" >> log_data.js
         cat \$file >> log_data.js
