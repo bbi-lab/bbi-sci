@@ -115,14 +115,21 @@ RT Barcode,Sample ID,Reference Genome
 ```
 
 #### Configuration file:
-The second thing you need is a config file which passes in your arguments to the pipeline. This file is very helpful as it allows you to specify if your data is 2-level or 3-level, allocate memory requirements, process only a subset of your samples and use custom genomes to map your data. We highly recommend using this instead of passing arguments on the command line so that you have a record of the run you called.
 
-##### An example configuration file is included in the package and includes further information on usage.
+The second thing you need are configuration files that pass in arguments to the pipeline. These are the *experiment.config* and *nextflow.config* files.
 
-For Shendure lab cluster
-```
-process.queue = "shendure-long.q"
-```
+##### *experiment.config* file
+
+ The *experiment.config* file is helpful as it allows you to specify if your data is 2-level or 3-level, allocate memory requirements, process only a subset of your samples and use custom genomes to map your data. We highly recommend using this instead of passing arguments on the command line so that you have a record of the run you called.
+
+Notes:
+- an example experiment configuration file is included in the package and includes further information on usage
+
+- for the Shendure lab cluster use `process.queue = "shendure-long.q"` in either the *experiment.config* or *nextflow.config* files
+
+##### *nextflow.config* file
+
+The *nextflow.config* file defines processing values such as the required modules, memory, and number of CPUs for each processing stage, which do not change typically from run-to-run. The file can be left in the bbi-\* installation directory where Nextflow searches for it automatically when the pipeline starts up. The supplied *nextflow.config* file has two profiles: the default profile, called *standard*, defines modules used by the pipeline on CentOS 7 systems in the UW Genome Sciences cluster, and the *centos_6* profile, which defines modules used by the pipeline on CentOS 6 systems in the UW Genome Sciences cluster. In order to run the pipelines with the *centos_6* profile, add the command line parameter `-p centos_6`. This *nextflow.config* file has comments with additional information.
 
 #### Run the pipeline:
 
