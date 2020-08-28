@@ -6,7 +6,9 @@ This pipeline is the under-construction pipe for processing 2-level and 3-level 
 The pipeline is run in two parts, the first is [bbi-dmux](https://github.com/bbi-lab/bbi-dmux) which runs the demultiplexing, and the second is [bbi-sci](https://github.com/bbi-lab/bbi-sci/) which completes the preprocessing. The instructions below apply to both pipelines, and both pipelines can use the same configuration file.
 
 ## Prerequisites
-1. As the Nextflow pipeline is run interactively, please use a terminal multiplexer such as tmux. tmux sessions are persistent which means that programs in tmux will continue to run even if you get disconnected. You can start a tmux session by using:
+1. This script requires Nextflow version >= 20.
+
+2. As the Nextflow pipeline is run interactively, please use a terminal multiplexer such as tmux. tmux sessions are persistent which means that programs in tmux will continue to run even if you get disconnected. You can start a tmux session by using:
 ```
 module load tmux/latest
 tmux
@@ -17,7 +19,7 @@ tmux attach
 ```
 which will return you to your session. See a handy tmux tutorial [here](https://www.hostinger.com/tutorials/tmux-beginners-guide-and-cheat-sheet/).
 
-2. Always start with a qlogin session before you begin the pipeline. This can be done by
+3. Always start with a qlogin session before you begin the pipeline. This can be done by
 ```
 qlogin -l mfree=20G
 ```
@@ -113,14 +115,27 @@ RT Barcode,Sample ID,Reference Genome
 ```
 
 #### Configuration file:
-The second thing you need is a config file which passes in your arguments to the pipeline. This file is very helpful as it allows you to specify if your data is 2-level or 3-level, allocate memory requirements, process only a subset of your samples and use custom genomes to map your data. We highly recommend using this instead of passing arguments on the command line so that you have a record of the run you called.
 
-##### An example configuration file is included in the package and includes further information on usage.
+The second thing you need are configuration files that pass in arguments to the pipeline. These are the *experiment.config* and *nextflow.config* files.
 
-For Shendure lab cluster
+##### *experiment.config* file
+
+ The *experiment.config* file is helpful as it allows you to specify if your data is 2-level or 3-level, allocate memory requirements, process only a subset of your samples and use custom genomes to map your data. We highly recommend using this instead of passing arguments on the command line so that you have a record of the run you called.
+
+Notes:
+- an example experiment configuration file is included in the package and includes further information on usage
+
+- for the Shendure lab cluster use `process.queue = "shendure-long.q"` in either the *experiment.config* or *nextflow.config* files
+
+##### *nextflow.config* file
+
+The *nextflow.config* file defines processing values such as the required modules, memory, and number of CPUs for each processing stage, which do not change typically from run-to-run. The file can be left in the bbi-\* installation directory where Nextflow searches for it automatically when the pipeline starts up. The supplied *nextflow.config* file has two profiles: the default profile, called *standard*, defines modules used by the pipeline on CentOS 7 systems in the UW Genome Sciences cluster, and the *centos_6* profile, which defines modules used by the pipeline on CentOS 6 systems in the UW Genome Sciences cluster. In order to run the pipelines with the *centos_6* profile, add the command line parameter `-profile centos_6` to the nextflow run command, for example
+
 ```
-process.queue = "shendure-long.q"
+nextflow run bbi-dmux -profile centos_6 -c experiment.config
 ```
+
+This *nextflow.config* file has comments that give additional information.
 
 #### Run the pipeline:
 
