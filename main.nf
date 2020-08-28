@@ -2,7 +2,7 @@
 ** Check that Nextflow version meets minimum version requirements.
 */
 def minMajorVersion = 20
-def minMinorVersion = 0
+def minMinorVersion = 07
 checkNextflowVersion( minMajorVersion, minMinorVersion )
 
 
