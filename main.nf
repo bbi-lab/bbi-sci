@@ -1241,14 +1241,16 @@ process run_scrublet {
     printf "    Process versions:
         \$(python --version)
             \$(pip freeze | grep scrublet | tr '==' ' ')\n\n" >> run_scrublet.log
-    echo '    Process command:
-        run_scrublet.py --key $key --mat $scrub_matrix\n'  >> run_scrublet.log
 
     if [ $params.skip_dedup == 'false' ]
     then
         run_scrublet.py --key $key --mat $scrub_matrix
+        echo '    Process command:
+        run_scrublet.py --key $key --mat $scrub_matrix\n'  >> run_scrublet.log
     else
         run_scrublet.py --key $key --mat $scrub_matrix --skip
+        echo '    Process command:
+        run_scrublet.py --key $key --mat $scrub_matrix --skip\n'  >> run_scrublet.log
         printf "    Scrublet skipped by request\n\n" >> run_scrublet.log
     fi
 
