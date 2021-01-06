@@ -253,7 +253,7 @@ gen_plots <- function(sample_name, sample_path) {
 
     for (mod in garnett_mods) {
       png(paste0(sample_name, "_", gsub("garnett_type_", "", mod) ,"_Garnett.png"), width = 7, height = 5, res = 600, units = "in")
-      print(suppressMessages(plot_cells_simp(samp_cds, color_cells_by = mod) + theme(text = element_text(size = 8))))
+      print(suppressMessages(plot_cells_simp(samp_cds, color_cells_by = mod) + theme(text = element_text(size = 8)) + theme(legend.position = "none")))
       dev.off()
     }
     
@@ -261,12 +261,12 @@ gen_plots <- function(sample_name, sample_path) {
   }, error = function(e) {
     
     png(paste0(sample_name, "_UMAP.png"), width = 5, height = 5, res = 600, units = "in")
-    print(ggplot() + geom_text(aes(x = 1, y = 1, label = "Insufficient cells for UMAP")) + monocle3:::monocle_theme_opts() + labs(x="UMAP 1", y = "UMAP 2"))
+    print(ggplot() + geom_text(aes(x = 1, y = 1, label = "Insufficient cells for UMAP")) + monocle3:::monocle_theme_opts() + theme(legend.position = "none") + labs(x="UMAP 1", y = "UMAP 2"))
     dev.off()
 
     for (mod in garnett_mods) {
       png(paste0(sample_name, "_", gsub("garnett_type_", "", mod) ,"_Garnett.png"), width = 7, height = 5, res = 600, units = "in")
-      print(ggplot() + geom_text(aes(x = 1, y = 1, label = "Insufficient cells for UMAP")) + monocle3:::monocle_theme_opts() + labs(x="UMAP 1", y = "UMAP 2"))
+      print(ggplot() + geom_text(aes(x = 1, y = 1, label = "Insufficient cells for UMAP")) + monocle3:::monocle_theme_opts() + theme(legend.position = "none") + labs(x="UMAP 1", y = "UMAP 2"))
       dev.off()
     }
     samp_cds  
