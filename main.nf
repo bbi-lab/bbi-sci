@@ -26,7 +26,7 @@ params.max_cores = 16
 params.hash_list = false
 params.max_wells_per_sample = 20
 params.garnett_file = false 
-params.skip_dedup = false
+params.skip_doublet_detect = false
 
 //print usage
 if (params.help) {
@@ -61,7 +61,7 @@ if (params.help) {
     log.info '    params.hash_list = false                   Path to a tab-delimited file with at least two columns, first the hash name and second the hash barcode sequence. Default is false to indicate no hashing.'
     log.info '    params.max_wells_per_sample = 20           The maximum number of wells per sample - if a sample is in more wells, the fastqs will be split then reassembled for efficiency.'
     log.info '    params.garnett_file = false                Path to a csv with two columns, first is the sample name, and second is a path to the Garnett classifier to be applied to that sample. Default is false - no classification.'
-    log.info '    params.skip_dedup = false                  Whether to skip deduplication - useful for very large datasets.'
+    log.info '    params.skip_doublet_detect = false         Whether to skip doublet detection, i.e. scrublet - useful for very large datasets.'
     log.info ''
     log.info 'Issues? Contact hpliner@uw.edu'
     exit 1
@@ -1242,7 +1242,7 @@ process run_scrublet {
         \$(python --version)
             \$(pip freeze | grep scrublet | tr '==' ' ')\n\n" >> run_scrublet.log
 
-    if [ $params.skip_dedup == 'false' ]
+    if [ $params.skip_doublet_detect == 'false' ]
     then
         run_scrublet.py --key $key --mat $scrub_matrix
         echo '    Process command:
@@ -1332,7 +1332,7 @@ process reformat_qc {
     cell_qc <- read.csv("$cell_qc")
 
     if(nrow(pData(cds)) > 0) {
-        if("$params.skip_dedup" == 'false') {
+        if("$params.skip_doublet_detect" == 'false') {
             scrublet_out <- read.csv("$scrub_csv", header=F)
             pData(cds)\$scrublet_score <- scrublet_out\$V1
             pData(cds)\$scrublet_call <- ifelse(scrublet_out\$V2 == 1, "Doublet", "Singlet")
@@ -1707,7 +1707,7 @@ process finish_log {
     printf "    params.hash_list:             $params.hash_list\n" >> ${key}_full.log
     printf "    params.max_wells_per_sample:  $params.max_wells_per_sample\n\n" >> ${key}_full.log
     printf "    params.garnett_file:          $params.garnett_file\n\n" >> ${key}_full.log
-    printf "    params.skip_dedup:            $params.skip_dedup\n\n" >> ${key}_full.log
+    printf "    params.skip_doublet_detect:   $params.skip_doublet_detect\n\n" >> ${key}_full.log
 
     tail -n +2 ${logfile} >> ${key}_full.log
     printf "\n** End processes generate qc metrics and dashboard at: \$(date)\n\n" >> ${key}_full.log
