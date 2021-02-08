@@ -1694,8 +1694,6 @@ process finish_log {
     printf "    params.run_dir:               $params.run_dir\n" >> ${key}_full.log
     printf "    params.output_dir:            $params.output_dir\n" >> ${key}_full.log
     printf "    params.sample_sheet:          $params.sample_sheet\n" >> ${key}_full.log
-    printf "    params.p7_rows:               $params.p7_rows\n" >> ${key}_full.log
-    printf "    params.p5_cols:               $params.p5_cols\n" >> ${key}_full.log
     printf "    params.demux_out:             $params.demux_out\n" >> ${key}_full.log
     printf "    params.level:                 $params.level\n" >> ${key}_full.log
     printf "    params.max_cores:             $params.max_cores\n" >> ${key}_full.log
