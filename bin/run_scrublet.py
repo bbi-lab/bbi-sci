@@ -48,4 +48,6 @@ if __name__ == '__main__':
         draw = ImageDraw.Draw(image)
         draw.text((120,140), "Scrublet skipped by request.", fill = "black")
         image.save(filename)
-        numpy.savetxt(args.key + "_scrublet_out.csv", "scrublet skipped", fmt="%s", delimiter=",")
+        f = open(args.key + "_scrublet_out.csv", 'w')
+        f.write("scrublet skipped")
+        f.close()
