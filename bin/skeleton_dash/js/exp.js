@@ -209,7 +209,7 @@ function RegRow(props) {
   return React.createElement(
     "td",
     null,
-    props.val
+    (props.val).toString().replace(/\B(?<!\.\d*)(?=(\d{3})+(?!\d))/g, ",")
   );
 }
 
@@ -590,7 +590,7 @@ var Table = function (_React$Component) {
           React.createElement(
             "h1",
             { className: "h3", id: "lig-name" },
-            "Summary Table"
+            "Summary Tables"
           )
         ),
         data.length > 0 && React.createElement(
@@ -684,22 +684,22 @@ var Table = function (_React$Component) {
                 React.createElement(
                   "td",
                   null,
-                  p.Sample
+                  (p.Sample).toString().replace(/\B(?<!\.\d*)(?=(\d{3})+(?!\d))/g, ",")
                 ),
                 React.createElement(
                   "td",
                   null,
-                  p.Total_reads
+                  (p.Total_reads).toString().replace(/\B(?<!\.\d*)(?=(\d{3})+(?!\d))/g, ",")
                 ),
                 React.createElement(
                   "td",
                   null,
-                  p.Total_UMIs
+                  (p.Total_UMIs).toString().replace(/\B(?<!\.\d*)(?=(\d{3})+(?!\d))/g, ",")
                 ),
                 React.createElement(
                   "td",
                   null,
-                  p.Duplication_rate
+                  (p.Duplication_rate).toString().replace(/\B(?<!\.\d*)(?=(\d{3})+(?!\d))/g, ",")
                 ),
                 React.createElement(
                   "td",
@@ -709,12 +709,12 @@ var Table = function (_React$Component) {
                 React.createElement(
                   "td",
                   null,
-                  p.Cells_100_UMIs
+                  (p.Cells_100_UMIs).toString().replace(/\B(?<!\.\d*)(?=(\d{3})+(?!\d))/g, ",")
                 ),
                 React.createElement(
                   "td",
                   null,
-                  p.Cells_1000_UMIs
+                  (p.Cells_1000_UMIs).toString().replace(/\B(?<!\.\d*)(?=(\d{3})+(?!\d))/g, ",")
                 )
               );
             })
@@ -750,7 +750,7 @@ function ExperimentPage(props) {
               React.createElement(
                 "a",
                 { className: "nav-link active", id: "summary-tab", "data-toggle": "pill", href: "#summary", role: "tab", "aria-controls": "summary", "aria-selected": "true" },
-                "Summary Table"
+                "Summary Tables"
               ),
               props.samp_pills
             )
