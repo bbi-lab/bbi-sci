@@ -590,7 +590,7 @@ var Table = function (_React$Component) {
           React.createElement(
             "h1",
             { className: "h3", id: "lig-name" },
-            "Summary Tables"
+            "Summary Table"
           )
         ),
         data.length > 0 && React.createElement(
@@ -750,7 +750,7 @@ function ExperimentPage(props) {
               React.createElement(
                 "a",
                 { className: "nav-link active", id: "summary-tab", "data-toggle": "pill", href: "#summary", role: "tab", "aria-controls": "summary", "aria-selected": "true" },
-                "Summary Tables"
+                "Summary Table"
               ),
               props.samp_pills
             )
