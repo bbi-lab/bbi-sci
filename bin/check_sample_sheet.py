@@ -1,5 +1,15 @@
 #!/usr/bin/env python
 
+# Notes:
+#   o  the master file is bbi-dmux/bin/check_sample_sheet.py
+#      Make changes to the master file and distribute
+#      to all other pipelines that use it in order to
+#      maintain consistency.
+#   o  this file is used in the following pipelines
+#         o  bbi-dmux: sci-RNA-seq demultiplexing pipeline
+#         o  bbi-sci: sci-RNA-seq analysis pipeline
+#
+
 import argparse
 import sys
 import os
