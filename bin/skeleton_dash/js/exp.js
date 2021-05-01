@@ -684,7 +684,7 @@ var Table = function (_React$Component) {
                 React.createElement(
                   "td",
                   null,
-                  (p.Sample).toString().replace(/\B(?<!\.\d*)(?=(\d{3})+(?!\d))/g, ",")
+                  p.Sample
                 ),
                 React.createElement(
                   "td",
