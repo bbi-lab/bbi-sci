@@ -1,4 +1,14 @@
-#!/usr/bin/env python    
+#!/usr/bin/env python
+
+# Notes:
+#   o  the master file is bbi-dmux/bin/check_sample_sheet.py
+#      Make changes to the master file and distribute
+#      to all other pipelines that use it in order to
+#      maintain consistency.
+#   o  this file is used in the following pipelines
+#         o  bbi-dmux: sci-RNA-seq demultiplexing pipeline
+#         o  bbi-sci: sci-RNA-seq analysis pipeline
+#
 
 import argparse
 import sys
@@ -17,6 +27,13 @@ if __name__ == '__main__':
     parser.add_argument('--rt_barcode_file', required=True, help='Custom barcode file path or "default"')
     parser.add_argument('--max_wells_per_sample', required=True, help='Maximum number of wells per sample - for efficiency')
     args = parser.parse_args()
+
+    # Check first line to see if the UTF encoding is wrong:
+    with open(args.sample_sheet, 'r') as f:
+        fline = f.readline().strip().split(",")
+        if fline[0] != "" and (fline[0][0] == '\ufeff' or fline[0][0] == '\xef'):
+            sys.stderr.write("The samplesheet has the wrong UTF encoding. Please see the troubleshooting section of https://github.com/bbi-lab/bbi-dmux for more information.\n")
+            sys.exit(20)
 
     if args.rt_barcode_file == "default":
         if args.level == "3":
@@ -41,7 +58,7 @@ if __name__ == '__main__':
         for line in f:
             items = line.strip().split()
             genomes.append(items[0])
-           
+
     def check_line(line, line_num, rtdict = rtdict, genomes = genomes):
         error_flag = 0
         line = line.strip().split(",")
@@ -54,6 +71,7 @@ if __name__ == '__main__':
         return error_flag
 
     def fix_line(line, fix):
+        line = '%s\n' % ( line.strip() )
         line = line.split(",")
         line[1] = well_dict[line[0]]
         if fix == 0:
@@ -74,6 +92,7 @@ if __name__ == '__main__':
             return ",".join(line)
 
     def fix_line_exp(line, fix):
+        line = '%s\n' % ( line.strip() )
         line = line.split(",")
         line[1] = well_dict[(line[0],line[3])]
         if fix == 0:
@@ -124,7 +143,7 @@ if __name__ == '__main__':
             curr_count = 1
             for well in sample_dict[samp]:
                 if curr_count <= div:
-                    curr_count += 1  
+                    curr_count += 1
                 else:
                     curr_count = 1
                     group_count += 1
@@ -173,7 +192,7 @@ if __name__ == '__main__':
         error_count += check_line(line, line_num)
         sample_out = sample_out + line
     sheet.close()
-    
+
     if error_count > 0:
         sys.stderr.write("There were " + str(error_count) + " errors in the sample sheet.\n")
         sys.exit(10)
