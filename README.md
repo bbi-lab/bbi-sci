@@ -54,7 +54,7 @@ module load python/3.7.7
 You must also have a few modules other than python loaded:
 
 ```
-module load git/2.19.1
+module load git/2.18.0
 ```
 
 After loading the above modules, you must install the following python packages:
@@ -63,6 +63,7 @@ After loading the above modules, you must install the following python packages:
 pip install --user biopython
 pip install --user fmt
 pip install --user pysam
+pip install --user matplotlib
 
 git clone https://github.com/andrewhill157/barcodeutils.git
 pushd barcodeutils
@@ -92,6 +93,12 @@ pushd scrublet
 pip install -r requirements.txt --user
 python setup.py install --user
 popd
+```
+
+Please note: If you are doing a hashing experiment, you will also need to install scipy in order to run the pipeline successfully. You can do this by running:
+
+```
+pip install --user scipy
 ```
 
 Once monocle3 and scrublet are installed, install nextflow by typing:

@@ -209,7 +209,7 @@ function RegRow(props) {
   return React.createElement(
     "td",
     null,
-    props.val
+    (props.val).toString().replace(/\B(?<!\.\d*)(?=(\d{3})+(?!\d))/g, ",")
   );
 }
 
@@ -689,17 +689,17 @@ var Table = function (_React$Component) {
                 React.createElement(
                   "td",
                   null,
-                  p.Total_reads
+                  (p.Total_reads).toString().replace(/\B(?<!\.\d*)(?=(\d{3})+(?!\d))/g, ",")
                 ),
                 React.createElement(
                   "td",
                   null,
-                  p.Total_UMIs
+                  (p.Total_UMIs).toString().replace(/\B(?<!\.\d*)(?=(\d{3})+(?!\d))/g, ",")
                 ),
                 React.createElement(
                   "td",
                   null,
-                  p.Duplication_rate
+                  (p.Duplication_rate).toString().replace(/\B(?<!\.\d*)(?=(\d{3})+(?!\d))/g, ",")
                 ),
                 React.createElement(
                   "td",
@@ -709,12 +709,12 @@ var Table = function (_React$Component) {
                 React.createElement(
                   "td",
                   null,
-                  p.Cells_100_UMIs
+                  (p.Cells_100_UMIs).toString().replace(/\B(?<!\.\d*)(?=(\d{3})+(?!\d))/g, ",")
                 ),
                 React.createElement(
                   "td",
                   null,
-                  p.Cells_1000_UMIs
+                  (p.Cells_1000_UMIs).toString().replace(/\B(?<!\.\d*)(?=(\d{3})+(?!\d))/g, ",")
                 )
               );
             })
