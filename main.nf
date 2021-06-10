@@ -1869,7 +1869,7 @@ def checkNextflowVersion( Integer minMajorVersion, Integer minMinorVersion )
   def aVersion = sVersion.split( /[.]/ )
   def majorVersion = aVersion[0].toInteger()
   def minorVersion = aVersion[1].toInteger()
-  if( majorVersion < minMajorVersion || minorVersion < minMinorVersion )
+  if( majorVersion < minMajorVersion || ( majorVersion == minMajorVersion && minorVersion < minMinorVersion ) )
   {
     def serr = "This pipeline requires Nextflow version at least %s.%s: you have version %s."
     println()
