@@ -21,3 +21,4 @@ Duck	/net/bbi/vol1/data/genomes_stage/duck/duck_star 47
 Horse	/net/bbi/vol1/data/genomes_stage/horse/horse_star 47
 Corn	/net/bbi/vol1/data/genomes_stage/corn/corn_star  25
 Arabidopsis	/net/bbi/vol1/data/genomes_stage/arabidopsis/arabidopsis_star 10
+Custom_cimino   /net/bbi/vol1/data/genomes_stage/custom_cimino/custom_cimino_star 47
