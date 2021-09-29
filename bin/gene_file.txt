@@ -21,3 +21,4 @@ Duck /net/bbi/vol1/data/genomes_stage/duck/duck_rna/
 Horse /net/bbi/vol1/data/genomes_stage/horse/horse_rna/
 Corn /net/bbi/vol1/data/genomes_stage/corn/corn_rna/
 Arabidopsis /net/bbi/vol1/data/genomes_stage/arabidopsis/arabidopsis_rna/
+Custom_cimino   /net/bbi/vol1/data/genomes_stage/custom_cimino/custom_cimino_rna/
