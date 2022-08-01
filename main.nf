@@ -115,6 +115,9 @@ process check_sample_sheet {
         file 'start.txt' into log_piece1
 
     """
+    # bash watch for errors
+    set -ueo pipefail
+
     printf "BBI bbi-sci Pipeline Log\n\n" > start.log
     printf "Run started at: \$(date)\n\n" >> start.log
 
@@ -209,6 +212,9 @@ process trim_fastqs {
         key = input_fastq.baseName.split(/-L[0-9]{3}/)[0].split(/\.fq.part/)[0]
 
     """
+    # bash watch for errors
+    set -ueo pipefail
+
     cat ${logfile} > trim.log
     printf "** Start process 'trim_fastqs' for $input_fastq at: \$(date)\n\n" > piece.log
     printf "    Process versions:
@@ -292,6 +298,8 @@ process gather_info {
         set val(key), env(gtf_path) into gtf_info2
 
     """
+    # bash watch for errors
+    set -ueo pipefail
 
     spec=`sed 's/ *\$//g' good_sample_sheet.csv | awk 'BEGIN {FS=",";OFS=","}{split(\$2,a,"_fq_part");gsub("[_ /-]", ".", a[1]);print(\$1, a[1], \$3)}' | awk 'BEGIN {FS=","}; \$2=="$key" {print \$3}' | uniq`
     star_mem=`awk -v var="\$spec" '\$1==var {print \$3}' $params.star_file | uniq`
@@ -360,6 +368,9 @@ process process_hashes {
         params.hash_list != false
 
     """
+    # bash watch for errors
+    set -ueo pipefail
+
     process_hashes.py --hash_sheet $params.hash_list \
         --fastq <(zcat $input_fastq) --key $key
 
@@ -418,6 +429,9 @@ process align_reads {
         set val(key), val(name), file("align_out/*Aligned.out.bam"), file('align.log'), file(log_piece2), file("*align.txt") into aligned_bams
 
     """
+    # bash watch for errors
+    set -ueo pipefail
+
     cat ${logfile} > align.log
     printf "** Start process 'align_reads' for $trimmed_fastq at: \$(date)\n\n" > piece.log
     printf "    Process versions:
@@ -513,6 +527,9 @@ process sort_and_filter {
         set val(key), file(log_piece2), file(log_piece3), file("*_sf.txt") into log_pieces
 
     """
+    # bash watch for errors
+    set -ueo pipefail
+
     printf "** Start process 'sort_and_filter' for $aligned_bam at: \$(date)\n\n" > ${name}_piece.log
     printf "    Process versions:
         \$(samtools --version | tr '\n' ' ')\n\n" >> ${name}_piece.log
@@ -580,6 +597,8 @@ process combine_logs {
         set val(key), file("*_pre.log") into log_premerge
 
     """
+    # bash watch for errors
+    set -ueo pipefail
 
     cat $log_piece1 $log_piece2 $log_piece3 $log_piece4 > ${key}_pre.log
 
@@ -642,6 +661,9 @@ process merge_bams {
         set key, file("*.read_count.txt") into read_count
 
     """
+    # bash watch for errors
+    set -ueo pipefail
+
     cat ${logfile} > merge_bams.log
     printf "** Start process 'merge_bams' at: \$(date)\n\n" >> merge_bams.log
     printf "    Process versions:
@@ -706,6 +728,9 @@ process split_bam {
         file merged_bam into output
 
     """
+    # bash watch for errors
+    set -ueo pipefail
+
     cat ${logfile} > remove_dups.log
     printf "** Start processes 'remove duplicates, assign_genes, merge_assignment' at: \$(date)\n\n" >> remove_dups.log
     printf "    Process versions:
@@ -758,10 +783,10 @@ process split_bam {
     mkdir split_bams
     bamtools split -in $merged_bam -reference -stub split_bams/split
     cd split_bams
-    if [[ \$(ls | grep "_[0-9A-Za-z\\.]\\{3,\\}.bam\$") ]]; then
-        ls | grep "_[0-9A-Za-z\\.]\\{3,\\}.bam\$" | samtools merge split.REFnonstand.bam -b -
-        ls | grep "_[0-9A-Za-z\\.]\\{3,\\}.bam\$" | xargs -d"\\n" rm
-        mv split.REFnonstand.bam split.REF_nonstand.bam
+    if [[ \$(ls *.bam | egrep -v '_(chr)?([0-9]?[0-9]?[0-9]|M|Mt|MT|MtDNA|mitochondrion_genome|X|Y)\\.bam\$') ]]; then
+        ls *.bam | egrep -v '_(chr)?([0-9]?[0-9]?[0-9]|M|Mt|MT|MtDNA|mitochondrion_genome|X|Y)\\.bam\$' | samtools merge split.REFnonstand.bam.xxx -b -
+        ls *.bam | egrep -v '_(chr)?([0-9]?[0-9]?[0-9]|M|Mt|MT|MtDNA|mitochondrion_genome|X|Y)\\.bam\$' | xargs -d"\\n" rm
+        mv split.REFnonstand.bam.xxx split.REF_nonstand.bam
     fi
     """
 
@@ -823,6 +848,9 @@ process remove_dups_assign_genes {
         set key, file("*.bed"), file("*_ga.txt"), file("*_umi_count.txt") into remove_dup_part_out
 
     """
+    # bash watch for errors
+    set -ueo pipefail
+
     rmdup.py --bam $split_bam --output_bam out.bam
 
     samtools view -c out.bam > ${split_bam}_umi_count.txt
@@ -831,23 +859,27 @@ process remove_dups_assign_genes {
             | sort -k1,1 -k2,2n -k3,3n -S 5G \
             > "${split_bam}.bed"
 
+    bedtools sort -i "${gtf_path}/latest.exons.bed" > latest.exons.bed.sort
+    bedtools sort -i "${gtf_path}/latest.genes.bed" > latest.genes.bed.sort
+
     bedtools map \
         -a "${split_bam}.bed" \
-        -b "${gtf_path}/latest.exons.bed" \
+        -b "latest.exons.bed.sort" \
         -nonamecheck -s -f 0.95 -c 7 -o distinct -delim '|' \
     | bedtools map \
-        -a - -b "${gtf_path}/latest.genes.bed" \
+        -a - -b "latest.genes.bed.sort" \
         -nonamecheck -s -f 0.95 -c 4 -o distinct -delim '|' \
     | sort -k4,4 -k2,2n -k3,3n -S 5G\
     | datamash \
         -g 4 first 1 first 2 last 3 first 5 first 6 collapse 7 collapse 8 \
-    | assign-reads-to-genes.py "${gtf_path}/latest.genes.bed" \
+    | assign-reads-to-genes.py "latest.genes.bed.sort" \
     | awk '\$3 == "exonic" || \$3 == "intronic" {{
             split(\$1, arr, "|")
             printf "%s_%s_%s\t%s\t%s\\n", arr[3], arr[4], arr[5], \$2, \$3
     }}' \
     | sort -k1,1 -k2,2 -S 5G > "${split_bam}_ga.txt"
 
+    rm latest.exons.bed.sort latest.genes.bed.sort
     """
 
 }
@@ -907,6 +939,9 @@ process merge_assignment {
         file "*.bed"  into temp_bed
 
     """
+    # bash watch for errors
+    set -ueo pipefail
+
     cat ${logfile} > merge_assignment.log
     cat $split_bed > "${key}.bed"
     sort -m -k1,1 -k2,2 $split_gene_assign > "${key}_ga.txt"
@@ -981,6 +1016,9 @@ process count_umis_by_sample {
         file "*UMIs.per.cell.barcode.intronic.txt" into umi_per_cell_intronic
 
     """
+    # bash watch for errors
+    set -ueo pipefail
+
     cat ${logfile} > count_umis_by_sample.log
     printf "** Start process 'count_umis_by_sample' at: \$(date)\n\n" >> count_umis_by_sample.log
     printf "    Process versions:
@@ -1062,6 +1100,9 @@ process make_matrix {
         set key, file("*cell_annotations.txt"), file("*umi_counts.mtx"), file("*gene_annotations.txt"), val(gtf_path), file("make_matrix.log") into mat_output
 
     """
+    # bash watch for errors
+    set -ueo pipefail
+
     cat ${logfile} > make_matrix.log
     printf "** Start process 'make_matrix' at: \$(date)\n\n" >> make_matrix.log
 
@@ -1128,6 +1169,9 @@ process make_cds {
         file("*cell_qc.csv") into cell_qcs
 
     """
+    # bash watch for errors
+    set -ueo pipefail
+
     cat ${logfile} > make_cds.log
     printf "** Start process 'make_cds' at: \$(date)\n\n" >> make_cds.log
     printf "    Process versions:
@@ -1167,6 +1211,9 @@ process apply_garnett {
         set key, file(scrub_matrix), file("new_cds/*.RDS"), file(cell_qc), file("apply_garnett.log") into for_scrub
 
 """
+    # bash watch for errors
+    set -ueo pipefail
+
     cat ${logfile} > apply_garnett.log
     printf "** Start process 'apply_garnett' at: \$(date)\n\n" >> apply_garnett.log
     mkdir new_cds
@@ -1236,6 +1283,9 @@ process run_scrublet {
         set key, file("run_scrublet.log") into pipe_log
 
     """
+    # bash watch for errors
+    set -ueo pipefail
+
     cat ${logfile} > run_scrublet.log
     printf "** Start process 'run_scrublet' at: \$(date)\n\n" >> run_scrublet.log
     printf "    Process versions:
@@ -1437,6 +1487,9 @@ process generate_qc_metrics {
         file("*.txt") into cutoff
 
     """
+    # bash watch for errors
+    set -ueo pipefail
+
     generate_qc.R\
         $cds_object $umis_per_cell $key \
         --specify_cutoff $params.umi_cutoff\
@@ -1480,8 +1533,10 @@ process zip_up_sample_stats {
         file "*ll_sample_stats.csv" into all_sample_stats
 
     """
+    # bash watch for errors
+    set -ueo pipefail
 
-     sed -s 1d $files > all_sample_stats.csv
+    sed -s 1d $files > all_sample_stats.csv
 
     """
 }
@@ -1521,6 +1576,8 @@ process calc_cell_totals {
         file "*.txt" into cell_counts
 
     """
+    # bash watch for errors
+    set -ueo pipefail
 
     for f in $cell_qc
     do
@@ -1568,6 +1625,8 @@ process collapse_collision {
         file "*.txt" into all_collision
 
     """
+    # bash watch for errors
+    set -ueo pipefail
 
     cat $col_file > all_collision.txt
 
@@ -1624,6 +1683,9 @@ process generate_dashboard {
         file exp_dash into exp_dash_out
 
     """
+    # bash watch for errors
+    set -ueo pipefail
+
     generate_dash_data.R $all_sample_stats $params.output_dir $cell_counts $all_collision $params.garnett_file
 
     mkdir exp_dash
@@ -1687,6 +1749,9 @@ process finish_log {
         file("*log_data.txt") into log_txt_for_wrap
 
     """
+    # bash watch for errors
+    set -ueo pipefail
+
     head -n 2 ${logfile} > ${key}_full.log
     printf "Nextflow version: $nextflow.version\n" >> ${key}_full.log
     printf "Pipeline version: $workflow.manifest.version\n" >> ${key}_full.log
@@ -1828,6 +1893,8 @@ process zip_up_log_data {
         file "*.js" into log_js
 
     """
+    # bash watch for errors
+    set -ueo pipefail
 
     echo 'const log_data = {' > log_data.js
     for file in $summary_log
