@@ -857,10 +857,11 @@ process remove_dups_assign_genes {
 
     bedtools bamtobed -i out.bam -split \
             | sort -k1,1 -k2,2n -k3,3n -S 5G \
-            > "${split_bam}.bed"
+            > "${split_bam}.bed.unsorted"
 
     bedtools sort -i "${gtf_path}/latest.exons.bed" > latest.exons.bed.sort
     bedtools sort -i "${gtf_path}/latest.genes.bed" > latest.genes.bed.sort
+    bedtools sort -i "${split_bam}.bed.unsorted" > "${split_bam}.bed"
 
     bedtools map \
         -a "${split_bam}.bed" \

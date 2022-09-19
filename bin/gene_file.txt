@@ -2,6 +2,7 @@ Human   /net/bbi/vol1/data/genomes_stage/human/human_rna/
 Human_gencode /net/bbi/vol1/data/genomes_stage/human_gencode/human_gencode_rna
 Mouse   /net/bbi/vol1/data/genomes_stage/mouse/mouse_rna/
 Mouse_gencode /net/bbi/vol1/data/genomes_stage/mouse_gencode/mouse_gencode_rna
+Mouse_tdTomato /net/bbi/vol1/data/genomes_stage/mouse_tdtomato/mouse_tdtomato_rna
 Barnyard    /net/bbi/vol1/data/genomes_stage/barnyard/barnyard_rna/
 Barnyard_gencode /net/bbi/vol1/data/genomes_stage/barnyard_gencode/barnyard_gencode_rna
 Worm    /net/bbi/vol1/data/genomes_stage/worm/worm_rna/
