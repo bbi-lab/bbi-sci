@@ -743,6 +743,7 @@ process split_bam {
         mkdir split_bams
         bamtools split -in $merged_bam -reference -stub split_bams/split
 
+        samtools index in_bam
         rmdup.py --bam in_bam --output_bam out.bam
 
         samtools view -c out.bam > split_bam_umi_count.txt
@@ -851,6 +852,7 @@ process remove_dups_assign_genes {
     # bash watch for errors
     set -ueo pipefail
 
+    samtools index $split_bam
     rmdup.py --bam $split_bam --output_bam out.bam
 
     samtools view -c out.bam > ${split_bam}_umi_count.txt
