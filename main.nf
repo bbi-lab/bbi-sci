@@ -1,4 +1,9 @@
 /*
+** This pipeline is written for Nextflow DSL 1.
+*/
+nextflow.enable.dsl = 1
+
+/*
 ** Check that Nextflow version meets minimum version requirements.
 */
 def minMajorVersion = 20
