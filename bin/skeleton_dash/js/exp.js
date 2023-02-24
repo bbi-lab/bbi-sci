@@ -37,7 +37,7 @@ function Header(props) {
 }
 
 function Sample(props) {
-  var safe_name = "hp" + props.sample_id.replace(".", "");
+  var safe_name = "hp" + props.sample_id.replace(/[.]/g, "");
   return React.createElement(
     "div",
     { className: "tab-pane fade", id: safe_name, role: "tabpanel",
@@ -209,14 +209,14 @@ function RegRow(props) {
   return React.createElement(
     "td",
     null,
-    (props.val).toString().replace(/\B(?<!\.\d*)(?=(\d{3})+(?!\d))/g, ",")
+    props.val
   );
 }
 
 function StatsPane(props) {
   var sample_stat = props.sample_stats[props.sample_id];
   var stats_list = ["Total Reads", "Total UMIs", "Duplication Rate", "Cells with >100 UMIs", "Cells with >1000 UMIs"];
-  var safe_name = "hp" + props.sample_id.replace(".", "");
+  var safe_name = "hp" + props.sample_id.replace(/[.]/g, "");
   return React.createElement(
     "div",
     { className: "tab-pane fade", id: "nav" + safe_name + "-stats", role: "tabpanel", "aria-labelledby": "nav" + safe_name + "-stats-tab" },
@@ -270,7 +270,7 @@ function CodeChunk(props) {
 }
 
 function ReadMetricsPane(props) {
-  var safe_name = "hp" + props.sample_id.replace(".", "");
+  var safe_name = "hp" + props.sample_id.replace(/[.]/g, "");
   return React.createElement(
     "div",
     { className: "tab-pane fade", id: "nav" + safe_name + "-readmetrics", role: "tabpanel", "aria-labelledby": "nav" + safe_name + "-readmetrics-tab" },
@@ -279,7 +279,7 @@ function ReadMetricsPane(props) {
 }
 
 function FullLogPane(props) {
-  var safe_name = "hp" + props.sample_id.replace(".", "");
+  var safe_name = "hp" + props.sample_id.replace(/[.]/g, "");
   return React.createElement(
     "div",
     { className: "tab-pane fade", id: "nav" + safe_name + "-fulllog", role: "tabpanel", "aria-labelledby": "nav" + safe_name + "-fulllog-tab" },
@@ -288,7 +288,7 @@ function FullLogPane(props) {
 }
 
 function BarnyardPane(props) {
-  var safe_name = "hp" + props.sample_id.replace(".", "");
+  var safe_name = "hp" + props.sample_id.replace(/[.]/g, "");
   return React.createElement(Pane, {
     className: props.className,
     id: "nav" + safe_name + "-barn",
@@ -298,7 +298,7 @@ function BarnyardPane(props) {
   });
 }
 function QCPane(props) {
-  var safe_name = "hp" + props.sample_id.replace(".", "");
+  var safe_name = "hp" + props.sample_id.replace(/[.]/g, "");
   return React.createElement(Pane, {
     className: "tab-pane fade",
     id: "nav" + safe_name + "-cellqc",
@@ -309,7 +309,7 @@ function QCPane(props) {
 }
 function ScrubPane(props) {
   var sample_stat = props.sample_stats[props.sample_id];
-  var safe_name = "hp" + props.sample_id.replace(".", "");
+  var safe_name = "hp" + props.sample_id.replace(/[.]/g, "");
   return React.createElement(Pane, {
     className: "tab-pane fade",
     id: "nav" + safe_name + "-scrub",
@@ -319,7 +319,7 @@ function ScrubPane(props) {
   });
 }
 function KneePane(props) {
-  var safe_name = "hp" + props.sample_id.replace(".", "");
+  var safe_name = "hp" + props.sample_id.replace(/[.]/g, "");
   return React.createElement(Pane, {
     className: props.className,
     id: "nav" + safe_name + "-knee",
@@ -329,7 +329,7 @@ function KneePane(props) {
   });
 }
 function UMAPPane(props) {
-  var safe_name = "hp" + props.sample_id.replace(".", "");
+  var safe_name = "hp" + props.sample_id.replace(/[.]/g, "");
   return React.createElement(Pane, {
     className: "tab-pane fade",
     id: "nav" + safe_name + "-umap",
@@ -340,7 +340,7 @@ function UMAPPane(props) {
 }
 
 function GarnettPane(props) {
-  var safe_name = "hp" + props.sample_id.replace(".", "");
+  var safe_name = "hp" + props.sample_id.replace(/[.]/g, "");
   return React.createElement(
     "div",
     { className: "tab-pane fade", id: "nav" + safe_name + "-garnett", role: "tabpanel", "aria-labelledby": "nav" + safe_name + "-garnett-tab" },
@@ -373,7 +373,7 @@ function GarnettPane(props) {
 }
 
 function SamplePill(props) {
-  var safe_name = "hp" + props.sample_id.replace(".", "");
+  var safe_name = "hp" + props.sample_id.replace(/[.]/g, "");
   return React.createElement(
     "a",
     { className: "nav-link", id: safe_name + "-tab", "data-toggle": "pill", href: "#" + safe_name, role: "tab",
@@ -689,17 +689,17 @@ var Table = function (_React$Component) {
                 React.createElement(
                   "td",
                   null,
-                  (p.Total_reads).toString().replace(/\B(?<!\.\d*)(?=(\d{3})+(?!\d))/g, ",")
+                  p.Total_reads
                 ),
                 React.createElement(
                   "td",
                   null,
-                  (p.Total_UMIs).toString().replace(/\B(?<!\.\d*)(?=(\d{3})+(?!\d))/g, ",")
+                  p.Total_UMIs
                 ),
                 React.createElement(
                   "td",
                   null,
-                  (p.Duplication_rate).toString().replace(/\B(?<!\.\d*)(?=(\d{3})+(?!\d))/g, ",")
+                  p.Duplication_rate
                 ),
                 React.createElement(
                   "td",
@@ -709,12 +709,12 @@ var Table = function (_React$Component) {
                 React.createElement(
                   "td",
                   null,
-                  (p.Cells_100_UMIs).toString().replace(/\B(?<!\.\d*)(?=(\d{3})+(?!\d))/g, ",")
+                  p.Cells_100_UMIs
                 ),
                 React.createElement(
                   "td",
                   null,
-                  (p.Cells_1000_UMIs).toString().replace(/\B(?<!\.\d*)(?=(\d{3})+(?!\d))/g, ",")
+                  p.Cells_1000_UMIs
                 )
               );
             })
