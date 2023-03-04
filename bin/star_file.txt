@@ -10,6 +10,7 @@ Worm    /net/bbi/vol1/data/genomes_stage/worm/worm_star  10
 Rat /net/bbi/vol1/data/genomes_stage/rat/rat_star 37
 Macaque /net/bbi/vol1/data/genomes_stage/macaque/macaque_star 110
 Zebrafish   /net/bbi/vol1/data/genomes_stage/zebrafish/zebrafish_star 20
+Zebrafish_rasmussen   /net/bbi/vol1/data/genomes_stage/zebrafish_rasmussen/zebrafish_rasmussen_star 20
 Drosophila  /net/bbi/vol1/data/genomes_stage/drosophila/drosophila_star  10
 Chicken	/net/bbi/vol1/data/genomes_stage/chicken/chicken_star 15
 Opossum	/net/bbi/vol1/data/genomes_stage/opossum/opossum_star 40

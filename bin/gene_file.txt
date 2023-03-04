@@ -10,6 +10,7 @@ Worm    /net/bbi/vol1/data/genomes_stage/worm/worm_rna/
 Rat /net/bbi/vol1/data/genomes_stage/rat/rat_rna/
 Macaque /net/bbi/vol1/data/genomes_stage/macaque/macaque_rna/
 Zebrafish   /net/bbi/vol1/data/genomes_stage/zebrafish/zebrafish_rna/
+Zebrafish_rasmussen   /net/bbi/vol1/data/genomes_stage/zebrafish_rasmussen/zebrafish_rasmussen_rna/
 Drosophila  /net/bbi/vol1/data/genomes_stage/drosophila/drosophila_rna/
 Chicken	/net/bbi/vol1/data/genomes_stage/chicken/chicken_rna/
 Opossum	/net/bbi/vol1/data/genomes_stage/opossum/opossum_rna/
