@@ -1,6 +1,7 @@
 Human   /net/bbi/vol1/data/genomes_stage/human/human_star 60
 Human_gencode /net/bbi/vol1/data/genomes_stage/human_gencode/human_gencode_star 60
 Mouse   /net/bbi/vol1/data/genomes_stage/mouse/mouse_star 47
+Mouse_davis    /net/bbi/vol1/data/genomes_stage/mouse_davis/mouse_davis_star 47
 Mouse_gencode /net/bbi/vol1/data/genomes_stage/mouse_gencode/mouse_gencode_star 47
 Mouse_tdTomato /net/bbi/vol1/data/genomes_stage/mouse_tdtomato/mouse_tdtomato_star 47
 Mouse_tdTomato_WPRE /net/bbi/vol1/data/genomes_stage/mouse_tdtomato_wpre/mouse_tdtomato_wpre_star 47

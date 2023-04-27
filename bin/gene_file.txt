@@ -1,6 +1,7 @@
 Human   /net/bbi/vol1/data/genomes_stage/human/human_rna/
 Human_gencode /net/bbi/vol1/data/genomes_stage/human_gencode/human_gencode_rna
 Mouse   /net/bbi/vol1/data/genomes_stage/mouse/mouse_rna/
+Mouse_davis    ls /net/bbi/vol1/data/genomes_stage/mouse_davis/mouse_davis_rna/
 Mouse_gencode /net/bbi/vol1/data/genomes_stage/mouse_gencode/mouse_gencode_rna
 Mouse_tdTomato /net/bbi/vol1/data/genomes_stage/mouse_tdtomato/mouse_tdtomato_rna
 Mouse_tdTomato_WPRE /net/bbi/vol1/data/genomes_stage/mouse_tdtomato_wpre/mouse_tdtomato_wpre_rna
