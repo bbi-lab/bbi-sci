@@ -5,8 +5,10 @@
 # that copy and copy that file to all repositories that use it:
 #   bbi-dmux
 #   bbi-sci
+#   bbi-wrap
 #   bbi-sciatac-demux
 #   bbe-sciatac-analyze
+#   bbi-sciatac-wrap
 #
 
 #
