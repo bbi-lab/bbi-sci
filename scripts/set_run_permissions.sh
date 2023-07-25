@@ -15,7 +15,7 @@
 # Executable files.
 # This is a regex alternation expression.
 #
-exec_files='(run.scirna-analyze.sh|run.scirna-demux.sh|run.sciatac-demux.sh|run.sciatac-analyze.sh|set_run_permissions.sh)'
+exec_files='(run.scirna-analyze.sh|run.scirna-demux.sh|run.sciatac-demux.sh|run.sciatac-analyze.sh|set_run_permissions.sh|run.scirna-wrap.sh|run.sciatac-wrap.sh)'
 
 run_path="$1"
 echo "Change permissions in path $run_path"
