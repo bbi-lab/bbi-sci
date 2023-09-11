@@ -11,6 +11,7 @@ parser$add_argument('matrix', help='File of umi count matrix.')
 parser$add_argument('cell_data', help='File of cell data.')
 parser$add_argument('gene_data', help='File of gene data.')
 parser$add_argument('gene_bed', help='Bed file of gene info.')
+parser$add_argument('empty_drops', help='RDS file from emptyDrops.')
 parser$add_argument('key', help='The sample name prefix.')
 parser$add_argument('umi_cutoff', help='UMI cutoff to count as a cell.')
 args = parser$parse_args()
@@ -35,6 +36,16 @@ pData(cds)$perc_mitochondrial_umis <- Matrix::colSums(exprs(mt_cds))/Matrix::col
 #rt <- row.names(fData(cds)[!is.na(fData(cds)$gene_biotype) & fData(cds)$gene_biotype == "rRNA",])
 #rt_cds <- cds[rt,]
 #pData(cds)$perc_rRNA_umis <- Matrix::colSums(exprs(rt_cds))/Matrix::colSums(exprs(cds)) * 100
+
+emptydrops_data <- readRDS(args$empty_drops)
+pData(cds)[['emptyDrops_FDR']] <-          emptydrops_data[rownames(colData(cds)),]@listData[['FDR']]
+pData(cds)[['emptyDrops_Limited']] <-     emptydrops_data[rownames(colData(cds)),]@listData[['Limited']]
+metadata(pData(cds))$emptyDrops_lower <-  metadata(emptydrops_data)[['lower']]
+metadata(pData(cds))$emptyDrops_niters <- metadata(emptydrops_data)[['niters']]
+metadata(pData(cds))$emptyDrops_alpha <-  metadata(emptydrops_data)[['alpha']]
+metadata(pData(cds))$emptyDrops_retain <- metadata(emptydrops_data)[['retain']]
+metadata(pData(cds))$emptyDrops_ignore <- metadata(emptydrops_data)[['ignore']]
+metadata(pData(cds))$emptyDrops_round <-  metadata(emptydrops_data)[['round']]
 
 qc <- as.data.frame(pData(cds))[,c("cell", "n.umi", "perc_mitochondrial_umis")]
 write.csv(qc, file=paste0(sample_name, "_cell_qc.csv"), quote=FALSE, row.names = FALSE)

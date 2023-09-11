@@ -32,6 +32,8 @@ params.hash_list = false
 params.max_wells_per_sample = 20
 params.garnett_file = false
 params.skip_doublet_detect = false
+params.run_emptyDrops = true
+
 
 //print usage
 if (params.help) {
@@ -1085,7 +1087,7 @@ Process: make_matrix
     Generate a matrix of cells by genes - make_matrix.py
 
  Downstream:
-    make_cds
+    run_emptyDrops
 
  Published:
     umi_matrix - MatrixMarket format matrix of cell by umi
@@ -1132,10 +1134,93 @@ process make_matrix {
 
 
     printf "\n** End process 'make_matrix' at: \$(date)\n\n" >> make_matrix.log
+
     """
 
 }
 
+
+/*************
+
+Process: run_emptyDrops
+
+ Inputs:
+    key - sample id
+    logfile - running log
+    umi_matrix - MatrixMarket format matrix of cells by genes
+    cell_anno - Cell annotations for umi_matrix
+    gene_anno - Gene annotations for umi_matrix
+    gtf_path - path to gtf info folder
+
+ Outputs:
+    <sample_name>_emptyDrops.RDS
+
+ Pass through:
+
+ Summary:
+    Run the emptyDrops utility on the umi_counts.mtx matrix.
+
+ Downstream:
+    make_cds
+
+ Published:
+    *_emptyDrops.RDS
+
+ Notes:
+
+*************/
+
+
+save_empty_drops = {params.output_dir + "/" + it - ~/_emptyDrops.RDS/ + "/" + it}
+
+process run_emptyDrops {
+    cache 'lenient'
+    publishDir path: "${params.output_dir}/", saveAs: save_empty_drops, pattern: "*_emptyDrops.RDS", mode: 'copy'
+
+    input:
+        set key, file(cell_data), file(umi_matrix), file(gene_data), val(gtf_path), file(logfile) from mat_output
+
+    output:
+        set key, file(cell_data), file(umi_matrix), file(gene_data), file("*_emptyDrops.RDS"), val(gtf_path), file("run_emptyDrops.log") into emptyDrops_output
+
+"""
+    # bash watch for errors
+    set -ueo pipefail
+
+    output_file="${key}_emptyDrops.RDS"
+
+    cat ${logfile} > run_emptyDrops.log
+    printf "** Start process 'run_emptyDrops' at: \$(date)\n\n" >> run_emptyDrops.log
+    
+    if [ "$params.run_emptyDrops" == 'true' ]
+    then
+      printf "    Process versions:
+          \$(R --version | grep 'R version')
+              emptyDrops version \$(Rscript -e 'packageVersion("emptyDrops")')\n\n" >> run_emptyDrops.log
+      echo '    Process command:
+          run_emptyDrops.R
+              "$umi_matrix"
+              "$cell_data"
+              "$gene_data"
+              "$key"
+              "${key}_emptyDrops.RDS"\n' >> run_emptyDrops.log
+
+      run_emptyDrops.R \
+          "$umi_matrix" \
+          "$cell_data" \
+          "$gene_data" \
+          "$key" \
+          "${key}_emptyDrops.RDS"
+    else
+      # make an empty emptyDrops.RDS file
+      printf "    emptyDrops skipped by request\n\n" >> run_emptyDrops.log
+    fi
+
+    printf "** End process 'run_emptyDrops' at: \$(date)\n\n" >> run_emptyDrops.log
+
+"""
+
+}
 
 /*************
 
@@ -1176,10 +1261,10 @@ process make_cds {
     cache 'lenient'
 
     input:
-        set key, file(cell_data), file(umi_matrix), file(gene_data), val(gtf_path), file(logfile) from mat_output
+      set key, file(cell_data), file(umi_matrix), file(gene_data), file(emptyDrops), val(gtf_path), file(logfile) from emptyDrops_output
 
     output:
-        set key, file("*for_scrub.mtx"), file("*.RDS"), file("*cell_qc.csv"), file("make_cds.log") into cds_out
+        set key, file("*for_scrub.mtx"), file("*_cds.RDS"), file("*cell_qc.csv"), file("make_cds.log") into cds_out
         file("*cell_qc.csv") into cell_qcs
 
     """
@@ -1197,18 +1282,18 @@ process make_cds {
             "$cell_data"
             "$gene_data"
             "${gtf_path}/latest.genes.bed"
+            "$emptyDrops"
             "$key"
             "$params.umi_cutoff"\n' >> make_cds.log
-
 
     make_cds.R \
         "$umi_matrix"\
         "$cell_data"\
         "$gene_data"\
         "${gtf_path}/latest.genes.bed"\
+        "$emptyDrops"\
         "$key"\
         "$params.umi_cutoff"
-
 
     printf "** End process 'make_cds' at: \$(date)\n\n" >> make_cds.log
     """
