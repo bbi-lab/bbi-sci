@@ -30,7 +30,7 @@ cds <- load_mm_data(mat_path = args$matrix, feature_anno_path = args$gene_data,
 ed_lower <-        60
 ed_niters <-       10000
 ed_test_ambient <- TRUE
-ed_ignore <-       99
+ed_ignore <-       100
 ed_alpha <-        NULL
 ed_round <-        TRUE
 ed_by_rank <-      NULL

@@ -32,7 +32,7 @@ params.hash_list = false
 params.max_wells_per_sample = 20
 params.garnett_file = false
 params.skip_doublet_detect = false
-params.run_emptyDrops = true
+params.run_emptyDrops = false
 
 
 //print usage
@@ -1156,6 +1156,11 @@ Process: run_emptyDrops
     <sample_name>_emptyDrops.RDS
 
  Pass through:
+   cell_data
+   umi_matrix
+   gene_data
+   gtf_path
+   logfile (modified)
 
  Summary:
     Run the emptyDrops utility on the umi_counts.mtx matrix.
@@ -1196,7 +1201,7 @@ process run_emptyDrops {
     then
       printf "    Process versions:
           \$(R --version | grep 'R version')
-              emptyDrops version \$(Rscript -e 'packageVersion("emptyDrops")')\n\n" >> run_emptyDrops.log
+              emptyDrops version \$(Rscript -e 'packageVersion("DropletUtils")')\n\n" >> run_emptyDrops.log
       echo '    Process command:
           run_emptyDrops.R
               "$umi_matrix"
@@ -1213,10 +1218,12 @@ process run_emptyDrops {
           "${key}_emptyDrops.RDS"
     else
       # make an empty emptyDrops.RDS file
+      Rscript -e 'note <- "emptyDrops was skipped"; saveRDS(note, file="${key}_emptyDrops.RDS")'
       printf "    emptyDrops skipped by request\n\n" >> run_emptyDrops.log
     fi
 
     printf "** End process 'run_emptyDrops' at: \$(date)\n\n" >> run_emptyDrops.log
+echo 'noooof' > /dev/null
 
 """
 
@@ -1265,7 +1272,7 @@ process make_cds {
 
     output:
         set key, file("*for_scrub.mtx"), file("*_cds.RDS"), file("*cell_qc.csv"), file("make_cds.log") into cds_out
-        file("*cell_qc.csv") into cell_qcs
+        file("*cell_emptyDrops.csv") into cell_eds
 
     """
     # bash watch for errors
@@ -1296,6 +1303,8 @@ process make_cds {
         "$params.umi_cutoff"
 
     printf "** End process 'make_cds' at: \$(date)\n\n" >> make_cds.log
+echo 'nooof' > /dev/null
+
     """
 }
 
@@ -1328,7 +1337,6 @@ process apply_garnett {
     printf "\n** End process 'apply_garnett' at: \$(date)\n\n" >> apply_garnett.log
 
 """
-
 
 }
 
@@ -1646,7 +1654,7 @@ process zip_up_sample_stats {
 Process: calc_cell_totals
 
  Inputs:
-    cell_qc - csv of cell quality control information - collected
+    cell_ed - csv of cell quality control information with emptyDrops FDR values - collected
 
  Outputs:
     cell_counts - table cell totals above set UMI thresholds for all samples
@@ -1669,7 +1677,7 @@ process calc_cell_totals {
     cache 'lenient'
 
     input:
-        file cell_qc from cell_qcs.collect()
+        file(cell_ed) from cell_eds.collect()
 
     output:
         file "*.txt" into cell_counts
@@ -1678,11 +1686,15 @@ process calc_cell_totals {
     # bash watch for errors
     set -ueo pipefail
 
-    for f in $cell_qc
+    rm -f cell_counts.txt
+    for f in $cell_ed
     do
-      awk 'BEGIN {FS=","}; \$2>100{c++} END{print FILENAME, "100", c-1}' \$f >> cell_counts.txt
-      awk 'BEGIN {FS=","}; \$2>500{c++} END{print FILENAME, "500", c-1}' \$f >> cell_counts.txt
-      awk 'BEGIN {FS=","}; \$2>1000{c++} END{print FILENAME, "1000", c-1}' \$f >> cell_counts.txt
+      awk 'BEGIN {FS=","; counter=0} {if(\$2 ~ /^[0-9]+\$/ && \$2 > 100)  {counter++}} END{print FILENAME, "100", counter}' \$f >> cell_counts.txt
+      awk 'BEGIN {FS=","; counter=0} {if(\$2 ~ /^[0-9]+\$/ && \$2 > 500)  {counter++}} END{print FILENAME, "500", counter}' \$f >> cell_counts.txt
+      awk 'BEGIN {FS=","; counter=0} {if(\$2 ~ /^[0-9]+\$/ && \$2 > 1000) {counter++}} END{print FILENAME, "1000", counter}' \$f >> cell_counts.txt
+
+      awk 'BEGIN {FS=","; counter=0} {if(NF >= 3) {if(\$2 ~ /^[0-9]+\$/ && \$2 > 100 && \$3 <= 0.01) {counter++}}else{counter="-"}} END{print FILENAME, "FDR_p01", counter}' \$f >> cell_counts.txt
+      awk 'BEGIN {FS=","; counter=0} {if(NF >= 3) {if(\$2 ~ /^[0-9]+\$/ && \$2 > 100 && \$3 <= 0.001) {counter++}}else{counter="-"}} END{print FILENAME, "FDR_p001", counter}' \$f >> cell_counts.txt
     done
 
     """

@@ -18,27 +18,47 @@ count_info <- read.table(args$cell_counts, stringsAsFactors=FALSE)
 project_name <- unlist(stringr::str_split(output_folder, "/"))
 project_name <- project_name[[length(project_name)]]
 
-c100 <- sum(count_info[count_info$V2 == 100,]$V3)
-c500 <- sum(count_info[count_info$V2 == 500,]$V3)
-c1000 <- sum(count_info[count_info$V2 == 1000,]$V3)
+#c100 <- sum(count_info[count_info$V2 == 100,]$V3)
+#c500 <- sum(count_info[count_info$V2 == 500,]$V3)
+#c1000 <- sum(count_info[count_info$V2 == 1000,]$V3)
+
+#count_info_tmp <- count_info[count_info$V2 == 'FDR_p01',]
+#if(!(length(unique(count_info_tmp$V3)) == 1 && count_info_tmp$V3[1] == '-')) {
+#  cfdr_p01 <- sum(count_info[count_info$V2 == 'FDR_p01',]$V3)
+#} else {
+#  cfdr_p01 <- '-'
+#}
+
+#cfdr_p01 <- sum(count_info[count_info$V2 == 'FDR_p01',]$V3)
+#cfdr_p001 <- sum(count_info[count_info$V2 == 'FDR_p001',]$V3)
 
 count_info_tab <- count_info
 
 count_info_tab$V1 <- gsub("_cell_qc.csv", "", count_info_tab$V1)
+count_info_tab$V1 <- gsub("_cell_emptyDrops.csv", "", count_info_tab$V1)
+
 ct100 <- count_info_tab[count_info_tab$V2 == 100,]
 ct500 <- count_info_tab[count_info_tab$V2 == 500,]
 ct1000 <- count_info_tab[count_info_tab$V2 == 1000,]
+ctfdr_p01 <- count_info_tab[count_info_tab$V2 == 'FDR_p01',]
+ctfdr_p001 <- count_info_tab[count_info_tab$V2 == 'FDR_p001',]
+
 row.names(ct100) <- ct100$V1
 row.names(ct500) <- ct500$V1
 row.names(ct1000) <- ct1000$V1
+row.names(ctfdr_p01) <- ctfdr_p01$V1
+row.names(ctfdr_p001) <- ctfdr_p001$V1
 
 all_dups$V1 <- as.character(all_dups$V1)
-all_dups$c100 <- ct100[all_dups$V1,"V3"]
-all_dups$c1000 <- ct1000[all_dups$V1,"V3"]
 
 all_dups$V5[all_dups$V7 > 0] <- "Fail"
 all_dups$V6[all_dups$V7 > 0] <-  "Fail"
 all_dups$V6[all_dups$V6 == "NaN%"] <-  "Fail"
+
+all_dups$c100 <- ct100[all_dups$V1,"V3"]
+all_dups$c1000 <- ct1000[all_dups$V1,"V3"]
+all_dups$cfdr_p01 <- ctfdr_p01[all_dups$V1,"V3"]
+all_dups$cfdr_p001 <- ctfdr_p001[all_dups$V1,"V3"]
 
 row.names(all_dups) <- all_dups$V1
 names(all_dups) <- c("Sample", "Total_reads",
@@ -48,7 +68,9 @@ names(all_dups) <- c("Sample", "Total_reads",
                      "Doublet_Percent",
                      "Doublet_NAs",
                      "Cells_100_UMIs",
-                     "Cells_1000_UMIs" 
+                     "Cells_1000_UMIs" ,
+                     "Cells_FDR_p01",
+                     "Cells_FDR_p001"
                      )
 
 all_dups$Doublet_Number[is.na(all_dups$Doublet_Number)] <- "Fail"
@@ -90,9 +112,22 @@ if("Barnyard" %in% sample_list) {
   barn_collision <- read.table(args$barn_col)
   barn_collision <- barn_collision[barn_collision$V1 == "Barnyard", "V2"]
 }
+
+if(!( length(unique(all_dups$Cells_FDR_p01)) == 1 && unique(all_dups$Cells_FDR_p01)[1] == '-')) {
+  sum_Cells_FDR_p01 <- sum(as.numeric(all_dups$Cells_FDR_p01))
+} else {
+  sum_Cells_FDR_p01 <- '-'
+}
+
+if(!( length(unique(all_dups$Cells_FDR_p001)) == 1 && unique(all_dups$Cells_FDR_p001)[1] == '-')) {
+  sum_Cells_FDR_p001 <- sum(as.numeric(all_dups$Cells_FDR_p001))
+} else {
+  sum_Cells_FDR_p001 <- '-'
+}
+
 sample_list <- as.list(sample_list)
 json_info <- list("run_name" = project_name,
-                  "cell_counts" = c(sum(all_dups$Cells_100_UMIs), sum(all_dups$Cells_1000_UMIs)),
+                  "cell_counts" = c(sum(as.numeric(all_dups$Cells_100_UMIs)), sum(as.numeric(all_dups$Cells_1000_UMIs)), sum_Cells_FDR_p01, sum_Cells_FDR_p001),
                   "sample_list" = sample_list,
                   "barn_collision" = barn_collision,
                   "sample_stats" = all_dup_lst)
