@@ -62,5 +62,4 @@ write.csv(ed, file=paste0(sample_name, "_cell_emptyDrops.csv"), quote=FALSE, row
 
 writeMM(exprs(cds), paste0(sample_name, "_for_scrub.mtx"))
 
-message('here 8 bge')
 saveRDS(cds, file=paste0(sample_name, "_cds.RDS"))

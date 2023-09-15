@@ -32,7 +32,7 @@ params.hash_list = false
 params.max_wells_per_sample = 20
 params.garnett_file = false
 params.skip_doublet_detect = false
-params.run_emptyDrops = false
+params.run_emptyDrops = true
 
 
 //print usage
@@ -1223,8 +1223,7 @@ process run_emptyDrops {
     fi
 
     printf "** End process 'run_emptyDrops' at: \$(date)\n\n" >> run_emptyDrops.log
-echo 'noooof' > /dev/null
-
+echo "moof" > /dev/null
 """
 
 }
@@ -1303,7 +1302,6 @@ process make_cds {
         "$params.umi_cutoff"
 
     printf "** End process 'make_cds' at: \$(date)\n\n" >> make_cds.log
-echo 'nooof' > /dev/null
 
     """
 }
