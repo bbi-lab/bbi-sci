@@ -116,6 +116,16 @@ function Sample(props) {
             "aria-selected": "false" },
           "UMAP"
         ),
+        React.createElement(
+          "a",
+          {
+            className: "nav-item nav-link",
+            id: "nav" + safe_name + "-wellcheck-tab",
+            "data-toggle": "tab", href: "#nav" + safe_name + "-wellcheck",
+            role: "tab", "aria-controls": "nav" + safe_name + "-wellcheck",
+            "aria-selected": "false" },
+          "Well Check"
+        ),
         props.garnett_model != null && React.createElement(
           "a",
           {
@@ -169,7 +179,8 @@ function Sample(props) {
       props.garnett_model != null && React.createElement(GarnettPane, { sample_id: props.sample_id, garnett_model: props.garnett_model }),
       React.createElement(StatsPane, { sample_id: props.sample_id, sample_stats: run_data.sample_stats }),
       React.createElement(ReadMetricsPane, { sample_id: props.sample_id, log: log_data[props.sample_id] }),
-      React.createElement(FullLogPane, { sample_id: props.sample_id, log: full_log_data[props.sample_id] })
+      React.createElement(FullLogPane, { sample_id: props.sample_id, log: full_log_data[props.sample_id] }),
+      React.createElement(WellCheckPane, { sample_id: props.sample_id })
     )
   );
 }
@@ -215,7 +226,7 @@ function RegRow(props) {
 
 function StatsPane(props) {
   var sample_stat = props.sample_stats[props.sample_id];
-  var stats_list = ["Total Reads", "Total UMIs", "Duplication Rate", "Cells with >100 UMIs", "Cells with >1000 UMIs"];
+  var stats_list = ["Total Reads", "Total UMIs", "Median UMIs", "Median Mitochondrial UMIs", "Duplication Rate", "Cells with >100 UMIs", "Cells with >1000 UMIs"];
   var safe_name = "hp" + props.sample_id.replace(/[.]/g, "");
   return React.createElement(
     "div",
@@ -248,6 +259,8 @@ function StatsPane(props) {
           ),
           React.createElement(RegRow, { val: sample_stat.Total_reads }),
           React.createElement(RegRow, { val: sample_stat.Total_UMIs }),
+          React.createElement(RegRow, { val: sample_stat.Median_UMIs }),
+          React.createElement(RegRow, { val: sample_stat.Median_Mitochondrial_UMIs_Percent}),
           React.createElement(RegRow, { val: sample_stat.Duplication_rate }),
           React.createElement(RegRow, { val: sample_stat.Cells_100_UMIs }),
           React.createElement(RegRow, { val: sample_stat.Cells_1000_UMIs })
@@ -314,7 +327,8 @@ function ScrubPane(props) {
     className: "tab-pane fade",
     id: "nav" + safe_name + "-scrub",
     tag: "nav" + safe_name + "-scrub-tab",
-    text: ['Doublet count: ' + sample_stat.Doublet_Number + "\n\nDoublet rate: " + sample_stat.Doublet_Percent],
+    // text: ['Doublet count: ' + sample_stat.Doublet_Number + "\n\nDoublet rate: " + sample_stat.Doublet_Percent],
+    text: [],
     plot: "img/" + props.sample_id + "_scrublet_hist.png"
   });
 }
@@ -338,6 +352,7 @@ function UMAPPane(props) {
     plot: "img/" + props.sample_id + "_UMAP.png"
   });
 }
+
 
 function GarnettPane(props) {
   var safe_name = "hp" + props.sample_id.replace(/[.]/g, "");
@@ -371,6 +386,28 @@ function GarnettPane(props) {
     )
   );
 }
+
+
+
+function WellCheckPane(props) {
+  var safe_name = "hp" + props.sample_id.replace(/[.]/g, "");
+
+  return React.createElement("div", { 
+    className: "tab-pane fade",
+    id: "nav" + safe_name + "-wellcheck",
+    role: "tabpanel", "aria-labelledby": "nav" + safe_name + "-wellcheck-tab" },
+
+    React.createElement("img", { 
+      src: "img/" + props.sample_id + "_wellcheck.png", 
+      className: "rounded mx-auto d-block", 
+      alt: "...",
+      style: { maxHeight: "100vh", width: "auto" } 
+    }),
+  );
+}
+
+
+
 
 function SamplePill(props) {
   var safe_name = "hp" + props.sample_id.replace(/[.]/g, "");
@@ -411,6 +448,32 @@ var sortTypes = {
       return b.Total_UMIs - a.Total_UMIs;
     }
   },
+  median_umis_up: {
+    class: 'sort-up',
+    fn: function fn(a, b) {
+      return a.Median_UMIs - b.Median_UMIs;
+    }
+  },
+  median_umis_down: {
+    class: 'sort-down',
+    fn: function fn(a, b) {
+      return b.Median_UMIs - a.Median_UMIs;
+    }
+  },
+
+  median_mito_up: {
+    class: 'sort-up',
+    fn: function fn(a, b) {
+      return a.Median_Mitochondrial_UMIs_Percent - b.Median_Mitochondrial_UMIs_Percents;
+    }
+  },
+  median_mito_down: {
+    class: 'sort-down',
+    fn: function fn(a, b) {
+      return b.Median_Mitochondrial_UMIs_Percent - a.Median_Mitochondrial_UMIs_Percent;
+    }
+  },
+
   sample_up: {
     class: 'sort-up',
     fn: function fn(a, b) {
@@ -435,18 +498,18 @@ var sortTypes = {
       return parseFloat(b.Duplication_rate) - parseFloat(a.Duplication_rate);
     }
   },
-  doub_rate_up: {
-    class: 'sort-up',
-    fn: function fn(a, b) {
-      return a.Doublet_Percent == "Fail" ? -1 : parseFloat(a.Doublet_Percent) - parseFloat(b.Doublet_Percent);
-    }
-  },
-  doub_rate_down: {
-    class: 'sort-down',
-    fn: function fn(a, b) {
-      return b.Doublet_Percent == "Fail" ? -1 : parseFloat(b.Doublet_Percent) - parseFloat(a.Doublet_Percent);
-    }
-  },
+  // doub_rate_up: {
+  //   class: 'sort-up',
+  //   fn: function fn(a, b) {
+  //     return a.Doublet_Percent == "Fail" ? -1 : parseFloat(a.Doublet_Percent) - parseFloat(b.Doublet_Percent);
+  //   }
+  // },
+  // doub_rate_down: {
+  //   class: 'sort-down',
+  //   fn: function fn(a, b) {
+  //     return b.Doublet_Percent == "Fail" ? -1 : parseFloat(b.Doublet_Percent) - parseFloat(a.Doublet_Percent);
+  //   }
+  // },
   c100_up: {
     class: 'sort-up',
     fn: function fn(a, b) {
@@ -515,16 +578,16 @@ var Table = function (_React$Component) {
       _this.setState({
         currentSort: nextSort
       });
-    }, _this.onSortDoub = function () {
-      var currentSort = _this.state.currentSort;
+    // }, _this.onSortDoub = function () {
+    //   var currentSort = _this.state.currentSort;
 
-      var nextSort = void 0;
+    //   var nextSort = void 0;
 
-      if (currentSort === 'doub_rate_down') nextSort = 'doub_rate_up';else if (currentSort === 'doub_rate_up') nextSort = 'doub_rate_down';else nextSort = 'doub_rate_up';
+    //   if (currentSort === 'doub_rate_down') nextSort = 'doub_rate_up';else if (currentSort === 'doub_rate_up') nextSort = 'doub_rate_down';else nextSort = 'doub_rate_up';
 
-      _this.setState({
-        currentSort: nextSort
-      });
+    //   _this.setState({
+    //     currentSort: nextSort
+    //   });
     }, _this.onSortUMIs = function () {
       var currentSort = _this.state.currentSort;
 
@@ -535,6 +598,29 @@ var Table = function (_React$Component) {
       _this.setState({
         currentSort: nextSort
       });
+
+    }, _this.onSortMedianUMIs = function () {
+      var currentSort = _this.state.currentSort;
+
+      var nextSort = void 0;
+
+      if (currentSort === 'median_umis_down') nextSort = 'median_umis_up';else if (currentSort === 'median_umis_up') nextSort = 'median_umis_down';else nextSort = 'median_umis_up';
+
+      _this.setState({
+        currentSort: nextSort
+      });
+
+    }, _this.onSortMedianMitoUMIs = function () {
+      var currentSort = _this.state.currentSort;
+
+      var nextSort = void 0;
+
+      if (currentSort === 'median_mito_down') nextSort = 'median_mito_up';else if (currentSort === 'median_mito_up') nextSort = 'median_mito_down';else nextSort = 'median_umis_up';
+
+      _this.setState({
+        currentSort: nextSort
+      });
+
     }, _this.onSortDup = function () {
       var currentSort = _this.state.currentSort;
 
@@ -635,6 +721,26 @@ var Table = function (_React$Component) {
               React.createElement(
                 "th",
                 null,
+                "Median UMIs",
+                React.createElement(
+                  "button",
+                  { onClick: this.onSortMedianUMIs, className: "sort_button" },
+                  React.createElement("i", { className: "fas fa-sort" })
+                )
+              ),
+              React.createElement(
+                "th",
+                null,
+                "Median Mitochondrial UMIs",
+                React.createElement(
+                  "button",
+                  { onClick: this.onSortMedianMitoUMIs, className: "sort_button" },
+                  React.createElement("i", { className: "fas fa-sort" })
+                )
+              ),
+              React.createElement(
+                "th",
+                null,
                 "Duplication rate",
                 React.createElement(
                   "button",
@@ -642,16 +748,16 @@ var Table = function (_React$Component) {
                   React.createElement("i", { className: "fas fa-sort" })
                 )
               ),
-              React.createElement(
-                "th",
-                null,
-                "Doublet rate",
-                React.createElement(
-                  "button",
-                  { onClick: this.onSortDoub, className: "sort_button" },
-                  React.createElement("i", { className: "fas fa-sort" })
-                )
-              ),
+              // React.createElement(
+              //   "th",
+              //   null,
+              //   "Doublet rate",
+              //   React.createElement(
+              //     "button",
+              //     { onClick: this.onSortDoub, className: "sort_button" },
+              //     React.createElement("i", { className: "fas fa-sort" })
+              //   )
+              // ),
               React.createElement(
                 "th",
                 null,
@@ -699,13 +805,24 @@ var Table = function (_React$Component) {
                 React.createElement(
                   "td",
                   null,
-                  p.Duplication_rate
+                  p.Median_UMIs
                 ),
                 React.createElement(
                   "td",
                   null,
-                  p.Doublet_Percent
+                  p.Median_Mitochondrial_UMIs_Percent
                 ),
+                
+                React.createElement(
+                  "td",
+                  null,
+                  p.Duplication_rate
+                ),
+                // React.createElement(
+                //   "td",
+                //   null,
+                //   p.Doublet_Percent
+                // ),
                 React.createElement(
                   "td",
                   null,

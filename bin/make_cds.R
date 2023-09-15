@@ -36,7 +36,9 @@ pData(cds)$perc_mitochondrial_umis <- Matrix::colSums(exprs(mt_cds))/Matrix::col
 #rt_cds <- cds[rt,]
 #pData(cds)$perc_rRNA_umis <- Matrix::colSums(exprs(rt_cds))/Matrix::colSums(exprs(cds)) * 100
 
-qc <- as.data.frame(pData(cds))[,c("cell", "n.umi", "perc_mitochondrial_umis")]
+
+temp_cds <- detect_genes(cds) # not saving cds with gene info to save space
+qc <- as.data.frame(pData(temp_cds))[,c("cell", "n.umi", "perc_mitochondrial_umis", "num_genes_expressed")]
 write.csv(qc, file=paste0(sample_name, "_cell_qc.csv"), quote=FALSE, row.names = FALSE)
 
 writeMM(exprs(cds), paste0(sample_name, "_for_scrub.mtx"))

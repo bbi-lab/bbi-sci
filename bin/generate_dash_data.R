@@ -40,19 +40,22 @@ all_dups$V5[all_dups$V7 > 0] <- "Fail"
 all_dups$V6[all_dups$V7 > 0] <-  "Fail"
 all_dups$V6[all_dups$V6 == "NaN%"] <-  "Fail"
 
+
 row.names(all_dups) <- all_dups$V1
 names(all_dups) <- c("Sample", "Total_reads",
                      "Total_UMIs",
+                     "Median_UMIs",
+                     "Median_Mitochondrial_UMIs_Percent",
                      "Duplication_rate",
-                     "Doublet_Number", 
-                     "Doublet_Percent",
-                     "Doublet_NAs",
+                    #  "Doublet_Number", 
+                    #  "Doublet_Percent",
+                    #  "Doublet_NAs",
                      "Cells_100_UMIs",
                      "Cells_1000_UMIs" 
                      )
 
-all_dups$Doublet_Number[is.na(all_dups$Doublet_Number)] <- "Fail"
-all_dups$Doublet_Percent[is.na(all_dups$Doublet_Percent)] <- "Fail"
+# all_dups$Doublet_Number[is.na(all_dups$Doublet_Number)] <- "Fail"
+# all_dups$Doublet_Percent[is.na(all_dups$Doublet_Percent)] <- "Fail"
 
 if (args$garnett_csv != "false") {
   garnett_file <- read.csv(args$garnett_csv, header=FALSE, stringsAsFactors = FALSE)

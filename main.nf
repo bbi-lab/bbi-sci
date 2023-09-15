@@ -1394,31 +1394,32 @@ process reformat_qc {
     dir.create("temp_fold")
     cds <- readRDS("$cds_object")
     cell_qc <- read.csv("$cell_qc")
+    dup_stats <- read.table(paste0("$key", ".duplication_rate_stats.txt"))
+
+
+    df <- data.frame()
 
     if(nrow(pData(cds)) > 0) {
         if("$params.skip_doublet_detect" == 'false') {
             scrublet_out <- read.csv("$scrub_csv", header=F)
             pData(cds)\$scrublet_score <- scrublet_out\$V1
-            pData(cds)\$scrublet_call <- ifelse(scrublet_out\$V2 == 1, "Doublet", "Singlet")
             cell_qc\$scrublet_score <- scrublet_out\$V1
-            cell_qc\$scrublet_call <- ifelse(scrublet_out\$V2 == 1, "Doublet", "Singlet")
         }
+        df <- data.frame(sample="$key", n.reads = dup_stats\$V2, n.umi = dup_stats\$V3,
+                median_umis = median(pData(cds)\$n.umi),
+                median_perc_mito_umis = round(median(pData(cds)\$perc_mitochondrial_umis), 1),
+                duplication_rate = dup_stats\$V4)
+    } else {
+        df <- data.frame(sample="$key", n.reads = dup_stats\$V2, n.umi = dup_stats\$V3,
+                    median_umis = "NA",
+                    median_perc_mito_umis = "NA",
+                    duplication_rate = dup_stats\$V4)
     }
 
     write.csv(cell_qc, quote=FALSE, file="temp_fold/$cell_qc")
-
-    dup_stats <- read.table(paste0("$key", ".duplication_rate_stats.txt"))
-
-    df <- data.frame(sample="$key", n.reads = dup_stats\$V2, n.umi = dup_stats\$V3,
-                     duplication_rate = dup_stats\$V4,
-                     doublet_count = sum(cell_qc\$scrublet_call == "Doublet", na.rm=TRUE),
-                     doublet_perc = paste0(round(sum(cell_qc\$scrublet_call == "Doublet",
-                                                     na.rm=TRUE)/nrow(cell_qc) * 100, 1), "%"),
-                     doublet_NAs=sum(is.na(cell_qc\$scrublet_call)))
-
     write.csv(df, file=paste0("$key", "_sample_stats.csv"), quote=FALSE, row.names=FALSE)
     saveRDS(cds, file="temp_fold/$cds_object")
-
+    
     if ("$key" == "Barnyard") {
         fData(cds)\$mouse <- grepl("ENSMUSG", fData(cds)\$id)
         fData(cds)\$human <- grepl("ENSG", fData(cds)\$id)
@@ -1439,6 +1440,7 @@ process reformat_qc {
         writeLines(paste0("$key", "\t", "NA"), fileConn)
         close(fileConn)
     }
+
     """
 
 }
@@ -1460,6 +1462,8 @@ Process: generate_qc_metrics
     umap_png - png sample UMAP
     knee_png - png sample knee plot
     qc_png - png of cell qc stats
+    wellcheck_png - png of RT barcode qc 
+    rt_stats - csv of RT barcode stats
 
  Pass through:
 
@@ -1473,6 +1477,7 @@ Process: generate_qc_metrics
     umap_png - png sample UMAP
     knee_png - png sample knee plot
     qc_png - png of cell qc stats
+    wellcheck_png - png of RT barcode qc 
 
  Notes:
     Need to test umi cutoff here and in cds function
@@ -1485,6 +1490,9 @@ save_knee = {params.output_dir + "/" + it - ~/_knee_plot.png/ + "/" + it}
 save_umap = {params.output_dir + "/" + it - ~/_UMAP.png/ + "/" + it}
 save_cellqc = {params.output_dir + "/" + it - ~/_cell_qc.png/ + "/" + it}
 save_garnett = {params.output_dir + "/" + it.split("_")[0] + "/" + it}
+save_umi_rt_stats = {params.output_dir + "/" + it - ~/_umi_rt_stats.csv/ + "/" + it}
+save_mito_rt_stats = {params.output_dir + "/" + it - ~/_mito_rt_stats.csv/ + "/" + it}
+save_wellcheck_combo = {params.output_dir + "/" + it - ~/_wellcheck.png/ + "/" + it}
 
 process generate_qc_metrics {
     cache 'lenient'
@@ -1492,13 +1500,17 @@ process generate_qc_metrics {
     publishDir path: "${params.output_dir}/", saveAs: save_knee, pattern: "*knee_plot.png", mode: 'copy'
     publishDir path: "${params.output_dir}/", saveAs: save_cellqc, pattern: "*cell_qc.png", mode: 'copy'
     publishDir path: "${params.output_dir}/", saveAs: save_garnett, pattern: "*Garnett.png", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_umi_rt_stats, pattern: "*_umi_rt_stats.csv", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_mito_rt_stats, pattern: "*_mito_rt_stats.csv", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_wellcheck_combo, pattern: "*_wellcheck.png", mode: 'copy'
 
     input:
         set key, file(cds_object), file(cell_qc), file(umis_per_cell) from for_gen_qc
-
+         
     output:
         file("*.png") into qc_plots
         file("*.txt") into cutoff
+        file("*.csv") into rt_stats
 
     """
     # bash watch for errors
@@ -1660,6 +1672,7 @@ Process: generate_dashboard
     umap_png - png sample UMAP - combined as qc_plots
     knee_png - png sample knee plot - combined as qc_plots
     qc_png - png of cell qc stats - combined as qc_plots
+    wellcheck_png - png of RT barcode qc stats - combined as qc_plots
     scrublet_png - png histogram of scrublet scores
     params.garnett_file
 
