@@ -12,6 +12,7 @@ parser$add_argument('cell_data', help='File of cell data.')
 parser$add_argument('gene_data', help='File of gene data.')
 parser$add_argument('gene_bed', help='Bed file of gene info.')
 parser$add_argument('empty_drops', help='RDS file from emptyDrops.')
+parser$add_argument('intron_fraction_file', help='Intron fraction of barcode UMIs file.')
 parser$add_argument('key', help='The sample name prefix.')
 parser$add_argument('umi_cutoff', help='UMI cutoff to count as a cell.')
 args = parser$parse_args()
@@ -57,6 +58,11 @@ if(is(emptydrops_data, 'DFrame')) {
 } else {
   ed <- as.data.frame(pData(cds))[,c('cell', 'n.umi')]
 }
+
+# Add intron fraction to the cell data.
+intron_fraction <- read.table(args$intron_fraction_file)
+row.names(intron_fraction) <- intron_fraction$V1
+pData(cds)[['intron_fraction']] <- intron_fraction[pData(cds)[,'cell'],]$V2
 
 write.csv(ed, file=paste0(sample_name, "_cell_emptyDrops.csv"), quote=FALSE, row.names = FALSE) 
 

@@ -33,8 +33,7 @@ ed_test_ambient <- TRUE
 ed_ignore <-       100
 ed_alpha <-        NULL
 ed_round <-        TRUE
-ed_by_rank <-      NULL
-ed_retain <-       500
+ed_retain <-       Inf
 
 emptyDrops_out <- emptyDrops(m=SingleCellExperiment::counts(cds),
                              lower=ed_lower,
@@ -43,12 +42,12 @@ emptyDrops_out <- emptyDrops(m=SingleCellExperiment::counts(cds),
                              ignore=ed_ignore, 
                              alpha=ed_alpha,
                              round=ed_round,
-                             by.rank=ed_by_rank,
                              retain=ed_retain)
 
 metadata(emptyDrops_out)$ignore <-  ed_ignore
 metadata(emptyDrops_out)$round <-   ed_round
 metadata(emptyDrops_out)$by_rank <- ed_by_rank
 
-
 saveRDS(object=emptyDrops_out, file=args$output_file)
+
+

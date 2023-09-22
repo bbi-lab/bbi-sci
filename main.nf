@@ -996,6 +996,7 @@ Process: count_umis_by_sample
     logfile - running log
     umis_per_cell - count of umis per cell
     umis_per_cell_intronic - count of umis per cell only from intronic reads - stops here
+    fraction_per_cell_intronic - fraction of barcode UMIs that are intronic
 
  Pass through:
     cell_gene_count - gzipped text file with a count of cell, gene pairs
@@ -1021,7 +1022,7 @@ save_umi_per_int = {params.output_dir + "/" + it - ~/.UMIs.per.cell.barcode.intr
 process count_umis_by_sample {
     cache 'lenient'
     publishDir path: "${params.output_dir}/", saveAs: save_umi_per_int, pattern: "*intronic.txt", mode: 'copy'
-    publishDir path: "${params.output_dir}/", saveAs: save_umi_per_cell, pattern: "*barcode.txt", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_umi_per_cell, pattern: "*UMIs.per.cell.barcode.txt", mode: 'copy'
 
     input:
         set val(key), file(cell_gene_count), file(gene_assign), file(logfile) from merge_assignment_out
@@ -1029,6 +1030,7 @@ process count_umis_by_sample {
     output:
         set key, file(cell_gene_count), file("count_umis_by_sample.log") into ubss_out
         set key, file("*UMIs.per.cell.barcode.txt") into umis_per_cell
+        set key, file("*fraction_intron_barcode.txt") into fraction_per_cell_intronic
         file "*UMIs.per.cell.barcode.intronic.txt" into umi_per_cell_intronic
 
     """
@@ -1043,13 +1045,15 @@ process count_umis_by_sample {
         tabulate_per_cell_counts.py
             --gene_assignment_files "$gene_assign"
             --all_counts_file "${key}.UMIs.per.cell.barcode.txt"
-            --intron_counts_file "${key}.UMIs.per.cell.barcode.intronic.txt"\n\n"      >> count_umis_by_sample.log
+            --intron_counts_file "${key}.UMIs.per.cell.barcode.intronic.txt"
+            --intron_fraction_file "${key}.fraction_intron_barcode.txt"\n\n"            >> count_umis_by_sample.log
 
 
     tabulate_per_cell_counts.py \
         --gene_assignment_files "$gene_assign" \
         --all_counts_file "${key}.UMIs.per.cell.barcode.txt" \
-        --intron_counts_file "${key}.UMIs.per.cell.barcode.intronic.txt"
+        --intron_counts_file "${key}.UMIs.per.cell.barcode.intronic.txt" \
+        --intron_fraction_file "${key}.fraction_intron_barcode.txt"
 
 
     printf "    Process stats:
@@ -1240,6 +1244,7 @@ Process: make_cds
     gtf_path - path to gtf info folder
     logfile - running log
     params.umi_cutoff
+    fraction_per_cell_intronic - fraction of barcode UMIs that are intronic
 
  Outputs:
     key - sample id
@@ -1263,11 +1268,19 @@ Process: make_cds
 
 *************/
 
+emptyDrops_output.combine(fraction_per_cell_intronic, by:0).set{emptyDrops_fraction_intronic}
+
+/*
+** Diagnostic.
+emptyDrops_output.combine(fraction_per_cell_intronic, by:0).into{emptyDrops_fraction_intronic; emptyDrops_fraction_intronic_tmp}
+emptyDrops_fraction_intronic_tmp.view()
+*/
+
 process make_cds {
     cache 'lenient'
 
     input:
-      set key, file(cell_data), file(umi_matrix), file(gene_data), file(emptyDrops), val(gtf_path), file(logfile) from emptyDrops_output
+      set key, file(cell_data), file(umi_matrix), file(gene_data), file(emptyDrops), val(gtf_path), file(logfile), file(fraction_intron_barcode) from emptyDrops_fraction_intronic
 
     output:
         set key, file("*for_scrub.mtx"), file("*_cds.RDS"), file("*cell_qc.csv"), file("make_cds.log") into cds_out
@@ -1289,6 +1302,7 @@ process make_cds {
             "$gene_data"
             "${gtf_path}/latest.genes.bed"
             "$emptyDrops"
+            "$fraction_intron_barcode"
             "$key"
             "$params.umi_cutoff"\n' >> make_cds.log
 
@@ -1298,10 +1312,12 @@ process make_cds {
         "$gene_data"\
         "${gtf_path}/latest.genes.bed"\
         "$emptyDrops"\
+        "$fraction_intron_barcode"\
         "$key"\
         "$params.umi_cutoff"
 
     printf "** End process 'make_cds' at: \$(date)\n\n" >> make_cds.log
+echo 'foof' > /dev/null
 
     """
 }
