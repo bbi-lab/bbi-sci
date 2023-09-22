@@ -46,7 +46,6 @@ emptyDrops_out <- emptyDrops(m=SingleCellExperiment::counts(cds),
 
 metadata(emptyDrops_out)$ignore <-  ed_ignore
 metadata(emptyDrops_out)$round <-   ed_round
-metadata(emptyDrops_out)$by_rank <- ed_by_rank
 
 saveRDS(object=emptyDrops_out, file=args$output_file)
 
