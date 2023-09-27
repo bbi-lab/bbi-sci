@@ -48,5 +48,3 @@ metadata(emptyDrops_out)$ignore <-  ed_ignore
 metadata(emptyDrops_out)$round <-   ed_round
 
 saveRDS(object=emptyDrops_out, file=args$output_file)
-
-

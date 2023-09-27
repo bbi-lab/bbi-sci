@@ -1322,6 +1322,58 @@ echo 'foof' > /dev/null
     """
 }
 
+/*************
+
+Process: calc_cell_totals
+
+ Inputs:
+    cell_ed - csv of cell quality control information with emptyDrops FDR values - collected
+
+ Outputs:
+    cell_counts - table cell totals above set UMI thresholds for all samples
+
+ Pass through:
+
+ Summary:
+    Count cell totals above set UMI thresholds for all samples
+
+ Downstream:
+    generate_dashboard
+
+ Published:
+
+ Notes:
+
+*************/
+
+process calc_cell_totals {
+    cache 'lenient'
+    // publishDir path: "${params.output_dir}/", saveAs: save_eds_count, pattern: "emptyDrops_cell_counts.txt", mode: 'copy'
+
+    input:
+        file(cell_ed) from cell_eds.collect()
+
+    output:
+        file "*.txt" into cell_counts
+
+    """
+    # bash watch for errors
+    set -ueo pipefail
+
+    rm -f cell_counts.txt
+    for f in $cell_ed
+    do
+      awk 'BEGIN {FS=","; counter=0} {if(\$2 ~ /^[0-9]+\$/ && \$2 > 100)  {counter++}} END{print FILENAME, "100", counter}' \$f >> cell_counts.txt
+      awk 'BEGIN {FS=","; counter=0} {if(\$2 ~ /^[0-9]+\$/ && \$2 > 500)  {counter++}} END{print FILENAME, "500", counter}' \$f >> cell_counts.txt
+      awk 'BEGIN {FS=","; counter=0} {if(\$2 ~ /^[0-9]+\$/ && \$2 > 1000) {counter++}} END{print FILENAME, "1000", counter}' \$f >> cell_counts.txt
+
+      awk 'BEGIN {FS=","; counter=0} {if(NF >= 3) {if(\$2 ~ /^[0-9]+\$/ && \$2 > 100 && \$3 <= 0.01) {counter++}}else{counter="-"}} END{print FILENAME, "FDR_p01", counter}' \$f >> cell_counts.txt
+      awk 'BEGIN {FS=","; counter=0} {if(NF >= 3) {if(\$2 ~ /^[0-9]+\$/ && \$2 > 100 && \$3 <= 0.001) {counter++}}else{counter="-"}} END{print FILENAME, "FDR_p001", counter}' \$f >> cell_counts.txt
+    done
+
+    """
+
+}
 
 process apply_garnett {
     cache 'lenient'
@@ -1486,13 +1538,14 @@ process reformat_qc {
 
     input:
         set key, file(scrub_csv), file(cds_object), file(cell_qc), file(dup_stats) from reformat_qc_in
+        file cell_counts
 
     output:
         set key, file("temp_fold/*.RDS"), file("temp_fold/*.csv") into rscrub_out
         file("*sample_stats.csv") into sample_stats
         file("*collision.txt") into collision
 
-
+    
     """
     #!/usr/bin/env Rscript
 
@@ -1501,31 +1554,44 @@ process reformat_qc {
     dir.create("temp_fold")
     cds <- readRDS("$cds_object")
     cell_qc <- read.csv("$cell_qc")
+    eds_count <- read.table("$cell_counts")
     dup_stats <- read.table(paste0("$key", ".duplication_rate_stats.txt"))
-
+    
 
     df <- data.frame()
 
     if(nrow(pData(cds)) > 0) {
+        
         if("$params.skip_doublet_detect" == 'false') {
             scrublet_out <- read.csv("$scrub_csv", header=F)
             pData(cds)\$scrublet_score <- scrublet_out\$V1
             cell_qc\$scrublet_score <- scrublet_out\$V1
         }
+        
+        sample_rows <- eds_count[grep("$key", eds_count\$V1),]
+
+        fdr_p01 <- sample_rows[sample_rows\$V2 == "FDR_p01",]\$V3
+        fdr_p001 <- sample_rows[sample_rows\$V2 == "FDR_p001",]\$V3
+     
         df <- data.frame(sample="$key", n.reads = dup_stats\$V2, n.umi = dup_stats\$V3,
                 median_umis = median(pData(cds)\$n.umi),
                 median_perc_mito_umis = round(median(pData(cds)\$perc_mitochondrial_umis), 1),
-                duplication_rate = dup_stats\$V4)
+                duplication_rate = dup_stats\$V4,
+                fdr_p01 = fdr_p01,
+                fdr_p001 = fdr_p001)
     } else {
         df <- data.frame(sample="$key", n.reads = dup_stats\$V2, n.umi = dup_stats\$V3,
                     median_umis = "NA",
                     median_perc_mito_umis = "NA",
-                    duplication_rate = dup_stats\$V4)
+                    duplication_rate = dup_stats\$V4,
+                    fdr_p01 = "NA",
+                    fdr_p001 = "NA")
     }
 
     write.csv(cell_qc, quote=FALSE, file="temp_fold/$cell_qc")
     write.csv(df, file=paste0("$key", "_sample_stats.csv"), quote=FALSE, row.names=FALSE)
     saveRDS(cds, file="temp_fold/$cds_object")
+
     
     if ("$key" == "Barnyard") {
         fData(cds)\$mouse <- grepl("ENSMUSG", fData(cds)\$id)
@@ -1677,59 +1743,6 @@ process zip_up_sample_stats {
 
 /*************
 
-Process: calc_cell_totals
-
- Inputs:
-    cell_ed - csv of cell quality control information with emptyDrops FDR values - collected
-
- Outputs:
-    cell_counts - table cell totals above set UMI thresholds for all samples
-
- Pass through:
-
- Summary:
-    Count cell totals above set UMI thresholds for all samples
-
- Downstream:
-    generate_dashboard
-
- Published:
-
- Notes:
-
-*************/
-
-process calc_cell_totals {
-    cache 'lenient'
-
-    input:
-        file(cell_ed) from cell_eds.collect()
-
-    output:
-        file "*.txt" into cell_counts
-
-    """
-    # bash watch for errors
-    set -ueo pipefail
-
-    rm -f cell_counts.txt
-    for f in $cell_ed
-    do
-      awk 'BEGIN {FS=","; counter=0} {if(\$2 ~ /^[0-9]+\$/ && \$2 > 100)  {counter++}} END{print FILENAME, "100", counter}' \$f >> cell_counts.txt
-      awk 'BEGIN {FS=","; counter=0} {if(\$2 ~ /^[0-9]+\$/ && \$2 > 500)  {counter++}} END{print FILENAME, "500", counter}' \$f >> cell_counts.txt
-      awk 'BEGIN {FS=","; counter=0} {if(\$2 ~ /^[0-9]+\$/ && \$2 > 1000) {counter++}} END{print FILENAME, "1000", counter}' \$f >> cell_counts.txt
-
-      awk 'BEGIN {FS=","; counter=0} {if(NF >= 3) {if(\$2 ~ /^[0-9]+\$/ && \$2 > 100 && \$3 <= 0.01) {counter++}}else{counter="-"}} END{print FILENAME, "FDR_p01", counter}' \$f >> cell_counts.txt
-      awk 'BEGIN {FS=","; counter=0} {if(NF >= 3) {if(\$2 ~ /^[0-9]+\$/ && \$2 > 100 && \$3 <= 0.001) {counter++}}else{counter="-"}} END{print FILENAME, "FDR_p001", counter}' \$f >> cell_counts.txt
-    done
-
-    """
-
-}
-
-
-/*************
-
 Process: collapse_collision
 
  Inputs:
@@ -1820,6 +1833,8 @@ process generate_dashboard {
     output:
         file exp_dash into exp_dash_out
 
+    print("all sample stats")
+    print(all_sample_stats)
     """
     # bash watch for errors
     set -ueo pipefail
