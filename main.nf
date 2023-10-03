@@ -1694,13 +1694,14 @@ Process: calc_cell_totals
     generate_dashboard
 
  Published:
-
+    cell_counts - table cell totals above set UMI thresholds for all samples
  Notes:
 
 *************/
 
 process calc_cell_totals {
     cache 'lenient'
+    publishDir path: "${params.output_dir}/", pattern: "cell_counts.txt", mode: 'copy'
 
     input:
         file(cell_ed) from cell_eds.collect()
