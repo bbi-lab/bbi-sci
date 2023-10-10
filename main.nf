@@ -1227,7 +1227,6 @@ process run_emptyDrops {
     fi
 
     printf "** End process 'run_emptyDrops' at: \$(date)\n\n" >> run_emptyDrops.log
-echo "moof" > /dev/null
 """
 
 }
@@ -1317,8 +1316,6 @@ process make_cds {
         "$params.umi_cutoff"
 
     printf "** End process 'make_cds' at: \$(date)\n\n" >> make_cds.log
-echo 'foof' > /dev/null
-
     """
 }
 
