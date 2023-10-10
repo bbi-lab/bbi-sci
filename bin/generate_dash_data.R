@@ -18,24 +18,9 @@ count_info <- read.table(args$cell_counts, stringsAsFactors=FALSE)
 project_name <- unlist(stringr::str_split(output_folder, "/"))
 project_name <- project_name[[length(project_name)]]
 
-#c100 <- sum(count_info[count_info$V2 == 100,]$V3)
-#c500 <- sum(count_info[count_info$V2 == 500,]$V3)
-#c1000 <- sum(count_info[count_info$V2 == 1000,]$V3)
-
-#count_info_tmp <- count_info[count_info$V2 == 'FDR_p01',]
-#if(!(length(unique(count_info_tmp$V3)) == 1 && count_info_tmp$V3[1] == '-')) {
-#  cfdr_p01 <- sum(count_info[count_info$V2 == 'FDR_p01',]$V3)
-#} else {
-#  cfdr_p01 <- '-'
-#}
-
-#cfdr_p01 <- sum(count_info[count_info$V2 == 'FDR_p01',]$V3)
-#cfdr_p001 <- sum(count_info[count_info$V2 == 'FDR_p001',]$V3)
-
 count_info_tab <- count_info
 
 count_info_tab$V1 <- gsub("_cell_qc.csv", "", count_info_tab$V1)
-count_info_tab$V1 <- gsub("_cell_emptyDrops.csv", "", count_info_tab$V1)
 
 ct100 <- count_info_tab[count_info_tab$V2 == 100,]
 ct500 <- count_info_tab[count_info_tab$V2 == 500,]
@@ -51,8 +36,8 @@ row.names(ctfdr_p001) <- ctfdr_p001$V1
 
 all_dups$V1 <- as.character(all_dups$V1)
 
-all_dups$V5[all_dups$V7 > 0] <- "Fail"
-all_dups$V6[all_dups$V7 > 0] <-  "Fail"
+#all_dups$V5[all_dups$V7 > 0] <- "Fail"
+#all_dups$V6[all_dups$V7 > 0] <-  "Fail"
 all_dups$V6[all_dups$V6 == "NaN%"] <-  "Fail"
 
 all_dups$c100 <- ct100[all_dups$V1,"V3"]
