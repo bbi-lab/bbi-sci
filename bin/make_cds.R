@@ -11,6 +11,8 @@ parser$add_argument('matrix', help='File of umi count matrix.')
 parser$add_argument('cell_data', help='File of cell data.')
 parser$add_argument('gene_data', help='File of gene data.')
 parser$add_argument('gene_bed', help='Bed file of gene info.')
+parser$add_argument('empty_drops', help='RDS file from emptyDrops.')
+parser$add_argument('intron_fraction_file', help='Intron fraction of barcode UMIs file.')
 parser$add_argument('key', help='The sample name prefix.')
 parser$add_argument('umi_cutoff', help='UMI cutoff to count as a cell.')
 args = parser$parse_args()
@@ -36,8 +38,33 @@ pData(cds)$perc_mitochondrial_umis <- Matrix::colSums(exprs(mt_cds))/Matrix::col
 #rt_cds <- cds[rt,]
 #pData(cds)$perc_rRNA_umis <- Matrix::colSums(exprs(rt_cds))/Matrix::colSums(exprs(cds)) * 100
 
-qc <- as.data.frame(pData(cds))[,c("cell", "n.umi", "perc_mitochondrial_umis")]
+
+temp_cds <- detect_genes(cds) # not saving cds with gene info to save space
+qc <- as.data.frame(pData(temp_cds))[,c("cell", "n.umi", "perc_mitochondrial_umis", "num_genes_expressed")]
 write.csv(qc, file=paste0(sample_name, "_cell_qc.csv"), quote=FALSE, row.names = FALSE)
+
+emptydrops_data <- readRDS(args$empty_drops)
+
+if(is(emptydrops_data, 'DFrame')) {
+  pData(cds)[['emptyDrops_FDR']]         <- emptydrops_data[pData(cds)[,'cell'],]@listData[['FDR']]
+  pData(cds)[['emptyDrops_Limited']]     <- emptydrops_data[pData(cds)[,'cell'],]@listData[['Limited']]
+  metadata(pData(cds))$emptyDrops_lower  <- metadata(emptydrops_data)[['lower']]
+  metadata(pData(cds))$emptyDrops_niters <- metadata(emptydrops_data)[['niters']]
+  metadata(pData(cds))$emptyDrops_alpha  <- metadata(emptydrops_data)[['alpha']]
+  metadata(pData(cds))$emptyDrops_retain <- metadata(emptydrops_data)[['retain']]
+  metadata(pData(cds))$emptyDrops_ignore <- metadata(emptydrops_data)[['ignore']]
+  metadata(pData(cds))$emptyDrops_round  <- metadata(emptydrops_data)[['round']]
+  ed <- as.data.frame(pData(cds))[,c('cell', 'n.umi', 'emptyDrops_FDR')]
+} else {
+  ed <- as.data.frame(pData(cds))[,c('cell', 'n.umi')]
+}
+
+# Add intron fraction to the cell data.
+intron_fraction <- read.table(args$intron_fraction_file)
+row.names(intron_fraction) <- intron_fraction$V1
+pData(cds)[['intron_fraction']] <- intron_fraction[pData(cds)[,'cell'],]$V2
+
+write.csv(ed, file=paste0(sample_name, "_cell_emptyDrops.csv"), quote=FALSE, row.names = FALSE) 
 
 writeMM(exprs(cds), paste0(sample_name, "_for_scrub.mtx"))
 

@@ -6,6 +6,8 @@ suppressPackageStartupMessages({
   library(mclust)
   library(argparse)
   library(monocle3)
+  library(tidyverse)
+  library(cowplot)
 })
 
 parser = argparse::ArgumentParser(description='Script to generate qc plots.')
@@ -18,6 +20,184 @@ args = parser$parse_args()
 sample_name <- args$sample_name
 
 
+#################################################
+##   Functions for manuipulating cds objects   ##
+##          performing well checks             ##
+#################################################
+
+
+
+# Extract column data from monocle object and separate 
+# barcodes and plate info from the cell name 
+# Returns a new cds object with barcode and plate info
+extractBarcode <- function(cds) {
+    df <- as.data.frame(colData(cds))
+
+    meta_types <- c("P5_barcode", "P7_barcode", "RT_barcode", "Ligation_barcode")
+    meta <- separate(df, cell, into=meta_types, sep="_", remove=FALSE)
+
+    # Fill in barcode information in cds object from meta object 
+    for (m in meta_types) {
+        colData(cds)[,m] <- meta[[m]]
+    }
+
+    # Extract plate number
+    cds$plate <- sapply(strsplit(as.character(meta$RT_barcode), "-"), `[`, 1)
+    return (cds)
+}
+
+# Function to return labels/text for stat_summary
+# Returns labels for ymax data (here, it is max number of cells)
+n_fun <- function(y){return(data.frame(y=max(y), label = paste0(length(y))))}
+
+
+# Extract RT barcode and plate information from cell name and 
+# returns with a cds with the extracted information 
+# Write csv for UMI and mitochondrial UMI summary stats by RT barcode
+rt_stats <- function(sample_name, cds) {
+  print("rt stats...")
+  temp_cds <- extractBarcode(cds)
+
+
+  umi_rt_stats <- data.frame(colData(temp_cds)) %>% 
+                group_by(RT_barcode) %>%
+                dplyr::summarise(min=min(n.umi),
+                                 q1=quantile(n.umi, probs=c(0.25)),
+                                 med=median(n.umi),
+                                 mean=mean(n.umi),
+                                 q3=quantile(n.umi, probs=c(0.75)),
+                                 max=max(n.umi)) %>%
+                data.frame()
+
+  write.csv(umi_rt_stats, file=paste0(sample_name, "_umi_rt_stats.csv"), quote=FALSE, row.names=FALSE)
+
+
+  mito_rt_stats <- data.frame(colData(temp_cds)) %>% 
+    group_by(RT_barcode) %>%
+    summarise(min=min(perc_mitochondrial_umis),
+              q1=quantile(perc_mitochondrial_umis, probs=c(0.25)),
+              med=median(perc_mitochondrial_umis),
+              mean=mean(perc_mitochondrial_umis),
+              q3=quantile(perc_mitochondrial_umis, probs=c(0.75)),
+              max=max(perc_mitochondrial_umis)) %>%
+    data.frame()
+
+  write.csv(mito_rt_stats, file=paste0(sample_name, "_mito_rt_stats.csv"), quote=FALSE, row.names=FALSE)
+
+  return (temp_cds)
+    
+}
+
+# Perform well check for each RT well 
+# Looks at number of UMIs, percent mitochondrial UMIs and 
+# percent of a UMAP cluster in a well 
+well_check <- function(sample_name, cds) {
+
+  # Add UMAP coordinates to the colData for easy plotting outside of monocle3 
+  cds$UMAP1 <- reducedDim(cds, "UMAP")[,1]
+  cds$UMAP2 <- reducedDim(cds, "UMAP")[,2]
+
+  # Extract the meta info into a data frame 
+  meta <- data.frame(colData(cds))
+ 
+  # Add cluster information to colData for each cell 
+  colData(cds)$clusters = clusters(cds)
+
+  # Calculate percentages of each cluster 
+  meta <- data.frame(colData(cds))
+  clusterCounts <- meta %>% 
+    dplyr::group_by(RT_barcode) %>%
+    dplyr::count(clusters) %>%
+    data.frame()
+
+ # Number of cells for each RT barcode and cluster
+  rt_key <- data.frame(table(meta$RT_barcode))
+  cluster_key <- data.frame(table(meta$clusters))
+
+  # Total number of cells for each RT barcode 
+  clusterCounts$RTtot <- rt_key[match(clusterCounts$RT_barcode, rt_key$Var1), 'Freq']
+
+  # Total number of cells per cluster / total RT barcode cells
+  clusterCounts$perRT <- clusterCounts$n/clusterCounts$RTtot * 100
+
+  # Total number of cells per cluster / total number of cells in sample
+  clusterCounts$perSamp <- clusterCounts$n/nrow(colData(cds)) * 100
+
+  # Find overall percent of each cell in each cluster by RT barcode 
+  clusterCounts$clustTot <- cluster_key[match(clusterCounts$clusters, cluster_key$Var1), 'Freq']
+  clusterCounts$perClust <- clusterCounts$n/clusterCounts$clustTot * 100
+
+  clusterCounts$plate <- substr(clusterCounts$RT_barcode, 1, 3)
+  meta$plate <- substr(meta$RT_barcode, 1, 3)
+
+
+  # UMAP of all data to use as background cluster
+  bg_data <- data.frame(colData(cds))[,c('UMAP1', 'UMAP2')]
+
+  # Violin plot of percent mitochondrial umis by RT barcode with threshold line at 10% 
+  mito_rt_plot <- ggplot(meta, aes(x=RT_barcode, y=perc_mitochondrial_umis)) +
+    geom_violin(aes(fill="aquamarine")) +
+    geom_boxplot(notch=T, fill="white", width=0.25, alpha=0.3, outlier.shape=NA) +
+    theme_light() +
+    theme(axis.text.x=element_blank(),
+          text=element_text(size=14)) +
+    geom_hline(yintercept = 10, linetype="dotted", ) +
+    scale_y_continuous(limits=c(0,max(cds$perc_mitochondrial_umis) + 5)) +
+    xlab("") +
+    ylab("% Mito UMIs") +
+    stat_summary(fun.data = n_fun, geom = "text", hjust = 0.5, vjust = -0.3) +
+    theme(legend.position="none")
+
+
+  # Num of UMIs by RT barcode 
+  umi_rt_plot <- ggplot(meta, aes(x=RT_barcode, y=n.umi)) +
+  # facet_wrap(~sample, nrow=1, drop=FALSE, scales="free_x") +
+    geom_violin(aes(fill="salmon")) +
+    geom_boxplot(notch=T, fill="white", width=0.25, alpha=0.3, outlier.shape=NA) +
+    # theme_bbi() +
+    theme_light() +
+    theme(axis.text.x=element_blank(),
+        text=element_text(size=14)) +
+    scale_y_log10() + 
+    xlab("") +
+    ylab("UMIs") +
+    theme(legend.position="none")
+
+  # Percent cluster of total sample 
+  perc_clust_plot <- ggplot(clusterCounts, aes(x=RT_barcode, y=perSamp, fill=clusters)) +
+    geom_bar(stat="identity") +
+    theme_light() +
+    theme(axis.text.x=element_blank(),
+          text=element_text(size=14)) +
+    xlab("") +
+    ylab("% Total Sample") +
+    theme(legend.position="none")
+
+
+  # Percent cluster of RT well 
+  perc_clust_rt <- ggplot(clusterCounts, aes(x=RT_barcode, y=perRT, fill=clusters)) +
+    geom_bar(stat="identity") +
+    theme_light() +
+    theme(axis.text.x=element_text(angle=45, hjust=1),
+          text=element_text(size=14)) +
+    xlab("RT Wells") +
+    ylab("% of RT Well") +
+    theme(legend.position="bottom")
+
+  # all 3 well check plots combined 
+  well_check_combined <- plot_grid(mito_rt_plot, umi_rt_plot, 
+                         perc_clust_plot, perc_clust_rt, 
+                         nrow=4, align='hv',
+                         rel_heights = c(1.5,1.5,1,1))
+
+  ggsave(paste0(sample_name, "_wellcheck.png"), well_check_combined, width=14, height = 17)
+
+}
+
+
+#################################################
+##         Function to generate UMAPs          ##
+#################################################
 
 plot_cells_simp <- function(cds,
                             x=1,
@@ -234,19 +414,25 @@ plot_cells_simp <- function(cds,
   g
 }
 
-
-
-
+#################################################
+##             Start QC checks                 ##
+#################################################
 
 
 gen_plots <- function(sample_name, sample_path) {
   samp_cds <- readRDS(sample_path)
   garnett_mods <- names(colData(samp_cds))[grepl("garnett_type", names(colData(samp_cds)))]
+
+
   tryCatch({
     samp_cds <- preprocess_cds(samp_cds)
     samp_cds <- reduce_dimension(samp_cds)
     samp_cds <- cluster_cells(samp_cds)
-    
+
+    # Generate UMI and mitochondrial stats by rt barcode 
+    samp_cds <- rt_stats(sample_name, samp_cds)
+    well_check(sample_name, samp_cds)
+
     png(paste0(sample_name, "_UMAP.png"), width = 5, height = 5, res = 600, units = "in")
     print(suppressMessages(plot_cells_simp(samp_cds) + theme(text = element_text(size = 8))))
     dev.off()
@@ -263,6 +449,13 @@ gen_plots <- function(sample_name, sample_path) {
     png(paste0(sample_name, "_UMAP.png"), width = 5, height = 5, res = 600, units = "in")
     print(ggplot() + geom_text(aes(x = 1, y = 1, label = "Insufficient cells for UMAP")) + monocle3:::monocle_theme_opts() + theme(legend.position = "none") + labs(x="UMAP 1", y = "UMAP 2"))
     dev.off()
+
+    png(paste0(sample_name, "_wellcheck.png"), width = 5, height = 5, res = 600, units = "in")
+    print(ggplot() + geom_text(aes(x = 1, y = 1, label = "Insufficient cells for WellCheck")) + monocle3:::monocle_theme_opts() + theme(legend.position = "none") + labs(x="RT Barcodes", y = "UMIs"))
+    dev.off()
+
+    write.table("Insufficent UMIs for RT stats", file=paste0(sample_name, "_mito_rt_stats.csv"), quote=FALSE, row.names=FALSE, col.names=FALSE)
+    write.table("Insufficent UMIs for RT stats", file=paste0(sample_name, "_umi_rt_stats.csv"), quote=FALSE, row.names=FALSE, col.names=FALSE)
 
     for (mod in garnett_mods) {
       png(paste0(sample_name, "_", gsub("garnett_type_", "", mod) ,"_Garnett.png"), width = 7, height = 5, res = 600, units = "in")
@@ -282,6 +475,7 @@ gen_plots <- function(sample_name, sample_path) {
   
     samp_cds
 }
+
 
 # Generate UMAP, cell_qc
 cds <- gen_plots(args$sample_name, args$cds_path)
@@ -345,6 +539,9 @@ gen_knee <- function(sample_name, cutoff) {
 
 suppressMessages(gen_knee(args$sample_name, args$specify_cutoff))
 
+
+
+# Generate Barnyard collision rates between mouse and human genes 
 
 if (sample_name == "Barnyard") {
 

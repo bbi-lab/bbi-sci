@@ -32,6 +32,8 @@ params.hash_list = false
 params.max_wells_per_sample = 20
 params.garnett_file = false
 params.skip_doublet_detect = false
+params.run_emptyDrops = true
+
 
 //print usage
 if (params.help) {
@@ -994,6 +996,7 @@ Process: count_umis_by_sample
     logfile - running log
     umis_per_cell - count of umis per cell
     umis_per_cell_intronic - count of umis per cell only from intronic reads - stops here
+    fraction_per_cell_intronic - fraction of barcode UMIs that are intronic
 
  Pass through:
     cell_gene_count - gzipped text file with a count of cell, gene pairs
@@ -1019,7 +1022,7 @@ save_umi_per_int = {params.output_dir + "/" + it - ~/.UMIs.per.cell.barcode.intr
 process count_umis_by_sample {
     cache 'lenient'
     publishDir path: "${params.output_dir}/", saveAs: save_umi_per_int, pattern: "*intronic.txt", mode: 'copy'
-    publishDir path: "${params.output_dir}/", saveAs: save_umi_per_cell, pattern: "*barcode.txt", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_umi_per_cell, pattern: "*UMIs.per.cell.barcode.txt", mode: 'copy'
 
     input:
         set val(key), file(cell_gene_count), file(gene_assign), file(logfile) from merge_assignment_out
@@ -1027,6 +1030,7 @@ process count_umis_by_sample {
     output:
         set key, file(cell_gene_count), file("count_umis_by_sample.log") into ubss_out
         set key, file("*UMIs.per.cell.barcode.txt") into umis_per_cell
+        set key, file("*fraction_intron_barcode.txt") into fraction_per_cell_intronic
         file "*UMIs.per.cell.barcode.intronic.txt" into umi_per_cell_intronic
 
     """
@@ -1041,13 +1045,15 @@ process count_umis_by_sample {
         tabulate_per_cell_counts.py
             --gene_assignment_files "$gene_assign"
             --all_counts_file "${key}.UMIs.per.cell.barcode.txt"
-            --intron_counts_file "${key}.UMIs.per.cell.barcode.intronic.txt"\n\n"      >> count_umis_by_sample.log
+            --intron_counts_file "${key}.UMIs.per.cell.barcode.intronic.txt"
+            --intron_fraction_file "${key}.fraction_intron_barcode.txt"\n\n"            >> count_umis_by_sample.log
 
 
     tabulate_per_cell_counts.py \
         --gene_assignment_files "$gene_assign" \
         --all_counts_file "${key}.UMIs.per.cell.barcode.txt" \
-        --intron_counts_file "${key}.UMIs.per.cell.barcode.intronic.txt"
+        --intron_counts_file "${key}.UMIs.per.cell.barcode.intronic.txt" \
+        --intron_fraction_file "${key}.fraction_intron_barcode.txt"
 
 
     printf "    Process stats:
@@ -1085,7 +1091,7 @@ Process: make_matrix
     Generate a matrix of cells by genes - make_matrix.py
 
  Downstream:
-    make_cds
+    run_emptyDrops
 
  Published:
     umi_matrix - MatrixMarket format matrix of cell by umi
@@ -1132,10 +1138,98 @@ process make_matrix {
 
 
     printf "\n** End process 'make_matrix' at: \$(date)\n\n" >> make_matrix.log
+
     """
 
 }
 
+
+/*************
+
+Process: run_emptyDrops
+
+ Inputs:
+    key - sample id
+    logfile - running log
+    umi_matrix - MatrixMarket format matrix of cells by genes
+    cell_anno - Cell annotations for umi_matrix
+    gene_anno - Gene annotations for umi_matrix
+    gtf_path - path to gtf info folder
+
+ Outputs:
+    <sample_name>_emptyDrops.RDS
+
+ Pass through:
+   cell_data
+   umi_matrix
+   gene_data
+   gtf_path
+   logfile (modified)
+
+ Summary:
+    Run the emptyDrops utility on the umi_counts.mtx matrix.
+
+ Downstream:
+    make_cds
+
+ Published:
+    *_emptyDrops.RDS
+
+ Notes:
+
+*************/
+
+
+save_empty_drops = {params.output_dir + "/" + it - ~/_emptyDrops.RDS/ + "/" + it}
+
+process run_emptyDrops {
+    cache 'lenient'
+    publishDir path: "${params.output_dir}/", saveAs: save_empty_drops, pattern: "*_emptyDrops.RDS", mode: 'copy'
+
+    input:
+        set key, file(cell_data), file(umi_matrix), file(gene_data), val(gtf_path), file(logfile) from mat_output
+
+    output:
+        set key, file(cell_data), file(umi_matrix), file(gene_data), file("*_emptyDrops.RDS"), val(gtf_path), file("run_emptyDrops.log") into emptyDrops_output
+
+"""
+    # bash watch for errors
+    set -ueo pipefail
+
+    output_file="${key}_emptyDrops.RDS"
+
+    cat ${logfile} > run_emptyDrops.log
+    printf "** Start process 'run_emptyDrops' at: \$(date)\n\n" >> run_emptyDrops.log
+    
+    if [ "$params.run_emptyDrops" == 'true' ]
+    then
+      printf "    Process versions:
+          \$(R --version | grep 'R version')
+              emptyDrops version \$(Rscript -e 'packageVersion("DropletUtils")')\n\n" >> run_emptyDrops.log
+      echo '    Process command:
+          run_emptyDrops.R
+              "$umi_matrix"
+              "$cell_data"
+              "$gene_data"
+              "$key"
+              "${key}_emptyDrops.RDS"\n' >> run_emptyDrops.log
+
+      run_emptyDrops.R \
+          "$umi_matrix" \
+          "$cell_data" \
+          "$gene_data" \
+          "$key" \
+          "${key}_emptyDrops.RDS"
+    else
+      # make an empty emptyDrops.RDS file
+      Rscript -e 'note <- "emptyDrops was skipped"; saveRDS(note, file="${key}_emptyDrops.RDS")'
+      printf "    emptyDrops skipped by request\n\n" >> run_emptyDrops.log
+    fi
+
+    printf "** End process 'run_emptyDrops' at: \$(date)\n\n" >> run_emptyDrops.log
+"""
+
+}
 
 /*************
 
@@ -1149,6 +1243,7 @@ Process: make_cds
     gtf_path - path to gtf info folder
     logfile - running log
     params.umi_cutoff
+    fraction_per_cell_intronic - fraction of barcode UMIs that are intronic
 
  Outputs:
     key - sample id
@@ -1172,15 +1267,23 @@ Process: make_cds
 
 *************/
 
+emptyDrops_output.combine(fraction_per_cell_intronic, by:0).set{emptyDrops_fraction_intronic}
+
+/*
+** Diagnostic.
+emptyDrops_output.combine(fraction_per_cell_intronic, by:0).into{emptyDrops_fraction_intronic; emptyDrops_fraction_intronic_tmp}
+emptyDrops_fraction_intronic_tmp.view()
+*/
+
 process make_cds {
     cache 'lenient'
 
     input:
-        set key, file(cell_data), file(umi_matrix), file(gene_data), val(gtf_path), file(logfile) from mat_output
+      set key, file(cell_data), file(umi_matrix), file(gene_data), file(emptyDrops), val(gtf_path), file(logfile), file(fraction_intron_barcode) from emptyDrops_fraction_intronic
 
     output:
-        set key, file("*for_scrub.mtx"), file("*.RDS"), file("*cell_qc.csv"), file("make_cds.log") into cds_out
-        file("*cell_qc.csv") into cell_qcs
+        set key, file("*for_scrub.mtx"), file("*_cds.RDS"), file("*cell_qc.csv"), file("make_cds.log") into cds_out
+        file("*cell_emptyDrops.csv") into cell_eds
 
     """
     # bash watch for errors
@@ -1197,18 +1300,20 @@ process make_cds {
             "$cell_data"
             "$gene_data"
             "${gtf_path}/latest.genes.bed"
+            "$emptyDrops"
+            "$fraction_intron_barcode"
             "$key"
             "$params.umi_cutoff"\n' >> make_cds.log
-
 
     make_cds.R \
         "$umi_matrix"\
         "$cell_data"\
         "$gene_data"\
         "${gtf_path}/latest.genes.bed"\
+        "$emptyDrops"\
+        "$fraction_intron_barcode"\
         "$key"\
         "$params.umi_cutoff"
-
 
     printf "** End process 'make_cds' at: \$(date)\n\n" >> make_cds.log
     """
@@ -1243,7 +1348,6 @@ process apply_garnett {
     printf "\n** End process 'apply_garnett' at: \$(date)\n\n" >> apply_garnett.log
 
 """
-
 
 }
 
@@ -1394,31 +1498,32 @@ process reformat_qc {
     dir.create("temp_fold")
     cds <- readRDS("$cds_object")
     cell_qc <- read.csv("$cell_qc")
+    dup_stats <- read.table(paste0("$key", ".duplication_rate_stats.txt"))
+
+
+    df <- data.frame()
 
     if(nrow(pData(cds)) > 0) {
         if("$params.skip_doublet_detect" == 'false') {
             scrublet_out <- read.csv("$scrub_csv", header=F)
             pData(cds)\$scrublet_score <- scrublet_out\$V1
-            pData(cds)\$scrublet_call <- ifelse(scrublet_out\$V2 == 1, "Doublet", "Singlet")
             cell_qc\$scrublet_score <- scrublet_out\$V1
-            cell_qc\$scrublet_call <- ifelse(scrublet_out\$V2 == 1, "Doublet", "Singlet")
         }
+        df <- data.frame(sample="$key", n.reads = dup_stats\$V2, n.umi = dup_stats\$V3,
+                median_umis = median(pData(cds)\$n.umi),
+                median_perc_mito_umis = round(median(pData(cds)\$perc_mitochondrial_umis), 1),
+                duplication_rate = dup_stats\$V4)
+    } else {
+        df <- data.frame(sample="$key", n.reads = dup_stats\$V2, n.umi = dup_stats\$V3,
+                    median_umis = "NA",
+                    median_perc_mito_umis = "NA",
+                    duplication_rate = dup_stats\$V4)
     }
 
     write.csv(cell_qc, quote=FALSE, file="temp_fold/$cell_qc")
-
-    dup_stats <- read.table(paste0("$key", ".duplication_rate_stats.txt"))
-
-    df <- data.frame(sample="$key", n.reads = dup_stats\$V2, n.umi = dup_stats\$V3,
-                     duplication_rate = dup_stats\$V4,
-                     doublet_count = sum(cell_qc\$scrublet_call == "Doublet", na.rm=TRUE),
-                     doublet_perc = paste0(round(sum(cell_qc\$scrublet_call == "Doublet",
-                                                     na.rm=TRUE)/nrow(cell_qc) * 100, 1), "%"),
-                     doublet_NAs=sum(is.na(cell_qc\$scrublet_call)))
-
     write.csv(df, file=paste0("$key", "_sample_stats.csv"), quote=FALSE, row.names=FALSE)
     saveRDS(cds, file="temp_fold/$cds_object")
-
+    
     if ("$key" == "Barnyard") {
         fData(cds)\$mouse <- grepl("ENSMUSG", fData(cds)\$id)
         fData(cds)\$human <- grepl("ENSG", fData(cds)\$id)
@@ -1439,6 +1544,7 @@ process reformat_qc {
         writeLines(paste0("$key", "\t", "NA"), fileConn)
         close(fileConn)
     }
+
     """
 
 }
@@ -1460,6 +1566,8 @@ Process: generate_qc_metrics
     umap_png - png sample UMAP
     knee_png - png sample knee plot
     qc_png - png of cell qc stats
+    wellcheck_png - png of RT barcode qc 
+    rt_stats - csv of RT barcode stats
 
  Pass through:
 
@@ -1473,6 +1581,7 @@ Process: generate_qc_metrics
     umap_png - png sample UMAP
     knee_png - png sample knee plot
     qc_png - png of cell qc stats
+    wellcheck_png - png of RT barcode qc 
 
  Notes:
     Need to test umi cutoff here and in cds function
@@ -1485,6 +1594,9 @@ save_knee = {params.output_dir + "/" + it - ~/_knee_plot.png/ + "/" + it}
 save_umap = {params.output_dir + "/" + it - ~/_UMAP.png/ + "/" + it}
 save_cellqc = {params.output_dir + "/" + it - ~/_cell_qc.png/ + "/" + it}
 save_garnett = {params.output_dir + "/" + it.split("_")[0] + "/" + it}
+save_umi_rt_stats = {params.output_dir + "/" + it - ~/_umi_rt_stats.csv/ + "/" + it}
+save_mito_rt_stats = {params.output_dir + "/" + it - ~/_mito_rt_stats.csv/ + "/" + it}
+save_wellcheck_combo = {params.output_dir + "/" + it - ~/_wellcheck.png/ + "/" + it}
 
 process generate_qc_metrics {
     cache 'lenient'
@@ -1492,13 +1604,17 @@ process generate_qc_metrics {
     publishDir path: "${params.output_dir}/", saveAs: save_knee, pattern: "*knee_plot.png", mode: 'copy'
     publishDir path: "${params.output_dir}/", saveAs: save_cellqc, pattern: "*cell_qc.png", mode: 'copy'
     publishDir path: "${params.output_dir}/", saveAs: save_garnett, pattern: "*Garnett.png", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_umi_rt_stats, pattern: "*_umi_rt_stats.csv", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_mito_rt_stats, pattern: "*_mito_rt_stats.csv", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_wellcheck_combo, pattern: "*_wellcheck.png", mode: 'copy'
 
     input:
         set key, file(cds_object), file(cell_qc), file(umis_per_cell) from for_gen_qc
-
+         
     output:
         file("*.png") into qc_plots
         file("*.txt") into cutoff
+        file("*.csv") into rt_stats
 
     """
     # bash watch for errors
@@ -1561,7 +1677,7 @@ process zip_up_sample_stats {
 Process: calc_cell_totals
 
  Inputs:
-    cell_qc - csv of cell quality control information - collected
+    cell_ed - csv of cell quality control information with emptyDrops FDR values - collected
 
  Outputs:
     cell_counts - table cell totals above set UMI thresholds for all samples
@@ -1575,16 +1691,17 @@ Process: calc_cell_totals
     generate_dashboard
 
  Published:
-
+    cell_counts - table cell totals above set UMI thresholds for all samples
  Notes:
 
 *************/
 
 process calc_cell_totals {
     cache 'lenient'
+    publishDir path: "${params.output_dir}/", pattern: "cell_counts.txt", mode: 'copy'
 
     input:
-        file cell_qc from cell_qcs.collect()
+        file(cell_ed) from cell_eds.collect()
 
     output:
         file "*.txt" into cell_counts
@@ -1593,11 +1710,15 @@ process calc_cell_totals {
     # bash watch for errors
     set -ueo pipefail
 
-    for f in $cell_qc
+    rm -f cell_counts.txt
+    for f in $cell_ed
     do
-      awk 'BEGIN {FS=","}; \$2>100{c++} END{print FILENAME, "100", c-1}' \$f >> cell_counts.txt
-      awk 'BEGIN {FS=","}; \$2>500{c++} END{print FILENAME, "500", c-1}' \$f >> cell_counts.txt
-      awk 'BEGIN {FS=","}; \$2>1000{c++} END{print FILENAME, "1000", c-1}' \$f >> cell_counts.txt
+      awk 'BEGIN {FS=","; counter=0} {if(\$2 ~ /^[0-9]+\$/ && \$2 > 100)  {counter++}} END{print FILENAME, "100", counter}' \$f >> cell_counts.txt
+      awk 'BEGIN {FS=","; counter=0} {if(\$2 ~ /^[0-9]+\$/ && \$2 > 500)  {counter++}} END{print FILENAME, "500", counter}' \$f >> cell_counts.txt
+      awk 'BEGIN {FS=","; counter=0} {if(\$2 ~ /^[0-9]+\$/ && \$2 > 1000) {counter++}} END{print FILENAME, "1000", counter}' \$f >> cell_counts.txt
+
+      awk 'BEGIN {FS=","; counter=0} {if(NF >= 3) {if(\$2 ~ /^[0-9]+\$/ && \$2 > 100 && \$3 <= 0.01) {counter++}}else{counter="-"}} END{print FILENAME, "FDR_p01", counter}' \$f >> cell_counts.txt
+      awk 'BEGIN {FS=","; counter=0} {if(NF >= 3) {if(\$2 ~ /^[0-9]+\$/ && \$2 > 100 && \$3 <= 0.001) {counter++}}else{counter="-"}} END{print FILENAME, "FDR_p001", counter}' \$f >> cell_counts.txt
     done
 
     """
@@ -1660,6 +1781,7 @@ Process: generate_dashboard
     umap_png - png sample UMAP - combined as qc_plots
     knee_png - png sample knee plot - combined as qc_plots
     qc_png - png of cell qc stats - combined as qc_plots
+    wellcheck_png - png of RT barcode qc stats - combined as qc_plots
     scrublet_png - png histogram of scrublet scores
     params.garnett_file
 

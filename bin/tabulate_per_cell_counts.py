@@ -11,6 +11,7 @@ if __name__ == '__main__':
     parser.add_argument('--gene_assignment_files', required=True, nargs='+', help='List of input files with gene assignments.') 
     parser.add_argument('--all_counts_file', required=True, help='Counts per cell in exons and introns.') 
     parser.add_argument('--intron_counts_file', required=True, help='Counts per cell in introns.') 
+    parser.add_argument('--intron_fraction_file', required=True, help='Intronic fraction of UMI counts.')
     args = parser.parse_args()
 
     for f in args.gene_assignment_files:
@@ -26,10 +27,12 @@ if __name__ == '__main__':
                 if category == 'intronic':
                     intronic_counts[cell] = intronic_counts.get(cell, 0) + 1
                     
-    with open(args.all_counts_file, 'w') as all_counts_file, open(args.intron_counts_file, 'w') as intron_counts_file:
+    with open(args.all_counts_file, 'w') as all_counts_file, open(args.intron_counts_file, 'w') as intron_counts_file, open(args.intron_fraction_file, 'w') as intron_fraction_file:
         for cell in all_counts:
             all_count = all_counts.get(cell, 0)
             intron_count = intronic_counts.get(cell, 0)
-            
+            intron_fraction = float(intron_count) / float(all_count)
+
             all_counts_file.write(f'{cell}\t{all_count}\n')
             intron_counts_file.write(f'{cell}\t{intron_count}\n')
+            intron_fraction_file.write(f'{cell}\t{intron_fraction}\n')
