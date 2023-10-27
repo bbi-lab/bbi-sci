@@ -330,7 +330,7 @@ plot_cells_simp <- function(cds,
           text_df = data_df %>%
             dplyr::group_by(cell_group) %>%
             dplyr::mutate(cells_in_cluster= dplyr::n()) %>%
-            dplyr::group_by(cell_color, add=TRUE) %>%
+            dplyr::group_by(cell_color, .add=TRUE) %>%
             dplyr::mutate(per=dplyr::n()/cells_in_cluster)
           median_coord_df = text_df %>%
             dplyr::summarize(fraction_of_group = dplyr::n(),
@@ -445,7 +445,7 @@ gen_plots <- function(sample_name, sample_path) {
     
     samp_cds
   }, error = function(e) {
-    
+
     png(paste0(sample_name, "_UMAP.png"), width = 5, height = 5, res = 600, units = "in")
     print(ggplot() + geom_text(aes(x = 1, y = 1, label = "Insufficient cells for UMAP")) + monocle3:::monocle_theme_opts() + theme(legend.position = "none") + labs(x="UMAP 1", y = "UMAP 2"))
     dev.off()
@@ -569,9 +569,4 @@ if (sample_name == "Barnyard") {
   collision_rate <- round(sum(pData(cds)$collision/nrow(pData(cds))) * 200, 1)
 
 }
-
-
-
-
-
 
