@@ -31,8 +31,11 @@ params.max_cores = 16
 params.hash_list = false
 params.max_wells_per_sample = 20
 params.garnett_file = false
-params.skip_doublet_detect = false
-params.run_emptyDrops = true
+params.skip_doublet_detect = true
+params.run_emptyDrops = false
+params.hash_ratio = 2.5
+params.upper_umi_cutoff = 10000 
+params.hash_umi_cutoff = 5
 
 
 //print usage
@@ -69,7 +72,9 @@ if (params.help) {
     log.info '    params.max_wells_per_sample = 20           The maximum number of wells per sample - if a sample is in more wells, the fastqs will be split then reassembled for efficiency.'
     log.info '    params.garnett_file = false                Path to a csv with two columns, first is the sample name, and second is a path to the Garnett classifier to be applied to that sample. Default is false - no classification.'
     log.info '    params.skip_doublet_detect = false         Whether to skip doublet detection, i.e. scrublet - useful for very large datasets.'
-    log.info ''
+    log.info '    params.hash_ratio = 2.5 Parameter to indicate the ratio of top hash to second best oligo assigned '
+    log.info '    params.upper_umi_cutoff = 5000             Max number of UMIs to filter for hash reads'
+    log.info '    params.hash_umi_cutoff = 5                 The hash umi cutoff to be called a hash in cds object'
     log.info 'Issues? Contact hpliner@uw.edu'
     exit 1
 }
@@ -369,7 +374,7 @@ process process_hashes {
 
     output:
         file("*hash.log") into hash_logs
-        set file("*mtx"), file("*hashumis_cells.txt"), file("*hashumis_hashes.txt") into hash_mats
+        set val(key), file("*mtx"), file("*hashumis_cells.txt"), file("*hashumis_hashes.txt") into hash_mats
 
     when:
         params.hash_list != false
@@ -377,6 +382,8 @@ process process_hashes {
     """
     # bash watch for errors
     set -ueo pipefail
+
+    echo "process_hashes"
 
     process_hashes.py --hash_sheet $params.hash_list \
         --fastq <(zcat $input_fastq) --key $key
@@ -1615,6 +1622,7 @@ process generate_qc_metrics {
         file("*.png") into qc_plots
         file("*.txt") into cutoff
         file("*.csv") into rt_stats
+        set key, file(cds_object), file(umis_per_cell) into for_assign_hash
 
     """
     # bash watch for errors
@@ -1622,7 +1630,7 @@ process generate_qc_metrics {
 
     generate_qc.R\
         $cds_object $umis_per_cell $key \
-        --specify_cutoff $params.umi_cutoff\
+        --specify_cutoff $params.umi_cutoff
 
     """
 }
@@ -1723,6 +1731,72 @@ process calc_cell_totals {
 
     """
 
+}
+
+/*************
+
+Process: assign_hash
+
+ Inputs:
+    cds_object - cds in RDS format 
+    hash_cell - text file with list of cell names with hash umis 
+    hash_list - text file with list of hash names 
+    hash_mtx - sparse matrix with hash umi counts for each cell 
+
+ Outputs:
+    corrected_hash_table - csv file with data frame of cells and hash stats 
+    hash_cds - cds object with hash info
+
+ Pass through:
+
+ Summary:
+    Assign hash to cells and find top hash oligo for each cell 
+
+ Downstream:
+    
+ Published:
+    corrected_hash_table - csv file with data frame of cells and hash stats 
+    hash_cds - cds object with hash info
+ Notes:
+    runs only when params.hash_list = true
+*************/
+
+
+// need to create a log for hash and well_check!!
+save_hash_cds = {params.output_dir + "/" + it - ~/_hash_cds.RDS/ + "/" + it}
+save_hash_table = {params.output_dir + "/" + it - ~/_hash_table.csv/ + "/" + it}
+
+process assign_hash {
+    cache 'lenient'
+    publishDir path: "${params.output_dir}/", saveAs: save_hash_cds, pattern: "*_hash_cds.RDS", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_hash_table, pattern: "*_hash_table.csv", mode: 'copy'
+
+    input:
+        set key, file(hash_mtx), file(hash_cell), file(hash_hash) from hash_mats
+        set key, file(cds_object), file(umis_per_cell) from for_assign_hash
+   
+    output:
+        file("*.RDS") into hash_cds
+        file("*.csv") into hash_table
+    
+
+    when: 
+        params.hash_list != false 
+
+    """
+    # bash watch for errors
+    set -ueo pipefail
+    assign_hash.R \
+        $key \
+        $hash_mtx \
+        $hash_cell \
+        $hash_hash \
+        $cds_object \
+        $umis_per_cell \
+        --upper_umi_cutoff $params.upper_umi_cutoff \
+        --hash_ratio $params.hash_ratio \
+        --hash_umi_cutoff $params.hash_umi_cutoff
+    """
 }
 
 
