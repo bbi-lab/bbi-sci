@@ -424,7 +424,7 @@ gen_plots <- function(sample_name, sample_path) {
   garnett_mods <- names(colData(samp_cds))[grepl("garnett_type", names(colData(samp_cds)))]
 
 
-  tryCatch({
+  samp_cds <- tryCatch({
     samp_cds <- preprocess_cds(samp_cds)
     samp_cds <- reduce_dimension(samp_cds)
     samp_cds <- cluster_cells(samp_cds)
