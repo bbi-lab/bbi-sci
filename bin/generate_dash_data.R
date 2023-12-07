@@ -21,6 +21,7 @@ project_name <- project_name[[length(project_name)]]
 count_info_tab <- count_info
 
 count_info_tab$V1 <- gsub("_cell_qc.csv", "", count_info_tab$V1)
+count_info_tab$V1 <- gsub("_cell_emptyDrops.csv", "", count_info_tab$V1)
 
 ct100 <- count_info_tab[count_info_tab$V2 == 100,]
 ct500 <- count_info_tab[count_info_tab$V2 == 500,]
@@ -46,6 +47,7 @@ all_dups$cfdr_p01 <- ctfdr_p01[all_dups$V1,"V3"]
 all_dups$cfdr_p001 <- ctfdr_p001[all_dups$V1,"V3"]
 
 row.names(all_dups) <- all_dups$V1
+
 names(all_dups) <- c("Sample", "Total_reads",
                      "Total_UMIs",
                      "Median_UMIs",
