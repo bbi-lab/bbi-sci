@@ -33,9 +33,9 @@ params.max_wells_per_sample = 20
 params.garnett_file = false
 params.skip_doublet_detect = true
 params.run_emptyDrops = false
-params.hash_ratio = 2.5
-params.upper_umi_cutoff = 10000 
-params.hash_umi_cutoff = 5
+// params.hash_ratio = 2.5
+// params.upper_umi_cutoff = 10000 
+// params.hash_umi_cutoff = 5
 
 
 //print usage
@@ -73,7 +73,7 @@ if (params.help) {
     log.info '    params.garnett_file = false                Path to a csv with two columns, first is the sample name, and second is a path to the Garnett classifier to be applied to that sample. Default is false - no classification.'
     log.info '    params.skip_doublet_detect = false         Whether to skip doublet detection, i.e. scrublet - useful for very large datasets.'
     log.info '    params.hash_ratio = 2.5 Parameter to indicate the ratio of top hash to second best oligo assigned '
-    log.info '    params.upper_umi_cutoff = 5000             Max number of UMIs to filter for hash reads'
+    // log.info '    params.upper_umi_cutoff = 5000             Max number of UMIs to filter for hash reads'
     log.info '    params.hash_umi_cutoff = 5                 The hash umi cutoff to be called a hash in cds object'
     log.info 'Issues? Contact hpliner@uw.edu'
     exit 1
@@ -1495,6 +1495,8 @@ process reformat_qc {
         set key, file("temp_fold/*.RDS"), file("temp_fold/*.csv") into rscrub_out
         file("*sample_stats.csv") into sample_stats
         file("*collision.txt") into collision
+        // set key, file("temp_fold/*.RDS") into for_assign_hash_cds
+
 
 
     """
@@ -1605,6 +1607,11 @@ save_umi_rt_stats = {params.output_dir + "/" + it - ~/_umi_rt_stats.csv/ + "/" +
 save_mito_rt_stats = {params.output_dir + "/" + it - ~/_mito_rt_stats.csv/ + "/" + it}
 save_wellcheck_combo = {params.output_dir + "/" + it - ~/_wellcheck.png/ + "/" + it}
 
+for_gen_qc
+.into { for_gen_qc_copy01;
+        for_gen_qc_copy02 }
+
+
 process generate_qc_metrics {
     cache 'lenient'
     publishDir path: "${params.output_dir}/", saveAs: save_umap, pattern: "*UMAP.png", mode: 'copy'
@@ -1616,13 +1623,14 @@ process generate_qc_metrics {
     publishDir path: "${params.output_dir}/", saveAs: save_wellcheck_combo, pattern: "*_wellcheck.png", mode: 'copy'
 
     input:
-        set key, file(cds_object), file(cell_qc), file(umis_per_cell) from for_gen_qc
+        set key, file(cds_object), file(cell_qc), file(umis_per_cell) from for_gen_qc_copy01
          
     output:
         file("*.png") into qc_plots
         file("*.txt") into cutoff
         file("*.csv") into rt_stats
-        set key, file(cds_object), file(umis_per_cell) into for_assign_hash
+        // set key, file(umis_per_cell) into for_assign_hash_umis
+        // set key, file(cds_object), file(umis_per_cell) into for_assign_hash
 
     """
     # bash watch for errors
@@ -1763,39 +1771,45 @@ Process: assign_hash
 
 
 // need to create a log for hash and well_check!!
-save_hash_cds = {params.output_dir + "/" + it - ~/_hash_cds.RDS/ + "/" + it}
+// save_hash_cds = {params.output_dir + "/" + it - ~/_hash_cds.RDS/ + "/" + it}
+save_hash_cds = {params.output_dir + "/" + it - ~/_cds.RDS/ + "/" + it}
 save_hash_table = {params.output_dir + "/" + it - ~/_hash_table.csv/ + "/" + it}
 
 process assign_hash {
     cache 'lenient'
-    publishDir path: "${params.output_dir}/", saveAs: save_hash_cds, pattern: "*_hash_cds.RDS", mode: 'copy'
+    // publishDir path: "${params.output_dir}/", saveAs: save_hash_cds, pattern: "*_hash_cds.RDS", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_hash_cds, pattern: "*cds.RDS", mode: 'copy'
     publishDir path: "${params.output_dir}/", saveAs: save_hash_table, pattern: "*_hash_table.csv", mode: 'copy'
 
     input:
         set key, file(hash_mtx), file(hash_cell), file(hash_hash) from hash_mats
-        set key, file(cds_object), file(umis_per_cell) from for_assign_hash
-   
+        // set key, file(umis_per_cell) from for_assign_hash_umis
+        set key, file(cds), file(cell_qc), file(umis_per_cell) from for_gen_qc_copy02 
+
     output:
-        file("*.RDS") into hash_cds
+        // file("*hash_cds.RDS") into hash_cds
+        file("*_cds.RDS") into hash_cds
         file("*.csv") into hash_table
     
 
     when: 
         params.hash_list != false 
 
+    // --upper_umi_cutoff $params.upper_umi_cutoff \
+    // --hash_ratio $params.hash_ratio \
+    // --hash_umi_cutoff $params.hash_umi_cutoff
     """
     # bash watch for errors
     set -ueo pipefail
+
     assign_hash.R \
         $key \
         $hash_mtx \
         $hash_cell \
         $hash_hash \
-        $cds_object \
-        $umis_per_cell \
-        --upper_umi_cutoff $params.upper_umi_cutoff \
-        --hash_ratio $params.hash_ratio \
-        --hash_umi_cutoff $params.hash_umi_cutoff
+        $cds \
+        $umis_per_cell 
+
     """
 }
 
