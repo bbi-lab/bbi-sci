@@ -31,7 +31,7 @@ params.max_cores = 16
 params.hash_list = false
 params.max_wells_per_sample = 20
 params.garnett_file = false
-params.skip_doublet_detect = true
+params.skip_doublet_detect = false
 params.run_emptyDrops = false
 // params.hash_ratio = 2.5
 // params.upper_umi_cutoff = 10000 
@@ -313,6 +313,8 @@ process gather_info {
     # bash watch for errors
     set -ueo pipefail
 
+    echo "test hash"
+
     spec=`sed 's/ *\$//g' good_sample_sheet.csv | awk 'BEGIN {FS=",";OFS=","}{split(\$2,a,"_fq_part");gsub("[_ /-]", ".", a[1]);print(\$1, a[1], \$3)}' | awk 'BEGIN {FS=","}; \$2=="$key" {print \$3}' | uniq`
     star_mem=`awk -v var="\$spec" '\$1==var {print \$3}' $params.star_file | uniq`
     star_path=`awk -v var="\$spec" '\$1==var {print \$2}' $params.star_file | uniq`
@@ -383,7 +385,7 @@ process process_hashes {
     # bash watch for errors
     set -ueo pipefail
 
-    echo "process_hashes"
+    echo "process_hashes_test"
 
     process_hashes.py --hash_sheet $params.hash_list \
         --fastq <(zcat $input_fastq) --key $key
@@ -1014,6 +1016,7 @@ Process: count_umis_by_sample
  Downstream:
     make_matrix
     generate_qc_metrics
+    assign_hash (if true)
 
  Published:
     umis_per_cell - count of umis per cell
@@ -1039,6 +1042,7 @@ process count_umis_by_sample {
         set key, file("*UMIs.per.cell.barcode.txt") into umis_per_cell
         set key, file("*fraction_intron_barcode.txt") into fraction_per_cell_intronic
         file "*UMIs.per.cell.barcode.intronic.txt" into umi_per_cell_intronic
+        set key, file("*UMIs.per.cell.barcode.txt") into for_assign_hash_umis
 
     """
     # bash watch for errors
@@ -1296,6 +1300,9 @@ process make_cds {
     # bash watch for errors
     set -ueo pipefail
 
+
+    echo "testing hash 4" 
+
     cat ${logfile} > make_cds.log
     printf "** Start process 'make_cds' at: \$(date)\n\n" >> make_cds.log
     printf "    Process versions:
@@ -1451,6 +1458,7 @@ Process: reformat_qc
  Outputs:
     key - sample id
     cds_object - cds object in RDS format
+    for_hash_cds_dir - directory to cds object for assigning hash if true
     sample_stats - csv with sample-wise statistics
     cell_qc - csv of cell quality control information
     collision - file containing collision rate if barnyard sample
@@ -1465,6 +1473,7 @@ Process: reformat_qc
  Downstream:
     generate_qc_metrics
     zip_up_sample_stats
+    assign_hash
     collapse_collision
 
  Published:
@@ -1495,14 +1504,21 @@ process reformat_qc {
         set key, file("temp_fold/*.RDS"), file("temp_fold/*.csv") into rscrub_out
         file("*sample_stats.csv") into sample_stats
         file("*collision.txt") into collision
-        // set key, file("temp_fold/*.RDS") into for_assign_hash_cds
+        file("temp_fold") into temp_dir
 
+    // script:
+
+    //     if (params.hash_list != false) {
+    //        output: file("temp_fold") into for_hash_cds_dir
+    //     }
 
 
     """
     #!/usr/bin/env Rscript
 
     library(monocle3)
+
+    print("testing 8")
 
     dir.create("temp_fold")
     cds <- readRDS("$cds_object")
@@ -1555,7 +1571,6 @@ process reformat_qc {
     }
 
     """
-
 }
 
 
@@ -1598,6 +1613,10 @@ Process: generate_qc_metrics
 
 *************/
 
+// rscrub_out.into{ rscrub_out_copy01; rscrub_out_copy02}
+
+temp_dir.into{temp_dir_copy01; temp_dir_copy02}
+
 for_gen_qc = rscrub_out.join(umis_per_cell)
 save_knee = {params.output_dir + "/" + it - ~/_knee_plot.png/ + "/" + it}
 save_umap = {params.output_dir + "/" + it - ~/_UMAP.png/ + "/" + it}
@@ -1606,11 +1625,6 @@ save_garnett = {params.output_dir + "/" + it.split("_")[0] + "/" + it}
 save_umi_rt_stats = {params.output_dir + "/" + it - ~/_umi_rt_stats.csv/ + "/" + it}
 save_mito_rt_stats = {params.output_dir + "/" + it - ~/_mito_rt_stats.csv/ + "/" + it}
 save_wellcheck_combo = {params.output_dir + "/" + it - ~/_wellcheck.png/ + "/" + it}
-
-for_gen_qc
-.into { for_gen_qc_copy01;
-        for_gen_qc_copy02 }
-
 
 process generate_qc_metrics {
     cache 'lenient'
@@ -1623,19 +1637,19 @@ process generate_qc_metrics {
     publishDir path: "${params.output_dir}/", saveAs: save_wellcheck_combo, pattern: "*_wellcheck.png", mode: 'copy'
 
     input:
-        set key, file(cds_object), file(cell_qc), file(umis_per_cell) from for_gen_qc_copy01
+        set key, file(cds_object), file(cell_qc), file(umis_per_cell) from for_gen_qc
          
     output:
         file("*.png") into qc_plots
         file("*.txt") into cutoff
         file("*.csv") into rt_stats
-        // set key, file(umis_per_cell) into for_assign_hash_umis
-        // set key, file(cds_object), file(umis_per_cell) into for_assign_hash
+
 
     """
     # bash watch for errors
     set -ueo pipefail
 
+    echo " testing"
     generate_qc.R\
         $cds_object $umis_per_cell $key \
         --specify_cutoff $params.umi_cutoff
@@ -1750,6 +1764,7 @@ Process: assign_hash
     hash_cell - text file with list of cell names with hash umis 
     hash_list - text file with list of hash names 
     hash_mtx - sparse matrix with hash umi counts for each cell 
+    umis_per_cell - txt file with number of umis per cell barcode
 
  Outputs:
     corrected_hash_table - csv file with data frame of cells and hash stats 
@@ -1763,34 +1778,33 @@ Process: assign_hash
  Downstream:
     
  Published:
-    corrected_hash_table - csv file with data frame of cells and hash stats 
-    hash_cds - cds object with hash info
+    hash_table - csv file with data frame of cells and hash stats 
+    cds - cds object with hash info in RDS format
+
  Notes:
     runs only when params.hash_list = true
 *************/
 
 
-// need to create a log for hash and well_check!!
-// save_hash_cds = {params.output_dir + "/" + it - ~/_hash_cds.RDS/ + "/" + it}
 save_hash_cds = {params.output_dir + "/" + it - ~/_cds.RDS/ + "/" + it}
+save_cell_qc = {params.output_dir + "/" + it - ~/_cell_qc.csv/ + "/" + it}
 save_hash_table = {params.output_dir + "/" + it - ~/_hash_table.csv/ + "/" + it}
 
 process assign_hash {
     cache 'lenient'
-    // publishDir path: "${params.output_dir}/", saveAs: save_hash_cds, pattern: "*_hash_cds.RDS", mode: 'copy'
     publishDir path: "${params.output_dir}/", saveAs: save_hash_cds, pattern: "*cds.RDS", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_cell_qc, pattern: "*cell_qc.csv", mode: 'copy'
     publishDir path: "${params.output_dir}/", saveAs: save_hash_table, pattern: "*_hash_table.csv", mode: 'copy'
 
     input:
         set key, file(hash_mtx), file(hash_cell), file(hash_hash) from hash_mats
-        // set key, file(umis_per_cell) from for_assign_hash_umis
-        set key, file(cds), file(cell_qc), file(umis_per_cell) from for_gen_qc_copy02 
+        file(cds_dir) from temp_dir_copy01
+        set key, file(umis_per_cell) from for_assign_hash_umis
 
     output:
-        // file("*hash_cds.RDS") into hash_cds
-        file("*_cds.RDS") into hash_cds
-        file("*.csv") into hash_table
-    
+        file("*cds.RDS") into hash_cds
+        file("*hash_table.csv") into hash_table
+        file("*cell_qc.csv") into cell_qc_out
 
     when: 
         params.hash_list != false 
@@ -1802,15 +1816,75 @@ process assign_hash {
     # bash watch for errors
     set -ueo pipefail
 
+    echo "testing"
+
+    cp ${cds_dir}/*.csv .
+
     assign_hash.R \
         $key \
         $hash_mtx \
         $hash_cell \
         $hash_hash \
-        $cds \
+        ${cds_dir}/*cds.RDS \
         $umis_per_cell 
 
     """
+}
+
+
+/*************
+
+Process: publish_cds_and_cell_qc
+
+ Inputs: 
+    temp_dir - directory containing monocle cds object and cell qc summary 
+
+ Outputs: 
+    cds_obj - monocle cds object in RDS format 
+    cell_qc - csv of cell quality control informatio
+
+ Summary: 
+    Publish monocle cds object and cell qc when not a hash experiment
+
+ Pass through: 
+
+ Downstream: 
+
+ Notes: 
+
+*************/
+
+save_cds = {params.output_dir + "/" + it - ~/_cds.RDS/ + "/" + it}
+save_cell_qc = {params.output_dir + "/" + it - ~/_cell_qc.csv/ + "/" + it}
+
+process publish_cds_and_cell_qc {
+    cache 'lenient'
+    publishDir path: "${params.output_dir}/", saveAs: save_cds, pattern: "*cds.RDS", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_cell_qc, pattern: "*cell_qc.csv", mode: 'copy'
+
+    input:
+        file(cds_dir) from temp_dir_copy02
+
+    output:
+        // set key, file(cds), file(cell_qc) into publish_out
+        file("*cds.RDS") into pub_cds
+        file("*cell_qc.csv") into pub_cell_qc
+    
+    when:
+        params.hash_list == false
+
+
+
+    """
+    # bash watch for errors
+    set -ueo pipefail
+
+    echo "testing"
+    cp ${cds_dir}/*.RDS . 
+    cp ${cds_dir}/*.csv . 
+
+    """
+
 }
 
 
@@ -1837,6 +1911,7 @@ Process: collapse_collision
  Notes:
 
 *************/
+
 
 process collapse_collision {
     cache 'lenient'
