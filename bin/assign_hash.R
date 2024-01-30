@@ -15,11 +15,11 @@ parser$add_argument('cell_list', help='File with list of cell names with hash um
 parser$add_argument('hash_list', help='File with list of hash names')
 parser$add_argument('cds', help='cds object in RDS format')
 parser$add_argument('umis_per_cell', help='File with list of umis per cell barcode')
-# parser$add_argument('--upper_umi_cutoff', type='integer', help='Optional. Specifies an upper UMI cutoff. Default is no upper UMI cutoff')
-# parser$add_argument('--hash_ratio', type='double', help='Optional. Specifies ratio of hash UMIs to determine top hash oligo')
-# parser$add_argument('--hash_umi_cutoff', type='integer', help='Optional. Specifies hash umi cutoff')
+parser$add_argument('hash_umi_cutoff', help='min number of hash umis to filter out')
 args = parser$parse_args()
 
+# Takes in cell hash matrix and background hash frequencies (determined by hash umi cutoff)
+# and find pvalues of hash frequencies
 chisq_vs_background <- function(test_hash_matrix, hash_frequencies){
   hash_frequencies_nz = which(hash_frequencies > 0)
   hash_frequencies = hash_frequencies[hash_frequencies_nz]
@@ -33,7 +33,10 @@ chisq_vs_background <- function(test_hash_matrix, hash_frequencies){
   return(pvals)
 }
 
-
+# Takes in a hash sparse matrix, cells from cds object and background cell hashes
+# (determined by cells with less than hash umi cutoff) to assign hash labels 
+# and determine the top to second best hash oligo.
+# Creates a corrected hash table 
 assign_hash_labels <- 
   function(hash_matrix,
            test_cell_hashes, 
@@ -86,19 +89,6 @@ assign_hash_labels <-
 
 cds <- readRDS(args$cds)
 
-
-
-
-# cell_meta_data = colData(cds) %>%
-#   as_tibble() %>%
-#   select(cell) %>%
-#   separate(cell, into = c("pcr_p5", "pcr_p7", "rt_plate_well", "lig_well"), sep = "_") %>%
-#   mutate(pcr_plate = paste(str_sub(pcr_p7, start = 1, end = 1), str_sub(pcr_p5, start = 2, end = 3), sep = "")) %>%
-#   select(pcr_plate, everything(), -pcr_p5, -pcr_p7)
-# colData(cds)$pcr_plate = cell_meta_data$pcr_plate
-# colData(cds)$rt_plate_well = cell_meta_data$rt_plate_well
-# colData(cds)$lig_well = cell_meta_data$lig_well
-
 # Extract meta info from cell name 
 df <- as.data.frame(colData(cds))
 meta_types <-  meta_types <- c("P5_barcode", "P7_barcode", "RT_barcode", "Ligation_barcode")
@@ -112,19 +102,7 @@ for (m in meta_types) {
 # Extract pcr plate number
 cds$plate <- sapply(strsplit(as.character(meta$RT_barcode), "-"), `[`, 1)
 
-# UMI cutoff
-# Prob don't need the lower cutoff if running through our pipeline 
-# lower_cutoff = 100 #### need to think about if umi cutoff for cds is not 100
-# upper_cutoff = args$upper_umi_cutoff
-
-#### should already have a lower cutoff of 100 so may not need that portion 
-# cds = cds[,colData(cds)$n.umi >= lower_cutoff & colData(cds)$n.umi <= upper_cutoff]
-
-
-# Gets list of cell names with hash umis 
-# cell_list = fread("CHEMFISH.ATOH7/CHEMFISH.ATOH7.hashumis_cells.txt", 
-#                   header = FALSE, 
-#                   data.table = F)[,1]
+# Get list of cell names with hash umis 
 
 cell_list <- fread(args$cell_list,
                   header = FALSE,
@@ -139,31 +117,25 @@ hash_list = fread(args$hash_list,
 # Add hash names to rows and cell names with hashes to column 
 # Effectively, a hash by cell matrix 
 
-
 hash_mtx = Matrix::readMM(args$hash_matrix)
 hash_mtx = as(hash_mtx, "dgCMatrix")
 rownames(hash_mtx) = hash_list
 colnames(hash_mtx) = cell_list
 
-# Flip it so that the hashes are columns and the cells are rows
+# Transpose hash matrix so hashes are columns and cells are rows
 hash_mtx = t(hash_mtx)
-# Comes in as a sparse matrix
-# hash_mtx[1:5, 1:5]
 
 # Grab sci umis 
 rna_umis = fread(args$umis_per_cell,
                  header = F, data.table = F, col.names = c("cell", "n.umi"))
 
 # Filter for umis that are less than 5
-#### Determine background cell hashes to find top_to_second_best_ratio
-
+# Determine background cell hashes to find top_to_second_best_ratio
 background_cell_hashes =
-  rna_umis$cell[rna_umis$n.umi < 5] %>%
+  rna_umis$cell[rna_umis$n.umi < args$hash_umi_cutoff] %>%
   as.character()
 
-#### Assigns number of hash umis to each cell, pvals, qvals, top_to_second_best_ration, and the top oligo
-
-
+# Assign number of hash umis to each cell, pvals, qvals, top_to_second_best_ration, and the top oligo
 corrected_hash_table = assign_hash_labels(hash_matrix = hash_mtx,
                                           test_cell_hashes = cds$cell,
                                           background_cell_hashes = background_cell_hashes)
@@ -172,45 +144,19 @@ sample_name = args$key
 fwrite(corrected_hash_table, file=paste0(sample_name, "_hash_table.csv"), sep = ",")
 
 # merge hash table with cds to assign to cells
-
-# pval, qval, top to second best_ratio, 
-# corrected_hash_table <- as.data.frame(corrected_hash_table)
-# cds$pval = corrected_hash_table$pval
-# cds$qval = corrected_hash_table$qval
-# cds$top_to_second_best_ratio$corrected_hash_table$top_to_second_best_ratio
-
 merged = as.data.table(merge(x=corrected_hash_table, y=colData(cds), by = "cell",all.x=FALSE, all.y=TRUE))
 merged <- merged %>% mutate_at(vars("hash_umis"), ~replace_na(., 0)) # add 0 if a cell has no hash
 
-
-
-#### Split top oligo by "." into top oligo 1, top oligo2...
-#### Not actually accurate since it labelled as if these are ranked by top oligos 
-#### This is actually meta data such as age, drug, etc 
-
-
 # suppressMessages(merged <- splitstackshape::cSplit(merged, "top_oligo", "."))
 
-
-colData(cds)$top_to_second_best_ratio = merged$top_to_second_best_ratio
 colData(cds)$hash_umis = merged$hash_umis
+colData(cds)$pval = merged$pval
+colData(cds)$qval = merged$qval
+colData(cds)$top_to_second_best_ratio = merged$top_to_second_best_ratio
 colData(cds)$top_oligo = merged$top_oligo
 
-
-# colData(cds)$age = merged$top_oligo_2
-# colData(cds)$temp = merged$top_oligo_3
-# colData(cds)$pheno = merged$top_oligo_4
-
-# Don't split hash plate and hash well for now. 
-
-
-# colData(cds)$hash_plate = merged$top_oligo_5
-# colData(cds)$hash_well = merged$top_oligo_6
-
-# drop any cells with no good hash assignment
-
-#### Create an option where the threshold can be changed 
-# cds_filt <- cds[,colData(cds)$hash_umis > args$hash_umi_cutoff]
+# Drop any cells with less than hash umi cutof
+cds_filt <- cds[,colData(cds)$hash_umis >= args$hash_umi_cutoff]
 # cds_filt <- cds_filt[,colData(cds_filt)$top_to_second_best_ratio > args$hash_ratio]
 
-saveRDS(cds,file=paste0(sample_name, "_cds.RDS"))
+saveRDS(cds_filt,file=paste0(sample_name, "_cds.RDS"))

@@ -33,9 +33,7 @@ params.max_wells_per_sample = 20
 params.garnett_file = false
 params.skip_doublet_detect = false
 params.run_emptyDrops = false
-// params.hash_ratio = 2.5
-// params.upper_umi_cutoff = 10000 
-// params.hash_umi_cutoff = 5
+params.hash_umi_cutoff = 5
 
 
 //print usage
@@ -72,8 +70,6 @@ if (params.help) {
     log.info '    params.max_wells_per_sample = 20           The maximum number of wells per sample - if a sample is in more wells, the fastqs will be split then reassembled for efficiency.'
     log.info '    params.garnett_file = false                Path to a csv with two columns, first is the sample name, and second is a path to the Garnett classifier to be applied to that sample. Default is false - no classification.'
     log.info '    params.skip_doublet_detect = false         Whether to skip doublet detection, i.e. scrublet - useful for very large datasets.'
-    log.info '    params.hash_ratio = 2.5 Parameter to indicate the ratio of top hash to second best oligo assigned '
-    // log.info '    params.upper_umi_cutoff = 5000             Max number of UMIs to filter for hash reads'
     log.info '    params.hash_umi_cutoff = 5                 The hash umi cutoff to be called a hash in cds object'
     log.info 'Issues? Contact hpliner@uw.edu'
     exit 1
@@ -313,8 +309,6 @@ process gather_info {
     # bash watch for errors
     set -ueo pipefail
 
-    echo "test hash"
-
     spec=`sed 's/ *\$//g' good_sample_sheet.csv | awk 'BEGIN {FS=",";OFS=","}{split(\$2,a,"_fq_part");gsub("[_ /-]", ".", a[1]);print(\$1, a[1], \$3)}' | awk 'BEGIN {FS=","}; \$2=="$key" {print \$3}' | uniq`
     star_mem=`awk -v var="\$spec" '\$1==var {print \$3}' $params.star_file | uniq`
     star_path=`awk -v var="\$spec" '\$1==var {print \$2}' $params.star_file | uniq`
@@ -384,8 +378,6 @@ process process_hashes {
     """
     # bash watch for errors
     set -ueo pipefail
-
-    echo "process_hashes_test"
 
     process_hashes.py --hash_sheet $params.hash_list \
         --fastq <(zcat $input_fastq) --key $key
@@ -1300,9 +1292,6 @@ process make_cds {
     # bash watch for errors
     set -ueo pipefail
 
-
-    echo "testing hash 4" 
-
     cat ${logfile} > make_cds.log
     printf "** Start process 'make_cds' at: \$(date)\n\n" >> make_cds.log
     printf "    Process versions:
@@ -1462,6 +1451,7 @@ Process: reformat_qc
     sample_stats - csv with sample-wise statistics
     cell_qc - csv of cell quality control information
     collision - file containing collision rate if barnyard sample
+    cds_dir - temp directory containing cds object and cell qc csv for assigning hash
 
  Pass through:
 
@@ -1473,15 +1463,16 @@ Process: reformat_qc
  Downstream:
     generate_qc_metrics
     zip_up_sample_stats
-    assign_hash
+    assign_hash (if true)
     collapse_collision
 
  Published:
-    cds_object - cds object in RDS format
     sample_stats - csv with sample-wise statistics
-    cell_qc - csv of cell quality control information
 
  Notes:
+    Nextflow dsl1 doesn't allow for conditional channel output or publishing, "temp_dir" is used 
+    as a work around to publish one final cds object when hash assignment is true 
+    without modifying the input cds object. 
 
 *************/
 
@@ -1506,19 +1497,11 @@ process reformat_qc {
         file("*collision.txt") into collision
         file("temp_fold") into temp_dir
 
-    // script:
-
-    //     if (params.hash_list != false) {
-    //        output: file("temp_fold") into for_hash_cds_dir
-    //     }
-
 
     """
     #!/usr/bin/env Rscript
 
     library(monocle3)
-
-    print("testing 8")
 
     dir.create("temp_fold")
     cds <- readRDS("$cds_object")
@@ -1649,7 +1632,6 @@ process generate_qc_metrics {
     # bash watch for errors
     set -ueo pipefail
 
-    echo " testing"
     generate_qc.R\
         $cds_object $umis_per_cell $key \
         --specify_cutoff $params.umi_cutoff
@@ -1760,7 +1742,7 @@ process calc_cell_totals {
 Process: assign_hash
 
  Inputs:
-    cds_object - cds in RDS format 
+    cds_dir - temp directory containing cds object and cell qc csv
     hash_cell - text file with list of cell names with hash umis 
     hash_list - text file with list of hash names 
     hash_mtx - sparse matrix with hash umi counts for each cell 
@@ -1769,6 +1751,7 @@ Process: assign_hash
  Outputs:
     corrected_hash_table - csv file with data frame of cells and hash stats 
     hash_cds - cds object with hash info
+    cell_qc - csv of cell quality control information
 
  Pass through:
 
@@ -1780,9 +1763,11 @@ Process: assign_hash
  Published:
     hash_table - csv file with data frame of cells and hash stats 
     cds - cds object with hash info in RDS format
+    cell_qc - csv of cell quality control information
 
  Notes:
     runs only when params.hash_list = true
+
 *************/
 
 
@@ -1809,14 +1794,9 @@ process assign_hash {
     when: 
         params.hash_list != false 
 
-    // --upper_umi_cutoff $params.upper_umi_cutoff \
-    // --hash_ratio $params.hash_ratio \
-    // --hash_umi_cutoff $params.hash_umi_cutoff
     """
     # bash watch for errors
     set -ueo pipefail
-
-    echo "testing"
 
     cp ${cds_dir}/*.csv .
 
@@ -1826,7 +1806,8 @@ process assign_hash {
         $hash_cell \
         $hash_hash \
         ${cds_dir}/*cds.RDS \
-        $umis_per_cell 
+        $umis_per_cell \
+        $params.hash_umi_cutoff
 
     """
 }
@@ -1841,7 +1822,7 @@ Process: publish_cds_and_cell_qc
 
  Outputs: 
     cds_obj - monocle cds object in RDS format 
-    cell_qc - csv of cell quality control informatio
+    cell_qc - csv of cell quality control information
 
  Summary: 
     Publish monocle cds object and cell qc when not a hash experiment
@@ -1850,7 +1831,17 @@ Process: publish_cds_and_cell_qc
 
  Downstream: 
 
+ Published:
+    cds - cds object in RDS format
+    cell_qc - csv of cell quality control information
+
  Notes: 
+    Runs only when params.hash_list == false
+
+    Nextflow dsl1 doesn't allow for conditional channel output or publishing, "temp_dir" is used 
+    as a work around to publish one final cds object when hash assignment is true 
+    without modifying the input cds object. This conditional process is used to publish the initial
+    cds object (without hash info) and cell qc when the hash processes are skipped.
 
 *************/
 
@@ -1866,20 +1857,16 @@ process publish_cds_and_cell_qc {
         file(cds_dir) from temp_dir_copy02
 
     output:
-        // set key, file(cds), file(cell_qc) into publish_out
         file("*cds.RDS") into pub_cds
         file("*cell_qc.csv") into pub_cell_qc
     
     when:
         params.hash_list == false
 
-
-
     """
     # bash watch for errors
     set -ueo pipefail
-
-    echo "testing"
+    
     cp ${cds_dir}/*.RDS . 
     cp ${cds_dir}/*.csv . 
 
