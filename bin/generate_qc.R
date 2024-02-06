@@ -8,6 +8,7 @@ suppressPackageStartupMessages({
   library(monocle3)
   library(tidyverse)
   library(cowplot)
+  library(randomcoloR)
 })
 
 parser = argparse::ArgumentParser(description='Script to generate qc plots.')
@@ -88,6 +89,8 @@ rt_stats <- function(sample_name, cds) {
     
 }
 
+
+
 # Perform well check for each RT well 
 # Looks at number of UMIs, percent mitochondrial UMIs and 
 # percent of a UMAP cluster in a well 
@@ -102,6 +105,12 @@ well_check <- function(sample_name, cds) {
  
   # Add cluster information to colData for each cell 
   colData(cds)$clusters = clusters(cds)
+
+  # Generate random colors for easy viewing in well checks and umaps 
+  nColor <- length(levels(cds$clusters))
+  colpal <- randomcoloR::distinctColorPalette(k = nColor)
+  # pie(rep(1, nColor), col = colpal)
+
 
   # Calculate percentages of each cluster 
   meta <- data.frame(colData(cds))
@@ -167,6 +176,7 @@ well_check <- function(sample_name, cds) {
   perc_clust_plot <- ggplot(clusterCounts, aes(x=RT_barcode, y=perSamp, fill=clusters)) +
     geom_bar(stat="identity") +
     theme_light() +
+    scale_fill_manual(values=colpal) +
     theme(axis.text.x=element_blank(),
           text=element_text(size=14)) +
     xlab("") +
@@ -178,6 +188,7 @@ well_check <- function(sample_name, cds) {
   perc_clust_rt <- ggplot(clusterCounts, aes(x=RT_barcode, y=perRT, fill=clusters)) +
     geom_bar(stat="identity") +
     theme_light() +
+    scale_fill_manual(values=colpal) +
     theme(axis.text.x=element_text(angle=45, hjust=1),
           text=element_text(size=14)) +
     xlab("RT Wells") +
@@ -191,7 +202,8 @@ well_check <- function(sample_name, cds) {
                          rel_heights = c(1.5,1.5,1,1))
 
   ggsave(paste0(sample_name, "_wellcheck.png"), well_check_combined, width=14, height = 17)
-
+  
+  return (colpal) # return colors used for clusters
 }
 
 
@@ -200,6 +212,7 @@ well_check <- function(sample_name, cds) {
 #################################################
 
 plot_cells_simp <- function(cds,
+                            colpal,
                             x=1,
                             y=2,
                             reduction_method = c("UMAP", "tSNE", "PCA", "LSI", "Aligned"),
@@ -410,7 +423,8 @@ plot_cells_simp <- function(cds,
     xlab(paste(reduction_method, x)) +
     ylab(paste(reduction_method, y)) +
     theme(legend.key = element_blank()) +
-    theme(panel.background = element_rect(fill='white'))
+    theme(panel.background = element_rect(fill='white')) + 
+    scale_color_manual(values=colpal) 
   g
 }
 
@@ -431,10 +445,10 @@ gen_plots <- function(sample_name, sample_path) {
 
     # Generate UMI and mitochondrial stats by rt barcode 
     samp_cds <- rt_stats(sample_name, samp_cds)
-    well_check(sample_name, samp_cds)
+    colpal = well_check(sample_name, samp_cds)
 
     png(paste0(sample_name, "_UMAP.png"), width = 5, height = 5, res = 600, units = "in")
-    print(suppressMessages(plot_cells_simp(samp_cds) + theme(text = element_text(size = 8))))
+    print(suppressMessages(plot_cells_simp(samp_cds, colpal) + theme(text = element_text(size = 8))))
     dev.off()
 
     for (mod in garnett_mods) {
