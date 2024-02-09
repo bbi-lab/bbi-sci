@@ -82,8 +82,11 @@ module load R/4.0.0
 R
 ```
 
-Then from within R, follow the installation instructions on the [monocle3 website](https://cole-trapnell-lab.github.io/monocle3/).
-And the instructions for garnett on the [Garnett website](https://cole-trapnell-lab.github.io/garnett/docs_m3/#install-from-github).
+Then from within R, follow the installation instructions for the following R packages:   
+- Monocle3: [monocle3 website](https://cole-trapnell-lab.github.io/monocle3/).
+- Garnette: [Garnett website](https://cole-trapnell-lab.github.io/garnett/docs_m3/#install-from-github).
+- DropletUtils: [DropletUtils website](https://bioconductor.org/packages/release/bioc/html/DropletUtils.html)
+- randomColoR: Run ```install.packages("randomcoloR")```in R. 
 
 You will also require scrublet, a tool used to detect doublets in single-cell RNA-seq data. You can install it from source by running:
 
