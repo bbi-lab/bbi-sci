@@ -34,6 +34,7 @@ params.garnett_file = false
 params.skip_doublet_detect = false
 params.run_emptyDrops = false
 params.hash_umi_cutoff = 5
+params.hash_ratio = false
 
 
 //print usage
@@ -70,7 +71,8 @@ if (params.help) {
     log.info '    params.max_wells_per_sample = 20           The maximum number of wells per sample - if a sample is in more wells, the fastqs will be split then reassembled for efficiency.'
     log.info '    params.garnett_file = false                Path to a csv with two columns, first is the sample name, and second is a path to the Garnett classifier to be applied to that sample. Default is false - no classification.'
     log.info '    params.skip_doublet_detect = false         Whether to skip doublet detection, i.e. scrublet - useful for very large datasets.'
-    log.info '    params.hash_umi_cutoff = 5                 The hash umi cutoff to be called a hash in cds object'
+    log.info '    params.hash_umi_cutoff = 5                 The hash umi cutoff to be called a hash in cds object. Default is 5'
+    log.info '    params.hash_ratio = false                  The min hash umi ratio for top to second best. Default is false and not filtered'
     log.info 'Issues? Contact hpliner@uw.edu'
     exit 1
 }
@@ -1767,9 +1769,8 @@ Process: assign_hash
 
  Notes:
     runs only when params.hash_list = true
-
+    
 *************/
-
 
 save_hash_cds = {params.output_dir + "/" + it - ~/_cds.RDS/ + "/" + it}
 save_cell_qc = {params.output_dir + "/" + it - ~/_cell_qc.csv/ + "/" + it}
@@ -1807,7 +1808,8 @@ process assign_hash {
         $hash_hash \
         ${cds_dir}/*cds.RDS \
         $umis_per_cell \
-        $params.hash_umi_cutoff
+        $params.hash_umi_cutoff \
+        $params.hash_ratio
 
     """
 }
@@ -1964,6 +1966,7 @@ process generate_dashboard {
         file all_collision
         file plots from qc_plots.collect()
         file scrublet_png from scrub_pngs.collect()
+        file(cds_object) from hash_cds
 
     output:
         file exp_dash into exp_dash_out
@@ -2056,6 +2059,8 @@ process finish_log {
     printf "    params.umi_cutoff:            $params.umi_cutoff\n" >> ${key}_full.log
     printf "    params.rt_barcode_file:       $params.rt_barcode_file\n" >> ${key}_full.log
     printf "    params.hash_list:             $params.hash_list\n" >> ${key}_full.log
+    printf "    params.hash_umi_cutoff:       $params.hash_umi_cutoff\n" >> ${key}_full.log
+    printf "    params.hash_ratio:            $params.hash_ratio\n" >> ${key}_full.log
     printf "    params.max_wells_per_sample:  $params.max_wells_per_sample\n\n" >> ${key}_full.log
     printf "    params.garnett_file:          $params.garnett_file\n\n" >> ${key}_full.log
     printf "    params.skip_doublet_detect:   $params.skip_doublet_detect\n\n" >> ${key}_full.log
