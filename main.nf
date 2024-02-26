@@ -355,7 +355,10 @@ Process: process_hashes
 // Group fastqs for finding hash barcodes
 fastqs_out
     .groupTuple()
-    .set { for_hash }
+    .set { fastqs_for_hash }
+
+// Second channel will be used to calculate hash PCR duplication rate 
+fastqs_for_hash.into{fastqs_for_hash_copy01; fastqs_for_hash_copy02}
 
 save_hash_cell = {params.output_dir + "/" + it - ~/.hashumis_cells.txt/ + "/" + it}
 save_hash_hash = {params.output_dir + "/" + it - ~/.hashumis_hashes.txt/ + "/" + it}
@@ -368,7 +371,7 @@ process process_hashes {
     publishDir path: "${params.output_dir}/", saveAs: save_hash_mtx, pattern: "*.mtx", mode: 'copy'
 
     input:
-        set key, file(input_fastq) from for_hash
+        set key, file(input_fastq) from fastqs_for_hash_copy01
 
     output:
         file("*hash.log") into hash_logs
@@ -1598,8 +1601,6 @@ Process: generate_qc_metrics
 
 *************/
 
-// rscrub_out.into{ rscrub_out_copy01; rscrub_out_copy02}
-
 temp_dir.into{temp_dir_copy01; temp_dir_copy02}
 
 for_gen_qc = rscrub_out.join(umis_per_cell)
@@ -1810,6 +1811,59 @@ process assign_hash {
         $umis_per_cell \
         $params.hash_umi_cutoff \
         $params.hash_ratio
+
+    """
+}
+
+
+/*************
+
+Process: calc_hash_dup
+
+ Inputs:
+
+ Outputs:
+
+
+ Pass through:
+
+ Summary:
+
+ Downstream:
+    
+ Published:
+
+ Notes:
+    runs only when params.hash_list = true
+    
+*************/
+
+
+
+process calc_hash_dup {
+    cache 'lenient'
+
+    input:
+        set key, file(input_fastq) from fastqs_for_hash_copy02
+
+    output:
+        set key, file("*hash.gz") into hash_assign 
+    when: 
+        params.hash_list != false 
+// awk -f $SCRIPTS_DIR/parseHash.awk $RT_OLIGO_LIST - | sed -e 's/|/,/g' | awk 'BEGIN {FS=","; OFS="\t";} {print $2,$3"_"$4"_"$5,$6,$7,$8}' | gzip > "${key}.hash.gz"
+    """
+    # bash watch for errors
+    set -ueo pipefail
+
+    echo "key: $key"
+    echo "hash_list: $params.hash_list" 
+    head $params.hash_list
+
+    BATCH_ID=`basename "$key"`
+    zcat $input_fastq | parseHash.awk $params.hash_list -\
+    | sed -e 's/|/,/g'\
+    | awk 'BEGIN {FS=","; OFS="\t";} {print \$2,\$3"_"\$4"_"\$5,\$6,\$7,\$8}'\
+    | gzip > "${key}.hash.gz"
 
     """
 }
