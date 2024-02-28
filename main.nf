@@ -35,6 +35,7 @@ params.skip_doublet_detect = false
 params.run_emptyDrops = false
 params.hash_umi_cutoff = 5
 params.hash_ratio = false
+params.datamash = "/net/trapnell/vol1/jspacker/datamash/datamash"
 
 
 //print usage
@@ -353,12 +354,19 @@ Process: process_hashes
 *************/
 
 // Group fastqs for finding hash barcodes
-fastqs_out
+fastqs_out.into{fastqs_out_copy01; fastqs_for_hash_copy02}
+
+fastqs_out_copy01
     .groupTuple()
-    .set { fastqs_for_hash }
+    .set { fastqs_for_hash_copy01 }
+
+// fastqs_out
+//     .groupTuple()
+//     .set { fastqs_for_hash }
 
 // Second channel will be used to calculate hash PCR duplication rate 
-fastqs_for_hash.into{fastqs_for_hash_copy01; fastqs_for_hash_copy02}
+// fastqs_for_hash.into{fastqs_for_hash_copy01; fastqs_for_hash_copy02}
+
 
 save_hash_cell = {params.output_dir + "/" + it - ~/.hashumis_cells.txt/ + "/" + it}
 save_hash_hash = {params.output_dir + "/" + it - ~/.hashumis_hashes.txt/ + "/" + it}
@@ -384,6 +392,7 @@ process process_hashes {
     # bash watch for errors
     set -ueo pipefail
 
+    echo "test"
     process_hashes.py --hash_sheet $params.hash_list \
         --fastq <(zcat $input_fastq) --key $key
 
@@ -1818,7 +1827,7 @@ process assign_hash {
 
 /*************
 
-Process: calc_hash_dup
+Process: sort_hash
 
  Inputs:
 
@@ -1839,18 +1848,26 @@ Process: calc_hash_dup
 *************/
 
 
-
-process calc_hash_dup {
+// save_sorted_hash = {params.output_dir + "/" + it - ~/_sorted_hash.gz/ + "/" + it}
+process sort_hash {
     cache 'lenient'
 
+    // publishDir path: "${params.output_dir}/", saveAs: save_sorted_hash, pattern: "*sorted_hash.gz", mode: 'copy'
+    
     input:
         set key, file(input_fastq) from fastqs_for_hash_copy02
 
     output:
-        set key, file("*hash.gz") into hash_assign 
+        set key, file("*hash") into sorted_hash
+        // file("runtime") in runtime
+
     when: 
         params.hash_list != false 
-// awk -f $SCRIPTS_DIR/parseHash.awk $RT_OLIGO_LIST - | sed -e 's/|/,/g' | awk 'BEGIN {FS=","; OFS="\t";} {print $2,$3"_"$4"_"$5,$6,$7,$8}' | gzip > "${key}.hash.gz"
+    
+    script:
+        name = input_fastq.baseName - ~/.fastq/
+        // key = input_fastq.baseName.split(/-L[0-9]{3}/)[0].split(/\.fq.part/)[0]
+
     """
     # bash watch for errors
     set -ueo pipefail
@@ -1859,11 +1876,114 @@ process calc_hash_dup {
     echo "hash_list: $params.hash_list" 
     head $params.hash_list
 
-    BATCH_ID=`basename "$key"`
-    zcat $input_fastq | parseHash.awk $params.hash_list -\
+    LL_ALL=C
+    time zcat $input_fastq | parseHash.awk $params.hash_list -\
     | sed -e 's/|/,/g'\
     | awk 'BEGIN {FS=","; OFS="\t";} {print \$2,\$3"_"\$4"_"\$5,\$6,\$7,\$8}'\
-    | gzip > "${key}.hash.gz"
+    | awk -v S="$key" 'BEGIN {FS="\t"; OFS="\t";} {print S, \$2, \$3, \$4}' > "${name}_sorted_hash"
+
+    """
+}
+
+
+/*************
+
+Process: calc_hash_dup
+
+ Inputs:
+
+ Outputs:
+
+
+ Pass through:
+
+ Summary:
+
+ Downstream:
+    
+ Published:
+
+ Notes:
+    runs only when params.hash_list = true
+    
+*************/
+
+sorted_hash
+    .groupTuple()
+    .set { for_calc_dup }
+
+save_sorted_hash = {params.output_dir + "/" + it - ~/_sorted_hash_combined.gz/ + "/" + it}
+save_hash_reads = {params.output_dir + "/" + it - ~/_hash_reads_per_cell.txt/ + "/" + it}
+save_hash_umis = {params.output_dir + "/" + it - ~/_hash_umis_per_cell.txt/ + "/" + it}
+// save_hash_table = {params.output_dir + "/" + it - ~/_hash_table/ + "/" + it}
+save_hash_knee = {params.output_dir + "/" + it - ~/_hash_knee_plot.png/ + "/" + it}
+save_hash_dup = {params.output_dir + "/" + it - ~/_hash_dup_rate.txt/ + "/" + it}
+
+
+process calc_hash_dup {
+    cache 'lenient'
+    publishDir path: "${params.output_dir}/", saveAs: save_sorted_hash, pattern: "*sorted_hash_combined.gz", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_hash_reads, pattern: "*hash_reads_per_cell.txt", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_hash_umis, pattern: "*hash_umis_per_cell.txt", mode: 'copy'
+    // publishDir path: "${params.output_dir}/", saveAs: save_hash_table, pattern: "*hash_table", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_hash_knee, pattern: "*hash_knee_plot.png", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_hash_dup, pattern: "*hash_dup_rate.txt", mode: 'copy'
+
+    input:
+        set key, file(hash_file) from for_calc_dup
+
+    output:
+        file("*sorted_hash_combined.gz*") into hash_assign 
+        // file("*hash_reads_per_cell") into hash_reads_cell
+        // file("*hash_umis_per_cell") into hash_umis_per_cell
+        // file("*hash_table") into hash_table
+        file("*.png") into hash_knee
+        // file("*hash_dup_rate.txt") into hash_dup
+        file("*.txt") into hash_results
+
+    when: 
+        params.hash_list != false 
+    
+    // script:
+    //     name = input_fastq.baseName - ~/.fastq/
+        // key = input_fastq.baseName.split(/-L[0-9]{3}/)[0].split(/\.fq.part/)[0]
+
+    // cat "${key}_sorted_hash_combined" \
+    // | uniq \
+    // | $DATAMASH_PATH -g 1,2,4,5 count 3  > ${key}_hash_table
+
+
+    """
+    # bash watch for errors
+    set -ueo pipefail
+
+    echo "testing"
+
+    LL_ALL=C
+    time sort -m \
+    *sorted_hash \
+    -S 50G -T /tmp/ -k2,2 -k4,4 -k3,3 --parallel=8 > ${key}_sorted_hash_combined
+
+    cat "${key}_sorted_hash_combined" \
+    | $params.datamash -g 2,3,4 count 3 \
+    | $params.datamash -g 1 sum 4 \
+    | awk -v S=$key '{OFS="\t";} {print S, \$0}' > ${key}_hash_reads_per_cell.txt
+
+    cat "${key}_sorted_hash_combined" \
+    | uniq \
+    | $params.datamash -g 2,3,4 count 3 \
+    | $params.datamash -g 1 sum 4 \
+    | awk -v S=$key '{OFS="\t";} {print S, \$0}' > ${key}_hash_umis_per_cell.txt
+
+    knee-plot_test.R \
+    "${key}_hash_umis_per_cell.txt" \
+    $key 
+
+    paste "${key}_hash_umis_per_cell.txt" "${key}_hash_reads_per_cell.txt" \
+     | cut -f 1,2,6,3 \
+     | awk 'BEGIN {OFS="\t";} {dup = 100 * (1-\$3/\$4); print \$1,\$2,\$3,\$4,dup;}' > ${key}_hash_dup_rate.txt
+
+    gzip "${key}_sorted_hash_combined"
 
     """
 }
