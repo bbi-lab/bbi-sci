@@ -35,7 +35,7 @@ params.skip_doublet_detect = false
 params.run_emptyDrops = false
 params.hash_umi_cutoff = 5
 params.hash_ratio = false
-params.datamash = "/net/trapnell/vol1/jspacker/datamash/datamash"
+// params.datamash = "/net/trapnell/vol1/jspacker/datamash/datamash"
 
 
 //print usage
@@ -1868,19 +1868,16 @@ process sort_hash {
         name = input_fastq.baseName - ~/.fastq/
         // key = input_fastq.baseName.split(/-L[0-9]{3}/)[0].split(/\.fq.part/)[0]
 
+    
     """
     # bash watch for errors
     set -ueo pipefail
 
-    echo "key: $key"
-    echo "hash_list: $params.hash_list" 
-    head $params.hash_list
-
-    LL_ALL=C
-    time zcat $input_fastq | parseHash.awk $params.hash_list -\
+    LL_ALL=C zcat $input_fastq | parseHash.awk $params.hash_list -\
     | sed -e 's/|/,/g'\
-    | awk 'BEGIN {FS=","; OFS="\t";} {print \$2,\$3"_"\$4"_"\$5,\$6,\$7,\$8}'\
-    | awk -v S="$key" 'BEGIN {FS="\t"; OFS="\t";} {print S, \$2, \$3, \$4}' > "${name}_sorted_hash"
+    | awk 'BEGIN {FS=","; OFS="\t";} {print \$2,\$3"_"\$4"_"\$5,\$6,\$7,\$8}' \
+    | awk -v S="$key" 'BEGIN {FS="\t"; OFS="\t";} {print S, \$2, \$3, \$4}' \
+    | sort -T /tmp/ -k2,2 -k4,4 -k3,3 --parallel=8 > "${name}_sorted_hash"
 
     """
 }
@@ -1915,7 +1912,7 @@ sorted_hash
 save_sorted_hash = {params.output_dir + "/" + it - ~/_sorted_hash_combined.gz/ + "/" + it}
 save_hash_reads = {params.output_dir + "/" + it - ~/_hash_reads_per_cell.txt/ + "/" + it}
 save_hash_umis = {params.output_dir + "/" + it - ~/_hash_umis_per_cell.txt/ + "/" + it}
-// save_hash_table = {params.output_dir + "/" + it - ~/_hash_table/ + "/" + it}
+save_hash_table = {params.output_dir + "/" + it - ~/_hash_assigned_table/ + "/" + it}
 save_hash_knee = {params.output_dir + "/" + it - ~/_hash_knee_plot.png/ + "/" + it}
 save_hash_dup = {params.output_dir + "/" + it - ~/_hash_dup_rate.txt/ + "/" + it}
 
@@ -1925,7 +1922,7 @@ process calc_hash_dup {
     publishDir path: "${params.output_dir}/", saveAs: save_sorted_hash, pattern: "*sorted_hash_combined.gz", mode: 'copy'
     publishDir path: "${params.output_dir}/", saveAs: save_hash_reads, pattern: "*hash_reads_per_cell.txt", mode: 'copy'
     publishDir path: "${params.output_dir}/", saveAs: save_hash_umis, pattern: "*hash_umis_per_cell.txt", mode: 'copy'
-    // publishDir path: "${params.output_dir}/", saveAs: save_hash_table, pattern: "*hash_table", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_hash_table, pattern: "*hash_assigned_table", mode: 'copy'
     publishDir path: "${params.output_dir}/", saveAs: save_hash_knee, pattern: "*hash_knee_plot.png", mode: 'copy'
     publishDir path: "${params.output_dir}/", saveAs: save_hash_dup, pattern: "*hash_dup_rate.txt", mode: 'copy'
 
@@ -1936,7 +1933,7 @@ process calc_hash_dup {
         file("*sorted_hash_combined.gz*") into hash_assign 
         // file("*hash_reads_per_cell") into hash_reads_cell
         // file("*hash_umis_per_cell") into hash_umis_per_cell
-        // file("*hash_table") into hash_table
+        // file("*hash_assigned_table") into hash_assigned_table
         file("*.png") into hash_knee
         // file("*hash_dup_rate.txt") into hash_dup
         file("*.txt") into hash_results
@@ -1948,32 +1945,29 @@ process calc_hash_dup {
     //     name = input_fastq.baseName - ~/.fastq/
         // key = input_fastq.baseName.split(/-L[0-9]{3}/)[0].split(/\.fq.part/)[0]
 
-    // cat "${key}_sorted_hash_combined" \
-    // | uniq \
-    // | $DATAMASH_PATH -g 1,2,4,5 count 3  > ${key}_hash_table
-
-
     """
     # bash watch for errors
     set -ueo pipefail
 
-    echo "testing"
-
-    LL_ALL=C
-    time sort -m \
+    LL_ALL=C sort -m \
     *sorted_hash \
     -S 50G -T /tmp/ -k2,2 -k4,4 -k3,3 --parallel=8 > ${key}_sorted_hash_combined
 
     cat "${key}_sorted_hash_combined" \
-    | $params.datamash -g 2,3,4 count 3 \
-    | $params.datamash -g 1 sum 4 \
+    | datamash -g 2,3,4 count 3 \
+    | datamash -g 1 sum 4 \
     | awk -v S=$key '{OFS="\t";} {print S, \$0}' > ${key}_hash_reads_per_cell.txt
 
     cat "${key}_sorted_hash_combined" \
-    | uniq \
-    | $params.datamash -g 2,3,4 count 3 \
-    | $params.datamash -g 1 sum 4 \
+    | uniq > ${key}_uniq_sorted_hash_combined
+
+    cat "${key}_uniq_sorted_hash_combined" \
+    | datamash -g 2,3,4 count 3 \
+    | datamash -g 1 sum 4 \
     | awk -v S=$key '{OFS="\t";} {print S, \$0}' > ${key}_hash_umis_per_cell.txt
+
+    cat "${key}_uniq_sorted_hash_combined" \
+    | datamash -g 1,2,4,5 count 3  > ${key}_hash_assigned_table.txt
 
     knee-plot_test.R \
     "${key}_hash_umis_per_cell.txt" \
