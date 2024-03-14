@@ -100,8 +100,8 @@ for (m in meta_types) {
   colData(cds)[,m] <- meta[[m]]
 }
 
-# Extract pcr plate number
-cds$plate <- sapply(strsplit(as.character(meta$RT_barcode), "-"), `[`, 1)
+# Extract RT plate number
+cds$RT_plate <- sapply(strsplit(as.character(meta$RT_barcode), "-"), `[`, 1)
 
 # Read txt file of cell names with hash umis 
 cell_list <- fread(args$cell_list,
@@ -168,8 +168,5 @@ cds_filt <- cds[,colData(cds)$hash_umis >= args$hash_umi_cutoff]
 if (args$hash_ratio != "false") {
   cds_filt <- cds_filt[,colData(cds_filt)$top_to_second_best_ratio >= args$hash_ratio]
 } 
-
-print("hash ratio:")
-print(args$hash_ratio)
 
 saveRDS(cds_filt,file=paste0(sample_name, "_cds.RDS"))
