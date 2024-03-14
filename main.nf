@@ -385,7 +385,8 @@ process process_hashes {
     """
     # bash watch for errors
     set -ueo pipefail
-
+    
+    echo "test"
     process_hashes.py --hash_sheet $params.hash_list \
         --fastq <(zcat $input_fastq) --key $key
 
@@ -1808,7 +1809,7 @@ process assign_hash {
 
     cp ${cds_dir}/*.csv .
 
-    echo "test"
+    echo "$key"
     assign_hash.R \
         $key \
         $hash_mtx \
