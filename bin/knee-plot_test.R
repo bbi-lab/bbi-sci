@@ -34,7 +34,7 @@ for (this.sample in levels(df$sample)) {
         # scale_y_log10(breaks = c(10, 100, 1000, 10000, 100000)) +
         scale_x_log10() +
         scale_y_log10() +
-        xlab("# of barcodes") +
+        xlab("RT barcodes") +
         ylab("hash UMI count threshold") +
         theme_bw()+
 	 theme(axis.text.x = element_text(angle = 90, hjust = 1))
