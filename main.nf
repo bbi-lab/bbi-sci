@@ -1829,16 +1829,20 @@ process assign_hash {
 Process: sort_hash
 
  Inputs:
+    input_fastq - fastq files 
 
  Outputs:
-
+    sorted_hash - sorted hash umi files 
 
  Pass through:
 
  Summary:
+    Takes in fastq files and finds hash umis using a hash oligo sample sheet.
+    The hash umis are then sorted by cell, hash oligo name, then hash umi. 
 
  Downstream:
-    
+    combine_hash
+
  Published:
 
  Notes:
@@ -1847,26 +1851,20 @@ Process: sort_hash
 *************/
 
 
-// save_sorted_hash = {params.output_dir + "/" + it - ~/_sorted_hash.gz/ + "/" + it}
 process sort_hash {
     cache 'lenient'
-    // queue 'shendure-short.q'
-
-    // publishDir path: "${params.output_dir}/", saveAs: save_sorted_hash, pattern: "*sorted_hash.gz", mode: 'copy'
     
     input:
         set key, file(input_fastq) from fastqs_for_hash_copy02
 
     output:
         set key, file("*hash") into sorted_hash
-        // file("runtime") in runtime
 
     when: 
         params.hash_list != false && params.hash_dup != false
     
     script:
         name = input_fastq.baseName - ~/.fastq/
-        // key = input_fastq.baseName.split(/-L[0-9]{3}/)[0].split(/\.fq.part/)[0]
 
     
     """
@@ -1887,17 +1885,23 @@ process sort_hash {
 Process: combine_hash
 
  Inputs:
+    for_combine_hash - all of the sorted hash umi files for a sample 
 
  Outputs:
+    for_calc_hash_dup - a combined, sorted hash umi file
 
 
  Pass through:
 
  Summary:
+    Takes a multiple sorted hash umi files that were sorted in parallel 
+    merges the sorted files together. 
 
  Downstream:
-    
+    calc_hash_dup
+
  Published:
+    for_calc_hash_dup - all of the sorted hash umis in a gzipped format 
 
  Notes:
     runs only when params.hash_list = true
@@ -1944,18 +1948,29 @@ process combine_hash {
 Process: calc_hash_dup
 
  Inputs:
-    sorted_hash_combined - all sorted hash reads combined
+    sorted_hash_combined - all sorted hash umis combined
 
  Outputs:
+    hash_results - .txt files with hash reads per cell, unique hash umis per cell, and a table of hash umis for each cell
+    for_hash_calc - hash duplication rate per cell 
+    hash_knee - unique hash umi by RT barcode knee plot in .png format
 
 
  Pass through:
 
  Summary:
+    Takes in a combined, sorted hash umi file and calculates the hash duplication rate per cell.
+    First, sums up the total hash reads per cell (non-unique). Second, sums up unique hash umis per cell. 
+    Third, output a hash table with unique hash umis found for each cell. 
+    Fourth, produces a knee plot with unique hash umis by RT barcode.
+    Fifth, calculates the hash duplication rate per by (1-(unique hash umis/ total hash read for thatcell)).
 
  Downstream:
     
  Published:
+    hash_knee - unique hash umi by RT barcode knee plot in .png format
+    hash_results - .txt files with hash reads per cell, unique hash umis per cell, and a table of hash umis for each cell
+
 
  Notes:
     runs only when params.hash_list != false and params.hash_dup!= false
@@ -2011,7 +2026,7 @@ process calc_hash_dup_cell {
     cat "${key}_uniq_sorted_hash_combined" \
     | datamash -g 1,2,4 count 3  > ${key}_hash_assigned_table.txt
 
-    knee-plot_test.R \
+    knee-plot.R \
     "${key}_hash_umis_per_cell.txt" \
     $key 
 
@@ -2031,21 +2046,22 @@ Process: calc_tot_hash_dup
     hash_dup_per_cell - hash duplication rate per cell 
 
  Outputs:
-    total_hash_dup - total hash duplication rate per sample 
+    total_hash_dup - total hash duplication rate per sample by pcr plate
 
  Pass through:
 
  Summary:
+    Calculates total hash duplication rate for each PCR plate. 
 
  Downstream:
     
  Published:
+    total_hash_dup - total hash duplication rate per sample by pcr plate
 
  Notes:
     runs only when params.hash_list != false and params.hash_dup!= false
 
-    Calculates total hash duplication rate by PCR plate. Checks p7 parameters 
-    to see if a whole 96-well p7 plate was used or only p7 rows to determine 
+    Checks p7 parameters to see if a whole 96-well p7 plate was used or only p7 rows to determine 
     PCR plate. If params.p7_rows is equal or less than 2 rows (A-H), then there are less than 
     24 wells (2 x 12) indicating the p7 is by rows so group by pcr plates. If params.p7_rows is greater or equal to 
     7 rows, then a whole p7 plate is used ( 7 x 12 + more) so group by p5 pcr plates. 
