@@ -57,6 +57,7 @@ pip install --user biopython
 pip install --user fmt
 pip install --user pysam
 pip install --user matplotlib
+pip install --user scrublet
 
 git clone https://github.com/andrewhill157/barcodeutils.git
 pushd barcodeutils
@@ -75,17 +76,8 @@ Then from within R, follow the installation instructions for the following R pac
 - Monocle3: [monocle3 website](https://cole-trapnell-lab.github.io/monocle3/)
 - Garnett: [Garnett website](https://cole-trapnell-lab.github.io/garnett/docs_m3/#install-from-github)
 - DropletUtils: [DropletUtils website](https://bioconductor.org/packages/release/bioc/html/DropletUtils.html)
-- randomColoR: Run ```install.packages("randomcoloR")
+- randomColoR: Run ```install.packages("randomcoloR")```
 
-You will also require scrublet, a tool used to detect doublets in single-cell RNA-seq data. You can install it from source by running:
-
-```
-git clone https://github.com/AllonKleinLab/scrublet.git
-pushd scrublet
-pip install -r requirements.txt --user
-python setup.py install --user
-popd
-```
 
 Please note: If you are doing a hashing experiment, you need scipy, which is installed already in python 3.12.1.
 
