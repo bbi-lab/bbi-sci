@@ -31,8 +31,11 @@ params.max_cores = 16
 params.hash_list = false
 params.max_wells_per_sample = 20
 params.garnett_file = false
-params.skip_doublet_detect = false
-params.run_emptyDrops = true
+params.skip_doublet_detect = true
+params.run_emptyDrops = false
+params.hash_umi_cutoff = 5
+params.hash_ratio = false
+params.hash_dup = true
 
 
 //print usage
@@ -69,7 +72,9 @@ if (params.help) {
     log.info '    params.max_wells_per_sample = 20           The maximum number of wells per sample - if a sample is in more wells, the fastqs will be split then reassembled for efficiency.'
     log.info '    params.garnett_file = false                Path to a csv with two columns, first is the sample name, and second is a path to the Garnett classifier to be applied to that sample. Default is false - no classification.'
     log.info '    params.skip_doublet_detect = false         Whether to skip doublet detection, i.e. scrublet - useful for very large datasets.'
-    log.info ''
+    log.info '    params.hash_umi_cutoff = 5                 The hash umi cutoff to be called a hash in cds object. Default is 5'
+    log.info '    params.hash_ratio = false                  The min hash umi ratio for top to second best. Default is false and not filtered'
+    log.info '    params.hash_dup = false                    Whether to run hash PCR duplication rate. params.hash_list also needs to be set to true. Default is false.'
     log.info 'Issues? Contact hpliner@uw.edu'
     exit 1
 }
@@ -349,10 +354,13 @@ Process: process_hashes
 
 *************/
 
-// Group fastqs for finding hash barcodes
-fastqs_out
+//  Group fastqs for finding hash barcodes
+// Second channel will be used to calculate hash PCR duplication rate 
+fastqs_out.into{fastqs_out_copy01; fastqs_for_hash_copy02}
+
+fastqs_out_copy01
     .groupTuple()
-    .set { for_hash }
+    .set { fastqs_for_hash_copy01 }
 
 save_hash_cell = {params.output_dir + "/" + it - ~/.hashumis_cells.txt/ + "/" + it}
 save_hash_hash = {params.output_dir + "/" + it - ~/.hashumis_hashes.txt/ + "/" + it}
@@ -365,11 +373,11 @@ process process_hashes {
     publishDir path: "${params.output_dir}/", saveAs: save_hash_mtx, pattern: "*.mtx", mode: 'copy'
 
     input:
-        set key, file(input_fastq) from for_hash
+        set key, file(input_fastq) from fastqs_for_hash_copy01
 
     output:
         file("*hash.log") into hash_logs
-        set file("*mtx"), file("*hashumis_cells.txt"), file("*hashumis_hashes.txt") into hash_mats
+        set key, file("*mtx"), file("*hashumis_cells.txt"), file("*hashumis_hashes.txt") into hash_mats
 
     when:
         params.hash_list != false
@@ -377,7 +385,7 @@ process process_hashes {
     """
     # bash watch for errors
     set -ueo pipefail
-
+    
     process_hashes.py --hash_sheet $params.hash_list \
         --fastq <(zcat $input_fastq) --key $key
 
@@ -1007,6 +1015,7 @@ Process: count_umis_by_sample
  Downstream:
     make_matrix
     generate_qc_metrics
+    assign_hash (if true)
 
  Published:
     umis_per_cell - count of umis per cell
@@ -1032,6 +1041,7 @@ process count_umis_by_sample {
         set key, file("*UMIs.per.cell.barcode.txt") into umis_per_cell
         set key, file("*fraction_intron_barcode.txt") into fraction_per_cell_intronic
         file "*UMIs.per.cell.barcode.intronic.txt" into umi_per_cell_intronic
+        set key, file("*UMIs.per.cell.barcode.txt") into for_assign_hash_umis
 
     """
     # bash watch for errors
@@ -1444,9 +1454,11 @@ Process: reformat_qc
  Outputs:
     key - sample id
     cds_object - cds object in RDS format
+    for_hash_cds_dir - directory to cds object for assigning hash if true
     sample_stats - csv with sample-wise statistics
     cell_qc - csv of cell quality control information
     collision - file containing collision rate if barnyard sample
+    cds_dir - temp directory containing cds object and cell qc csv for assigning hash
 
  Pass through:
 
@@ -1458,14 +1470,16 @@ Process: reformat_qc
  Downstream:
     generate_qc_metrics
     zip_up_sample_stats
+    assign_hash (if true)
     collapse_collision
 
  Published:
-    cds_object - cds object in RDS format
     sample_stats - csv with sample-wise statistics
-    cell_qc - csv of cell quality control information
 
  Notes:
+    Nextflow dsl1 doesn't allow for conditional channel output or publishing, "temp_dir" is used 
+    as a work around to publish one final cds object when hash assignment is true 
+    without modifying the input cds object. 
 
 *************/
 
@@ -1488,6 +1502,7 @@ process reformat_qc {
         set key, file("temp_fold/*.RDS"), file("temp_fold/*.csv") into rscrub_out
         file("*sample_stats.csv") into sample_stats
         file("*collision.txt") into collision
+        set key, file("temp_fold") into temp_dir
 
 
     """
@@ -1546,7 +1561,6 @@ process reformat_qc {
     }
 
     """
-
 }
 
 
@@ -1584,10 +1598,14 @@ Process: generate_qc_metrics
     wellcheck_png - png of RT barcode qc 
 
  Notes:
-    Need to test umi cutoff here and in cds function
-    Need to either remove or use output cutoff
+    Temp dir is used in "assign_hash" and "publish_cds_and_cell_qc" process block.
+    It's copied here because these two blocks are conditional and temp dir is required 
+    to publish cds object and cell qc. 
 
 *************/
+
+// See notes above for info on temp_dir
+temp_dir.into{temp_dir_copy01; temp_dir_copy02}
 
 for_gen_qc = rscrub_out.join(umis_per_cell)
 save_knee = {params.output_dir + "/" + it - ~/_knee_plot.png/ + "/" + it}
@@ -1597,6 +1615,7 @@ save_garnett = {params.output_dir + "/" + it.split("_")[0] + "/" + it}
 save_umi_rt_stats = {params.output_dir + "/" + it - ~/_umi_rt_stats.csv/ + "/" + it}
 save_mito_rt_stats = {params.output_dir + "/" + it - ~/_mito_rt_stats.csv/ + "/" + it}
 save_wellcheck_combo = {params.output_dir + "/" + it - ~/_wellcheck.png/ + "/" + it}
+// save_empty_hash_plot = {params.output_dir + "/" + it - ~/_hash_knee_plot.png/ + "/" + it}
 
 process generate_qc_metrics {
     cache 'lenient'
@@ -1607,6 +1626,7 @@ process generate_qc_metrics {
     publishDir path: "${params.output_dir}/", saveAs: save_umi_rt_stats, pattern: "*_umi_rt_stats.csv", mode: 'copy'
     publishDir path: "${params.output_dir}/", saveAs: save_mito_rt_stats, pattern: "*_mito_rt_stats.csv", mode: 'copy'
     publishDir path: "${params.output_dir}/", saveAs: save_wellcheck_combo, pattern: "*_wellcheck.png", mode: 'copy'
+    // publishDir path: "${params.output_dir}/", saveAs: save_empty_hash_plot pattern: "*_hash_knee_plot.png", mode: 'copy'
 
     input:
         set key, file(cds_object), file(cell_qc), file(umis_per_cell) from for_gen_qc
@@ -1616,13 +1636,14 @@ process generate_qc_metrics {
         file("*.txt") into cutoff
         file("*.csv") into rt_stats
 
+
     """
     # bash watch for errors
     set -ueo pipefail
 
     generate_qc.R\
         $cds_object $umis_per_cell $key \
-        --specify_cutoff $params.umi_cutoff\
+        --specify_cutoff $params.umi_cutoff
 
     """
 }
@@ -1725,6 +1746,440 @@ process calc_cell_totals {
 
 }
 
+/*************
+
+Process: assign_hash
+
+ Inputs:
+    cds_dir - temp directory containing cds object and cell qc csv
+    hash_cell - text file with list of cell names with hash umis 
+    hash_list - text file with list of hash names 
+    hash_mtx - sparse matrix with hash umi counts for each cell 
+    umis_per_cell - txt file with number of umis per cell barcode
+
+ Outputs:
+    corrected_hash_table - csv file with data frame of cells and hash stats 
+    hash_cds - cds object with hash info
+    cell_qc - csv of cell quality control information
+
+ Pass through:
+
+ Summary:
+    Assign hash to cells and find top hash oligo for each cell 
+
+ Downstream:
+    
+ Published:
+    hash_table - csv file with data frame of cells and hash stats 
+    cds - cds object with hash info in RDS format
+    cell_qc - csv of cell quality control information
+
+ Notes:
+    runs only when params.hash_list = true
+    
+*************/
+
+make_hash_cds = temp_dir_copy01.join(hash_mats).join(for_assign_hash_umis)
+
+save_hash_cds = {params.output_dir + "/" + it - ~/_cds.RDS/ + "/" + it}
+save_cell_qc = {params.output_dir + "/" + it - ~/_cell_qc.csv/ + "/" + it}
+save_hash_table = {params.output_dir + "/" + it - ~/_hash_table.csv/ + "/" + it}
+
+process assign_hash {
+    cache 'lenient'
+    publishDir path: "${params.output_dir}/", saveAs: save_hash_cds, pattern: "*cds.RDS", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_cell_qc, pattern: "*cell_qc.csv", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_hash_table, pattern: "*_hash_table.csv", mode: 'copy'
+
+    input:
+        set key, file(cds_dir), file(hash_mtx), file(hash_cell), file(hash_hash), file(umis_per_cell) from make_hash_cds
+
+    output:
+        file("*cds.RDS") into hash_cds
+        file("*hash_table.csv") into hash_table
+        file("*cell_qc.csv") into cell_qc_out
+
+    when: 
+        params.hash_list != false 
+
+    """
+    # bash watch for errors
+    set -ueo pipefail
+
+    cp ${cds_dir}/*.csv .
+
+    assign_hash.R \
+        $key \
+        $hash_mtx \
+        $hash_cell \
+        $hash_hash \
+        ${cds_dir}/*cds.RDS \
+        $umis_per_cell \
+        $params.hash_umi_cutoff \
+        $params.hash_ratio
+
+    """
+}
+
+
+/*************
+
+Process: sort_hash
+
+ Inputs:
+    input_fastq - fastq files 
+
+ Outputs:
+    sorted_hash - sorted hash umi files 
+
+ Pass through:
+
+ Summary:
+    Takes in fastq files and finds hash umis using a hash oligo sample sheet.
+    The hash umis are then sorted by cell, hash oligo name, then hash umi. 
+
+ Downstream:
+    combine_hash
+
+ Published:
+
+ Notes:
+    runs only when params.hash_list = true and params.hash_dup = true
+    
+*************/
+
+
+process sort_hash {
+    cache 'lenient'
+    
+    input:
+        set key, file(input_fastq) from fastqs_for_hash_copy02
+
+    output:
+        set key, file("*hash") into sorted_hash
+
+    when: 
+        params.hash_list != false && params.hash_dup != false
+    
+    script:
+        name = input_fastq.baseName - ~/.fastq/
+
+    
+    """
+    # bash watch for errors
+    set -ueo pipefail
+
+    LL_ALL=C zcat $input_fastq | parseHash.awk $params.hash_list -\
+    | sed -e 's/|/,/g'\
+    | awk 'BEGIN {FS=","; OFS="\t";} {print \$2,\$3"_"\$4"_"\$5,\$6,\$7,\$8}' \
+    | awk -v S="$key" 'BEGIN {FS="\t"; OFS="\t";} {print S, \$2, \$3, \$4}' \
+    | sort -S 50G -T /tmp/ -k2,2 -k4,4 -k3,3 --parallel=8 > "${name}_sorted_hash"
+
+    """
+}
+
+/*************
+
+Process: combine_hash
+
+ Inputs:
+    for_combine_hash - all of the sorted hash umi files for a sample 
+
+ Outputs:
+    for_calc_hash_dup - a combined, sorted hash umi file
+
+
+ Pass through:
+
+ Summary:
+    Takes a multiple sorted hash umi files that were sorted in parallel 
+    merges the sorted files together. 
+
+ Downstream:
+    calc_hash_dup
+
+ Published:
+    for_calc_hash_dup - all of the sorted hash umis in a gzipped format 
+
+ Notes:
+    runs only when params.hash_list = true
+    
+*************/
+
+sorted_hash
+    .groupTuple()
+    .set { for_combine_hash }
+
+save_sorted_hash = {params.output_dir + "/" + it - ~/_sorted_hash_combined.gz/ + "/" + it}
+
+process combine_hash {
+    cache 'lenient'
+    publishDir path: "${params.output_dir}/", saveAs: save_sorted_hash, pattern: "*sorted_hash_combined.gz", mode: 'copy'
+
+    input:
+        set key, file(hash_file) from for_combine_hash
+
+    output:
+        set key, file("*.gz") into for_calc_hash_dup
+
+    when: 
+        params.hash_list != false && params.hash_dup != false
+    
+
+    """
+    # bash watch for errors
+    set -ueo pipefail
+
+    LL_ALL=C sort -m \
+    *sorted_hash \
+    -S 50G -T /tmp/ -k2,2 -k4,4 -k3,3 --parallel=8 > ${key}_sorted_hash_combined
+    
+    pigz -p 8 "${key}_sorted_hash_combined" "${key}_sorted_hash_combined"
+
+    """
+}
+
+/*************
+
+Process: calc_hash_dup
+
+ Inputs:
+    sorted_hash_combined - all sorted hash umis combined
+
+ Outputs:
+    hash_results - .txt files with hash reads per cell, unique hash umis per cell, and a table of hash umis for each cell
+    for_hash_calc - hash duplication rate per cell 
+    hash_knee - unique hash umi by RT barcode knee plot in .png format
+
+
+ Pass through:
+
+ Summary:
+    Takes in a combined, sorted hash umi file and calculates the hash duplication rate per cell.
+    First, sums up the total hash reads per cell (non-unique). Second, sums up unique hash umis per cell. 
+    Third, output a hash table with unique hash umis found for each cell. 
+    Fourth, produces a knee plot with unique hash umis by RT barcode.
+    Fifth, calculates the hash duplication rate per by (1-(unique hash umis/ total hash read for thatcell)).
+
+ Downstream:
+    
+ Published:
+    hash_knee - unique hash umi by RT barcode knee plot in .png format
+    hash_results - .txt files with hash reads per cell, unique hash umis per cell, and a table of hash umis for each cell
+
+
+ Notes:
+    runs only when params.hash_list != false and params.hash_dup!= false
+    
+*************/
+
+save_hash_reads = {params.output_dir + "/" + it - ~/_hash_reads_per_cell.txt/ + "/" + it}
+save_hash_umis = {params.output_dir + "/" + it - ~/_hash_umis_per_cell.txt/ + "/" + it}
+save_hash_table = {params.output_dir + "/" + it - ~/_hash_assigned_table.txt/ + "/" + it}
+save_hash_knee = {params.output_dir + "/" + it - ~/_hash_knee_plot.png/ + "/" + it}
+save_hash_dup = {params.output_dir + "/" + it - ~/_hash_dup_per_cell.txt/ + "/" + it}
+
+process calc_hash_dup_cell {
+    cache 'lenient'
+    publishDir path: "${params.output_dir}/", saveAs: save_hash_reads, pattern: "*hash_reads_per_cell.txt", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_hash_umis, pattern: "*hash_umis_per_cell.txt", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_hash_table, pattern: "*hash_assigned_table.txt", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_hash_knee, pattern: "*hash_knee_plot.png", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_hash_dup, pattern: "*hash_dup_per_cell.txt", mode: 'copy'
+
+    input:
+        set key, file(hash_file) from for_calc_hash_dup
+
+    output:
+        file("*.png") into hash_knee
+        set key, file("*hash_reads_per_cell.txt"), file("*hash_umis_per_cell.txt"), file("*hash_assigned_table.txt") into hash_results
+        set key, file("*hash_dup_per_cell.txt") into for_hash_calc
+
+    when: 
+        params.hash_list != false && params.hash_dup != false
+    
+    script:
+
+    """
+    # bash watch for errors
+    set -ueo pipefail
+
+    zcat "${key}_sorted_hash_combined.gz" \
+    | datamash -g 2,3,4 count 3 \
+    | datamash -g 1 sum 4 \
+    | awk -v S=$key '{OFS="\t";} {print S, \$0}' > ${key}_hash_reads_per_cell.txt
+
+    zcat "${key}_sorted_hash_combined.gz" \
+    | uniq \
+    | awk -v S=$key '{OFS="\t";} {print \$0}'> ${key}_uniq_sorted_hash_combined
+
+    cat "${key}_uniq_sorted_hash_combined" \
+    | datamash -g 2,3,4 count 3 \
+    | datamash -g 1 sum 4 \
+    | awk -v S=$key '{OFS="\t";} {print S, \$0}' > ${key}_hash_umis_per_cell.txt
+
+    cat "${key}_uniq_sorted_hash_combined" \
+    | datamash -g 1,2,4 count 3 \
+    | awk -v S=$key '{OFS="\t";} {print \$0}' > ${key}_hash_assigned_table.txt
+
+    knee-plot.R \
+    "${key}_hash_umis_per_cell.txt" \
+    $key 
+
+    paste "${key}_hash_umis_per_cell.txt" "${key}_hash_reads_per_cell.txt" \
+     | cut -f 1,2,6,3 \
+     | awk 'BEGIN {OFS="\t";} {dup = 100 * (1-\$3/\$4); print \$1,\$2,\$3,\$4,dup;}' > ${key}_hash_dup_per_cell.txt
+
+    """
+}
+
+
+/*************
+
+Process: calc_tot_hash_dup
+
+ Inputs:
+    hash_dup_per_cell - hash duplication rate per cell 
+
+ Outputs:
+    total_hash_dup - total hash duplication rate per sample by pcr plate
+
+ Pass through:
+
+ Summary:
+    Calculates total hash duplication rate for each PCR plate. 
+
+ Downstream:
+    
+ Published:
+    total_hash_dup - total hash duplication rate per sample by pcr plate
+
+ Notes:
+    runs only when params.hash_list != false and params.hash_dup!= false
+
+    Checks p7 parameters to see if a whole 96-well p7 plate was used or only p7 rows to determine 
+    PCR plate. If params.p7_rows is equal or less than 2 rows (A-H), then there are less than 
+    24 wells (2 x 12) indicating the p7 is by rows so group by pcr plates. If params.p7_rows is greater or equal to 
+    7 rows, then a whole p7 plate is used ( 7 x 12 + more) so group by p5 pcr plates. 
+    
+*************/
+
+
+save_total_hash_dup = {params.output_dir + "/" + it - ~/_total_hash_dup_rate.csv/ + "/" + it}
+
+
+process calc_tot_hash_dup {
+    cache 'lenient'
+    publishDir path: "${params.output_dir}/", saveAs: save_total_hash_dup, pattern: "*_total_hash_dup_rate.csv", mode: 'copy'
+
+    input:
+        set key, file(hash_dup) from for_hash_calc
+
+    output:
+        file("*.csv") into total_hash_dup
+
+    when: 
+        params.hash_list != false && params.hash_dup != false
+    
+    
+    script:
+
+    """
+    #!/usr/bin/env Rscript
+
+    library(data.table)
+    library(tidyverse)
+
+    dup = fread("${key}_hash_dup_per_cell.txt", header = FALSE,
+                data.table = F,
+                col.names = c("Expt", "Cell", "V4", "V5", "V6"))
+    
+    dup_rate = NULL
+    
+    dup = dup %>%
+        separate(Cell, into = c("p5", "p7", "rt_plate_well", "lig_well"), sep = "_") %>%
+        mutate(pcr_plate = paste(str_sub(p7, start = 1, end = 1), str_sub(p5, start = 2, end = 3), sep = ""))
+    
+    num_p7_rows = nchar(gsub("\\\\s+", "", "$params.p7_rows"))
+
+    if (num_p7_rows <= 2) {
+        dup = dup %>% group_by(pcr_plate) 
+
+    } else if(num_p7_rows >= 7 ) {
+        dup = dup %>% group_by(p5) 
+    } else {
+        stop("Error: params.p7_rows is not within the expected range.")     
+    }
+
+    dup_rate = dup %>% summarize(dup_rate = 1-(sum(V4)/sum(V5))) %>% data.frame()
+    out <- file(paste0("$key", "_total_hash_dup_rate.csv"))
+    write.csv(dup_rate, file = out, row.names = FALSE, quote = FALSE)
+
+    """
+}
+
+
+/*************
+
+Process: publish_cds_and_cell_qc
+
+ Inputs: 
+    temp_dir - directory containing monocle cds object and cell qc summary 
+
+ Outputs: 
+    cds_obj - monocle cds object in RDS format 
+    cell_qc - csv of cell quality control information
+
+ Summary: 
+    Publish monocle cds object and cell qc when not a hash experiment
+
+ Pass through: 
+
+ Downstream: 
+
+ Published:
+    cds - cds object in RDS format
+    cell_qc - csv of cell quality control information
+
+ Notes: 
+    Runs only when params.hash_list == false
+
+    Nextflow dsl1 doesn't allow for conditional channel output or publishing, "temp_dir" is used 
+    as a work around to publish one final cds object when hash assignment is true 
+    without modifying the input cds object. This conditional process is used to publish the initial
+    cds object (without hash info) and cell qc when the hash processes are skipped.
+
+*************/
+
+save_cds = {params.output_dir + "/" + it - ~/_cds.RDS/ + "/" + it}
+save_cell_qc = {params.output_dir + "/" + it - ~/_cell_qc.csv/ + "/" + it}
+
+process publish_cds_and_cell_qc {
+    cache 'lenient'
+    publishDir path: "${params.output_dir}/", saveAs: save_cds, pattern: "*cds.RDS", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_cell_qc, pattern: "*cell_qc.csv", mode: 'copy'
+
+    input:
+        set key,file(cds_dir) from temp_dir_copy02
+
+    output:
+        file("*cds.RDS") into pub_cds
+        file("*cell_qc.csv") into pub_cell_qc
+    
+    when:
+        params.hash_list == false
+
+    """
+    # bash watch for errors
+    set -ueo pipefail
+
+    cp $cds_dir/*.RDS . 
+    cp $cds_dir/*.csv . 
+
+    """
+
+}
+
 
 /*************
 
@@ -1749,6 +2204,7 @@ Process: collapse_collision
  Notes:
 
 *************/
+
 
 process collapse_collision {
     cache 'lenient'
@@ -1814,6 +2270,7 @@ process generate_dashboard {
         file all_collision
         file plots from qc_plots.collect()
         file scrublet_png from scrub_pngs.collect()
+        file(cds_object) from hash_cds
 
     output:
         file exp_dash into exp_dash_out
@@ -1906,6 +2363,8 @@ process finish_log {
     printf "    params.umi_cutoff:            $params.umi_cutoff\n" >> ${key}_full.log
     printf "    params.rt_barcode_file:       $params.rt_barcode_file\n" >> ${key}_full.log
     printf "    params.hash_list:             $params.hash_list\n" >> ${key}_full.log
+    printf "    params.hash_umi_cutoff:       $params.hash_umi_cutoff\n" >> ${key}_full.log
+    printf "    params.hash_ratio:            $params.hash_ratio\n" >> ${key}_full.log
     printf "    params.max_wells_per_sample:  $params.max_wells_per_sample\n\n" >> ${key}_full.log
     printf "    params.garnett_file:          $params.garnett_file\n\n" >> ${key}_full.log
     printf "    params.skip_doublet_detect:   $params.skip_doublet_detect\n\n" >> ${key}_full.log
