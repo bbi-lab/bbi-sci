@@ -386,7 +386,6 @@ process process_hashes {
     # bash watch for errors
     set -ueo pipefail
     
-    echo "test"
     process_hashes.py --hash_sheet $params.hash_list \
         --fastq <(zcat $input_fastq) --key $key
 
@@ -1780,6 +1779,8 @@ Process: assign_hash
     
 *************/
 
+make_hash_cds = temp_dir_copy01.join(hash_mats).join(for_assign_hash_umis)
+
 save_hash_cds = {params.output_dir + "/" + it - ~/_cds.RDS/ + "/" + it}
 save_cell_qc = {params.output_dir + "/" + it - ~/_cell_qc.csv/ + "/" + it}
 save_hash_table = {params.output_dir + "/" + it - ~/_hash_table.csv/ + "/" + it}
@@ -1791,9 +1792,7 @@ process assign_hash {
     publishDir path: "${params.output_dir}/", saveAs: save_hash_table, pattern: "*_hash_table.csv", mode: 'copy'
 
     input:
-        set key, file(hash_mtx), file(hash_cell), file(hash_hash) from hash_mats
-        set key, file(cds_dir) from temp_dir_copy01
-        set key, file(umis_per_cell) from for_assign_hash_umis
+        set key, file(cds_dir), file(hash_mtx), file(hash_cell), file(hash_hash), file(umis_per_cell) from make_hash_cds
 
     output:
         file("*cds.RDS") into hash_cds
@@ -1809,7 +1808,6 @@ process assign_hash {
 
     cp ${cds_dir}/*.csv .
 
-    echo "$key"
     assign_hash.R \
         $key \
         $hash_mtx \
@@ -1932,8 +1930,6 @@ process combine_hash {
     # bash watch for errors
     set -ueo pipefail
 
-    echo "test"
-
     LL_ALL=C sort -m \
     *sorted_hash \
     -S 50G -T /tmp/ -k2,2 -k4,4 -k3,3 --parallel=8 > ${key}_sorted_hash_combined
@@ -1996,7 +1992,6 @@ process calc_hash_dup_cell {
 
     output:
         file("*.png") into hash_knee
-        // file("*.txt") into hash_results
         set key, file("*hash_reads_per_cell.txt"), file("*hash_umis_per_cell.txt"), file("*hash_assigned_table.txt") into hash_results
         set key, file("*hash_dup_per_cell.txt") into for_hash_calc
 
@@ -2024,7 +2019,8 @@ process calc_hash_dup_cell {
     | awk -v S=$key '{OFS="\t";} {print S, \$0}' > ${key}_hash_umis_per_cell.txt
 
     cat "${key}_uniq_sorted_hash_combined" \
-    | datamash -g 1,2,4 count 3  > ${key}_hash_assigned_table.txt
+    | datamash -g 1,2,4 count 3 \
+    | awk -v S=$key '{OFS="\t";} {print \$0}' > ${key}_hash_assigned_table.txt
 
     knee-plot.R \
     "${key}_hash_umis_per_cell.txt" \
@@ -2164,7 +2160,7 @@ process publish_cds_and_cell_qc {
     publishDir path: "${params.output_dir}/", saveAs: save_cell_qc, pattern: "*cell_qc.csv", mode: 'copy'
 
     input:
-        file(cds_dir) from temp_dir_copy02
+        set key,file(cds_dir) from temp_dir_copy02
 
     output:
         file("*cds.RDS") into pub_cds
@@ -2176,9 +2172,9 @@ process publish_cds_and_cell_qc {
     """
     # bash watch for errors
     set -ueo pipefail
-    
-    cp ${cds_dir}/*.RDS . 
-    cp ${cds_dir}/*.csv . 
+
+    cp $cds_dir/*.RDS . 
+    cp $cds_dir/*.csv . 
 
     """
 
