@@ -447,34 +447,58 @@ gen_plots <- function(sample_name, sample_path) {
     samp_cds <- rt_stats(sample_name, samp_cds)
     colpal = well_check(sample_name, samp_cds)
 
-    png(paste0(sample_name, "_UMAP.png"), width = 5, height = 5, res = 600, units = "in")
-    print(suppressMessages(plot_cells_simp(samp_cds, colpal) + theme(text = element_text(size = 8))))
-    dev.off()
+#    file_name <- paste0(sample_name, "_UMAP.png")
+#    png(file_name, width = 5, height = 5, res = 600, units = "in")
+#    print(suppressMessages(plot_cells_simp(samp_cds, colpal) + theme(text = element_text(size = 8))))
+#    dev.off()
+
+    file_name <- paste0(sample_name, "_UMAP.png")
+    ggp_obj <- suppressMessages(plot_cells_simp(samp_cds, colpal) + theme(text = element_text(size = 8)))
+    ggsave(filename=file_name, ggp_obj, device='png', width=5, height=5, dpi=600, units='in')
+
 
     for (mod in garnett_mods) {
-      png(paste0(sample_name, "_", gsub("garnett_type_", "", mod) ,"_Garnett.png"), width = 7, height = 5, res = 600, units = "in")
-      print(suppressMessages(plot_cells_simp(samp_cds, color_cells_by = mod) + theme(text = element_text(size = 8)) + theme(legend.position = "none")))
-      dev.off()
+#      file_name <- paste0(sample_name, "_", gsub("garnett_type_", "", mod) ,"_Garnett.png")
+#      png(file_name, width = 7, height = 5, res = 600, units = "in")
+#      print(suppressMessages(plot_cells_simp(samp_cds, color_cells_by = mod) + theme(text = element_text(size = 8)) + theme(legend.position = "none")))
+#      dev.off()
+
+      file_name <- paste0(sample_name, "_", gsub("garnett_type_", "", mod) ,"_Garnett.png")
+      ggp_obj <- suppressMessages(plot_cells_simp(samp_cds, color_cells_by = mod) + theme(text = element_text(size = 8)) + theme(legend.position = "none"))
+      ggsave(filename=file_name, ggp_obj, device='png', width=7, height=5, dpi=600, units='in')
     }
     
     samp_cds
   }, error = function(e) {
 
-    png(paste0(sample_name, "_UMAP.png"), width = 5, height = 5, res = 600, units = "in")
-    print(ggplot() + geom_text(aes(x = 1, y = 1, label = "Insufficient cells for UMAP")) + monocle3:::monocle_theme_opts() + theme(legend.position = "none") + labs(x="UMAP 1", y = "UMAP 2"))
-    dev.off()
+#    png(paste0(sample_name, "_UMAP.png"), width = 5, height = 5, res = 600, units = "in")
+#    print(ggplot() + geom_text(aes(x = 1, y = 1, label = "Insufficient cells for UMAP")) + monocle3:::monocle_theme_opts() + theme(legend.position = "none") + labs(x="UMAP 1", y = "UMAP 2"))
+#    dev.off()
 
-    png(paste0(sample_name, "_wellcheck.png"), width = 5, height = 5, res = 600, units = "in")
-    print(ggplot() + geom_text(aes(x = 1, y = 1, label = "Insufficient cells for WellCheck")) + monocle3:::monocle_theme_opts() + theme(legend.position = "none") + labs(x="RT Barcodes", y = "UMIs"))
-    dev.off()
+     file_name <- paste0(sample_name, "_UMAP.png")
+     ggp_obj <- ggplot() + geom_text(aes(x = 1, y = 1, label = "Insufficient cells for UMAP")) + monocle3:::monocle_theme_opts() + theme(legend.position = "none") + labs(x="UMAP 1", y = "UMAP 2")
+     ggsave(filename=file_name, ggp_obj, device='png', width=5, height=5, dpi=600, units='in')
+   
+#    png(paste0(sample_name, "_wellcheck.png"), width = 5, height = 5, res = 600, units = "in")
+#    print(ggplot() + geom_text(aes(x = 1, y = 1, label = "Insufficient cells for WellCheck")) + monocle3:::monocle_theme_opts() + theme(legend.position = "none") + labs(x="RT Barcodes", y = "UMIs"))
+#    dev.off()
+
+    file_name <- paste0(sample_name, "_wellcheck.png")
+    ggp_obj <- ggplot() + geom_text(aes(x = 1, y = 1, label = "Insufficient cells for WellCheck")) + monocle3:::monocle_theme_opts() + theme(legend.position = "none") + labs(x="RT Barcodes", y = "UMIs")
+     ggsave(filename=file_name, ggp_obj, device='png', width=5, height=5, dpi=600, units='in')
 
     write.table("Insufficent UMIs for RT stats", file=paste0(sample_name, "_mito_rt_stats.csv"), quote=FALSE, row.names=FALSE, col.names=FALSE)
     write.table("Insufficent UMIs for RT stats", file=paste0(sample_name, "_umi_rt_stats.csv"), quote=FALSE, row.names=FALSE, col.names=FALSE)
 
     for (mod in garnett_mods) {
-      png(paste0(sample_name, "_", gsub("garnett_type_", "", mod) ,"_Garnett.png"), width = 7, height = 5, res = 600, units = "in")
-      print(ggplot() + geom_text(aes(x = 1, y = 1, label = "Insufficient cells for UMAP")) + monocle3:::monocle_theme_opts() + theme(legend.position = "none") + labs(x="UMAP 1", y = "UMAP 2"))
-      dev.off()
+#      png(paste0(sample_name, "_", gsub("garnett_type_", "", mod) ,"_Garnett.png"), width = 7, height = 5, res = 600, units = "in")
+#      print(ggplot() + geom_text(aes(x = 1, y = 1, label = "Insufficient cells for UMAP")) + monocle3:::monocle_theme_opts() + theme(legend.position = "none") + labs(x="UMAP 1", y = "UMAP 2"))
+#      dev.off()
+
+      file_name <- paste0(sample_name, "_", gsub("garnett_type_", "", mod) ,"_Garnett.png")
+      ggp_obj <- ggplot() + geom_text(aes(x = 1, y = 1, label = "Insufficient cells for UMAP")) + monocle3:::monocle_theme_opts() + theme(legend.position = "none") + labs(x="UMAP 1", y = "UMAP 2")
+      ggsave(filename=file_name, ggp_obj, device='png', width=7, height=5, dpi=600, units='in')
+
     }
     samp_cds  
   })
