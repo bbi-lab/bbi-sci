@@ -35,7 +35,7 @@ params.skip_doublet_detect = true
 params.run_emptyDrops = false
 params.hash_umi_cutoff = 5
 params.hash_ratio = false
-params.hash_dup = true
+params.hash_dup = false
 
 
 //print usage
