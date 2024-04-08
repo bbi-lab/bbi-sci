@@ -31,8 +31,8 @@ params.max_cores = 16
 params.hash_list = false
 params.max_wells_per_sample = 20
 params.garnett_file = false
-params.skip_doublet_detect = true
-params.run_emptyDrops = false
+params.skip_doublet_detect = false
+params.run_emptyDrops = true
 params.hash_umi_cutoff = 5
 params.hash_ratio = false
 params.hash_dup = false
@@ -2270,7 +2270,6 @@ process generate_dashboard {
         file all_collision
         file plots from qc_plots.collect()
         file scrublet_png from scrub_pngs.collect()
-        file(cds_object) from hash_cds
 
     output:
         file exp_dash into exp_dash_out
