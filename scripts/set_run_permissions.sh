@@ -22,10 +22,10 @@ echo "Change permissions in path $run_path"
 echo
 
 # Set directory permissions.
-find "$run_path" -type d -print0 | xargs -0 chmod -R 770 
+find "$run_path" -type d -print0 | xargs -r -0 chmod -R 770 
 
 # Set file permissions.
-find "$run_path" -type f -print0 | egrep -z -v "${exec_files}" | xargs -0 chmod -R 660
-find "$run_path" -type f -print0 | egrep -z    "${exec_files}" | xargs -0 chmod -R 770
+find "$run_path" -type f -print0 | egrep -z -v "${exec_files}" | xargs -r -0 chmod -R 660
+find "$run_path" -type f -print0 | egrep -z    "${exec_files}" | xargs -r -0 chmod -R 770
 
 
