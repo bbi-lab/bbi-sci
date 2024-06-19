@@ -31,8 +31,8 @@ params.max_cores = 16
 params.hash_list = false
 params.max_wells_per_sample = 20
 params.garnett_file = false
-params.skip_doublet_detect = true
-params.run_emptyDrops = false
+params.skip_doublet_detect = false
+params.run_emptyDrops = true
 params.hash_umi_cutoff = 5
 params.hash_ratio = false
 params.hash_dup = false
@@ -72,7 +72,7 @@ if (params.help) {
     log.info '    params.max_wells_per_sample = 20           The maximum number of wells per sample - if a sample is in more wells, the fastqs will be split then reassembled for efficiency.'
     log.info '    params.garnett_file = false                Path to a csv with two columns, first is the sample name, and second is a path to the Garnett classifier to be applied to that sample. Default is false - no classification.'
     log.info '    params.skip_doublet_detect = false         Whether to skip doublet detection, i.e. scrublet - useful for very large datasets.'
-    log.info '    params.hash_umi_cutoff = 5                 The hash umi cutoff to be called a hash in cds object. Default is 5'
+    log.info '    params.hash_umi_cutoff = 5                 The hash umi cutoff to determine hash vs background in top to second best hash oligo. Default is 5'
     log.info '    params.hash_ratio = false                  The min hash umi ratio for top to second best. Default is false and not filtered'
     log.info '    params.hash_dup = false                    Whether to run hash PCR duplication rate. params.hash_list also needs to be set to true. Default is false.'
     log.info 'Issues? Contact hpliner@uw.edu'
@@ -1285,8 +1285,15 @@ emptyDrops_output.combine(fraction_per_cell_intronic, by:0).into{emptyDrops_frac
 emptyDrops_fraction_intronic_tmp.view()
 */
 
+
+save_cds = {params.output_dir + "/" + it - ~/_cds.RDS/ + "/" + it}
+save_cell_qc = {params.output_dir + "/" + it - ~/_cell_qc.csv/ + "/" + it}
+
 process make_cds {
     cache 'lenient'
+    publishDir path: "${params.output_dir}/", saveAs: save_cds, pattern: "*cds.RDS", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_cell_qc, pattern: "*cell_qc.csv", mode: 'copy'
+
 
     input:
       set key, file(cell_data), file(umi_matrix), file(gene_data), file(emptyDrops), val(gtf_path), file(logfile), file(fraction_intron_barcode) from emptyDrops_fraction_intronic
@@ -1781,13 +1788,13 @@ Process: assign_hash
 
 make_hash_cds = temp_dir_copy01.join(hash_mats).join(for_assign_hash_umis)
 
-save_hash_cds = {params.output_dir + "/" + it - ~/_cds.RDS/ + "/" + it}
+save_hash_cds = {params.output_dir + "/" + it - ~/_hash_cds.RDS/ + "/" + it}
 save_cell_qc = {params.output_dir + "/" + it - ~/_cell_qc.csv/ + "/" + it}
 save_hash_table = {params.output_dir + "/" + it - ~/_hash_table.csv/ + "/" + it}
 
 process assign_hash {
     cache 'lenient'
-    publishDir path: "${params.output_dir}/", saveAs: save_hash_cds, pattern: "*cds.RDS", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_hash_cds, pattern: "*_hash_cds.RDS", mode: 'copy'
     publishDir path: "${params.output_dir}/", saveAs: save_cell_qc, pattern: "*cell_qc.csv", mode: 'copy'
     publishDir path: "${params.output_dir}/", saveAs: save_hash_table, pattern: "*_hash_table.csv", mode: 'copy'
 
@@ -1795,7 +1802,7 @@ process assign_hash {
         set key, file(cds_dir), file(hash_mtx), file(hash_cell), file(hash_hash), file(umis_per_cell) from make_hash_cds
 
     output:
-        file("*cds.RDS") into hash_cds
+        file("*hash_cds.RDS") into hash_cds
         file("*hash_table.csv") into hash_table
         file("*cell_qc.csv") into cell_qc_out
 
@@ -1929,12 +1936,12 @@ process combine_hash {
     """
     # bash watch for errors
     set -ueo pipefail
-
+    
     LL_ALL=C sort -m \
     *sorted_hash \
     -S 50G -T /tmp/ -k2,2 -k4,4 -k3,3 --parallel=8 > ${key}_sorted_hash_combined
     
-    pigz -p 8 "${key}_sorted_hash_combined" "${key}_sorted_hash_combined"
+    pigz -p 8 "${key}_sorted_hash_combined"
 
     """
 }
@@ -2093,25 +2100,28 @@ process calc_tot_hash_dup {
     dup = fread("${key}_hash_dup_per_cell.txt", header = FALSE,
                 data.table = F,
                 col.names = c("Expt", "Cell", "V4", "V5", "V6"))
-    
+     
     dup_rate = NULL
     
-    dup = dup %>%
-        separate(Cell, into = c("p5", "p7", "rt_plate_well", "lig_well"), sep = "_") %>%
-        mutate(pcr_plate = paste(str_sub(p7, start = 1, end = 1), str_sub(p5, start = 2, end = 3), sep = ""))
-    
-    num_p7_rows = nchar(gsub("\\\\s+", "", "$params.p7_rows"))
+    if (dim(dup)[1] != 0) {
+        dup = dup %>%
+            separate(Cell, into = c("p5", "p7", "rt_plate_well", "lig_well"), sep = "_") %>%
+            mutate(pcr_plate = paste(str_sub(p7, start = 1, end = 1), str_sub(p5, start = 2, end = 3), sep = ""))
+        
+        num_p7_rows = nchar(gsub("\\\\s+", "", "$params.p7_rows"))
 
-    if (num_p7_rows <= 2) {
-        dup = dup %>% group_by(pcr_plate) 
+        if (num_p7_rows <= 2) {
+            dup = dup %>% group_by(pcr_plate) 
 
-    } else if(num_p7_rows >= 7 ) {
-        dup = dup %>% group_by(p5) 
-    } else {
-        stop("Error: params.p7_rows is not within the expected range.")     
+        } else if(num_p7_rows >= 7 ) {
+            dup = dup %>% group_by(p5) 
+        } else {
+            stop("Error: params.p7_rows is not within the expected range.")     
+        }
+
+        dup_rate = dup %>% summarize(dup_rate = 1-(sum(V4)/sum(V5))) %>% data.frame()
     }
 
-    dup_rate = dup %>% summarize(dup_rate = 1-(sum(V4)/sum(V5))) %>% data.frame()
     out <- file(paste0("$key", "_total_hash_dup_rate.csv"))
     write.csv(dup_rate, file = out, row.names = FALSE, quote = FALSE)
 
@@ -2151,13 +2161,13 @@ Process: publish_cds_and_cell_qc
 
 *************/
 
-save_cds = {params.output_dir + "/" + it - ~/_cds.RDS/ + "/" + it}
-save_cell_qc = {params.output_dir + "/" + it - ~/_cell_qc.csv/ + "/" + it}
+// save_cds = {params.output_dir + "/" + it - ~/_cds.RDS/ + "/" + it}
+// save_cell_qc = {params.output_dir + "/" + it - ~/_cell_qc.csv/ + "/" + it}
 
 process publish_cds_and_cell_qc {
     cache 'lenient'
-    publishDir path: "${params.output_dir}/", saveAs: save_cds, pattern: "*cds.RDS", mode: 'copy'
-    publishDir path: "${params.output_dir}/", saveAs: save_cell_qc, pattern: "*cell_qc.csv", mode: 'copy'
+    // publishDir path: "${params.output_dir}/", saveAs: save_cds, pattern: "*cds.RDS", mode: 'copy'
+    // publishDir path: "${params.output_dir}/", saveAs: save_cell_qc, pattern: "*cell_qc.csv", mode: 'copy'
 
     input:
         set key,file(cds_dir) from temp_dir_copy02
@@ -2270,7 +2280,6 @@ process generate_dashboard {
         file all_collision
         file plots from qc_plots.collect()
         file scrublet_png from scrub_pngs.collect()
-        file(cds_object) from hash_cds
 
     output:
         file exp_dash into exp_dash_out
