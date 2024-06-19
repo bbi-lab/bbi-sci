@@ -35,7 +35,7 @@ params.skip_doublet_detect = false
 params.run_emptyDrops = true
 params.hash_umi_cutoff = 5
 params.hash_ratio = false
-params.hash_dup = true
+params.hash_dup = false
 
 
 //print usage
@@ -1305,7 +1305,7 @@ process make_cds {
     """
     # bash watch for errors
     set -ueo pipefail
-    echo "test"
+
     cat ${logfile} > make_cds.log
     printf "** Start process 'make_cds' at: \$(date)\n\n" >> make_cds.log
     printf "    Process versions:
@@ -1937,7 +1937,6 @@ process combine_hash {
     # bash watch for errors
     set -ueo pipefail
     
-    echo "test"
     LL_ALL=C sort -m \
     *sorted_hash \
     -S 50G -T /tmp/ -k2,2 -k4,4 -k3,3 --parallel=8 > ${key}_sorted_hash_combined
@@ -2011,7 +2010,7 @@ process calc_hash_dup_cell {
     """
     # bash watch for errors
     set -ueo pipefail
-    echo "test"
+
     zcat "${key}_sorted_hash_combined.gz" \
     | datamash -g 2,3,4 count 3 \
     | datamash -g 1 sum 4 \
@@ -2094,7 +2093,7 @@ process calc_tot_hash_dup {
 
     """
     #!/usr/bin/env Rscript
-    print("test")
+
     library(data.table)
     library(tidyverse)
 
@@ -2289,7 +2288,6 @@ process generate_dashboard {
     # bash watch for errors
     set -ueo pipefail
 
-    echo "test"
     generate_dash_data.R $all_sample_stats $params.output_dir $cell_counts $all_collision $params.garnett_file
 
     mkdir exp_dash
