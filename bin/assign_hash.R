@@ -15,7 +15,7 @@ parser$add_argument('cell_list', help='File with list of cell names with hash um
 parser$add_argument('hash_list', help='File with list of hash names')
 parser$add_argument('cds', help='cds object in RDS format')
 parser$add_argument('umis_per_cell', help='File with list of umis per cell barcode')
-parser$add_argument('hash_umi_cutoff', help='min number of hash umis to filter out')
+parser$add_argument('hash_umi_cutoff', type='integer', help='min number of hash umis to determine top to second best ratio')
 parser$add_argument('hash_ratio', help='min top to second best hash ratio. Default is false and not filtered')
 args = parser$parse_args()
 
@@ -28,7 +28,8 @@ chisq_vs_background <- function(test_hash_matrix, hash_frequencies){
     tryCatch({
       res = chisq.test(x, p=hash_frequencies,  simulate.p.value = FALSE)
       unlist(res[["p.value"]])
-    }, error = function(e) { 1.0 }
+    }, error = function(e) { 1.0
+     }
     )
   })
   return(pvals)
@@ -132,7 +133,7 @@ hash_mtx = t(hash_mtx)
 rna_umis = fread(args$umis_per_cell,
                  header = F, data.table = F, col.names = c("cell", "n.umi"))
 
-# Filter for umis that are less than 5
+# Filter for umis that are less than specified cutoff 
 # Determine background cell hashes to find top_to_second_best_ratio
 background_cell_hashes =
   rna_umis$cell[rna_umis$n.umi < args$hash_umi_cutoff] %>%
@@ -150,23 +151,26 @@ sample_name = args$key
 fwrite(corrected_hash_table, file=paste0(sample_name, "_hash_table.csv"), sep = ",")
 
 # merge hash table with cds to assign to cells
-merged = as.data.table(merge(x=corrected_hash_table, y=colData(cds), by = "cell",all.x=FALSE, all.y=TRUE))
-merged <- merged %>% mutate_at(vars("hash_umis"), ~replace_na(., 0)) # add 0 if a cell has no hash
+# If hash table is empty, put NA for each hash column 
+if (dim(corrected_hash_table)[1] != 0) {
+  merged = as.data.table(merge(x=corrected_hash_table, y=colData(cds), by = "cell",all.x=FALSE, all.y=TRUE))
+  merged <- merged %>% mutate_at(vars("hash_umis"), ~replace_na(., 0)) # add 0 if a cell has no hash
 
-# suppressMessages(merged <- splitstackshape::cSplit(merged, "top_oligo", "."))
+  # suppressMessages(merged <- splitstackshape::cSplit(merged, "top_oligo", "."))
 
-colData(cds)$hash_umis = merged$hash_umis
-colData(cds)$pval = merged$pval
-colData(cds)$qval = merged$qval
-colData(cds)$top_to_second_best_ratio = merged$top_to_second_best_ratio
-colData(cds)$top_oligo = merged$top_oligo
+  colData(cds)$hash_umis = merged$hash_umis
+  colData(cds)$pval = merged$pval
+  colData(cds)$qval = merged$qval
+  colData(cds)$top_to_second_best_ratio = merged$top_to_second_best_ratio
+  colData(cds)$top_oligo = merged$top_oligo
 
-# Drop any cells with less than hash umi cutoff and top to second best hash ratio
-cds_filt <- cds[,colData(cds)$hash_umis >= args$hash_umi_cutoff]
+  # Drop any cells with less than hash umi cutoff and top to second best hash ratio
+  # cds <- cds[,colData(cds)$hash_umis >= args$hash_umi_cutoff]
 
-# Drop any cells with less than top to second best hash ratio cutoff if args$hash_ratio is not false 
-if (args$hash_ratio != "false") {
-  cds_filt <- cds_filt[,colData(cds_filt)$top_to_second_best_ratio >= args$hash_ratio]
-} 
+  # Drop any cells with less than top to second best hash ratio cutoff if args$hash_ratio is not false 
+  if (args$hash_ratio != "false") {
+    cds  <- cds[,!is.na(colData(cds)$top_to_second_best_ratio) & colData(cds)$top_to_second_best_ratio >= args$hash_ratio ]
+  } 
+}
 
-saveRDS(cds_filt,file=paste0(sample_name, "_cds.RDS"))
+saveRDS(cds,file=paste0(sample_name, "_hash_cds.RDS"))
