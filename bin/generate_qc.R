@@ -569,9 +569,15 @@ gen_knee <- function(sample_name, cutoff) {
     # Color barcode rank knee plot by empty drops FDR if empty drops was called 
     if(is(emptydrops_data, 'DFrame')) {
 
-      df = cbind(df, emptyDrops_FDR=as.integer(emptydrops_data$FDR))
-      df$emptyDrops_FDR_0.01 <- ifelse(is.na(emptydrops_data$FDR), NA, ifelse(df$emptyDrops_FDR < 0.01, TRUE, FALSE))
+      df = cbind(df, emptyDrops_FDR=emptydrops_data$FDR)
+
+
+      df$emptyDrops_FDR_0.01 <- ifelse(is.na(emptydrops_data$FDR), "NA", ifelse(df$emptyDrops_FDR < 0.01, "TRUE", "FALSE"))
+
+      print("df emptydrops FDR 0.01")
+      print(df$emptyDrops_FDR_0.01[!is.na(df$emptyDrops_FDR_0.01)])
       df = df %>% mutate(n.umi.rank = min_rank(-n.umi))
+      
 
       plot = ggplot(df %>%
                       arrange(-n.umi) %>%
@@ -625,13 +631,6 @@ suppressMessages(gen_knee(args$sample_name, args$specify_cutoff))
 # Generate Barnyard collision rates between mouse and human genes 
 
 if (sample_name == "Barnyard") {
-
-  # # Filter out false cells called by emptyDrops 
-
-  # # Keep NA calls 
-  # keep_na <- cds[,is.na(colData(cds)$emptyDrops_Limited)]
-  # keep_cells <- cds[,!is.na(colData(cds)$emptyDrops_Limited) & colData(cds)$emptyDrops_Limited=="TRUE"]
-  # cds <- combine_cds(list(keep_na, keep_cells), sample_col_name="og_cds")
 
   fData(cds)$mouse <- grepl("ENSMUSG", fData(cds)$id)
   fData(cds)$human <- grepl("ENSG", fData(cds)$id)
