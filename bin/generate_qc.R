@@ -442,7 +442,7 @@ gen_plots <- function(sample_name, sample_path) {
   # If Empty drops was ran, then filter out cds object for Empty Drops FDR < 0.01
   if(is(emptydrops_data, 'DFrame')) {
     keep_na <- samp_cds[,is.na(colData(samp_cds)$emptyDrops_FDR)]
-    keep_cells <- samp_cds[,!is.na(colData(samp_cds)$emptyDrops_FDR) & colData(samp_cds)$emptyDrops_FDR < 0.01]
+    keep_cells <- samp_cds[,!is.na(colData(samp_cds)$emptyDrops_FDR) & colData(samp_cds)$emptyDrops_FDR <= 0.01]
     samp_cds <- combine_cds(list(keep_na, keep_cells), sample_col_name="og_cds")
   }
 
@@ -570,14 +570,8 @@ gen_knee <- function(sample_name, cutoff) {
     if(is(emptydrops_data, 'DFrame')) {
 
       df = cbind(df, emptyDrops_FDR=emptydrops_data$FDR)
-
-
-      df$emptyDrops_FDR_0.01 <- ifelse(is.na(emptydrops_data$FDR), "NA", ifelse(df$emptyDrops_FDR < 0.01, "TRUE", "FALSE"))
-
-      print("df emptydrops FDR 0.01")
-      print(df$emptyDrops_FDR_0.01[!is.na(df$emptyDrops_FDR_0.01)])
+      df$emptyDrops_FDR_0.01 <- ifelse(is.na(emptydrops_data$FDR), "NA", ifelse(df$emptyDrops_FDR <= 0.01, "TRUE", "FALSE"))
       df = df %>% mutate(n.umi.rank = min_rank(-n.umi))
-      
 
       plot = ggplot(df %>%
                       arrange(-n.umi) %>%
@@ -595,13 +589,13 @@ gen_knee <- function(sample_name, cutoff) {
     } else {
     # Output plot
       df = df %>% mutate(n.umi.rank = min_rank(-n.umi))
-      
+
       plot = ggplot(df %>%
                       arrange(-n.umi) %>%
                       select(n.umi, n.umi.rank)
                     %>% distinct(),
                     aes(x = n.umi.rank, y = n.umi)) +
-        geom_point(aes(size=1, shape=1, color="black")) +
+        geom_point(size=1, shape=1, stroke=0.3, color = "black") +
         # geom_line(size = 0.8) +
         scale_x_log10() +
         scale_y_log10() +
