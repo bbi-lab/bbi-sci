@@ -1201,11 +1201,13 @@ process run_emptyDrops {
 
     output:
         set key, file(cell_data), file(umi_matrix), file(gene_data), file("*_emptyDrops.RDS"), val(gtf_path), file("run_emptyDrops.log") into emptyDrops_output
+        set key, file("*_emptyDrops.RDS") into for_gen_qc_emptyDrops
 
 """
     # bash watch for errors
     set -ueo pipefail
 
+    echo "test2"
     output_file="${key}_emptyDrops.RDS"
 
     cat ${logfile} > run_emptyDrops.log
@@ -1270,6 +1272,7 @@ Process: make_cds
  Downstream:
     run_scrublet
     calc_cell_totals
+    generate_qc
 
  Published:
 
@@ -1278,6 +1281,7 @@ Process: make_cds
 *************/
 
 emptyDrops_output.combine(fraction_per_cell_intronic, by:0).set{emptyDrops_fraction_intronic}
+// emptyDrops_fraction_intronic.into{emptyDrops_fraction_intronic_copy01; emptyDrops_fraction_intronic_copy02}
 
 /*
 ** Diagnostic.
@@ -1305,6 +1309,8 @@ process make_cds {
     """
     # bash watch for errors
     set -ueo pipefail
+
+    echo "test"
 
     cat ${logfile} > make_cds.log
     printf "** Start process 'make_cds' at: \$(date)\n\n" >> make_cds.log
@@ -1508,8 +1514,31 @@ process reformat_qc {
     output:
         set key, file("temp_fold/*.RDS"), file("temp_fold/*.csv") into rscrub_out
         file("*sample_stats.csv") into sample_stats
-        file("*collision.txt") into collision
+        // file("*collision.txt") into collision
         set key, file("temp_fold") into temp_dir
+
+
+    
+    // if ("$key" == "Barnyard") {
+    //     fData(cds)\$mouse <- grepl("ENSMUSG", fData(cds)\$id)
+    //     fData(cds)\$human <- grepl("ENSG", fData(cds)\$id)
+
+    //     pData(cds)\$mouse_reads <- Matrix::colSums(exprs(cds)[fData(cds)\$mouse,])
+    //     pData(cds)\$human_reads <- Matrix::colSums(exprs(cds)[fData(cds)\$human,])
+    //     pData(cds)\$total_reads <- pData(cds)\$mouse_reads + pData(cds)\$human_reads
+    //     pData(cds)\$human_perc <- pData(cds)\$human_reads/pData(cds)\$total_reads
+    //     pData(cds)\$mouse_perc <- pData(cds)\$mouse_reads/pData(cds)\$total_reads
+    //     pData(cds)\$collision <- ifelse(pData(cds)\$human_perc >= .9 | pData(cds)\$mouse_perc >= .9, FALSE, TRUE)
+
+    //     collision_rate <- round(sum(pData(cds)\$collision/nrow(pData(cds))) * 200, 1)
+    //     fileConn<-file("Barn_collision.txt")
+    //     writeLines(paste0("$key", "\t", collision_rate, "%"), fileConn)
+    //     close(fileConn)
+    // } else {
+    //     fileConn<-file("${key}_no_collision.txt")
+    //     writeLines(paste0("$key", "\t", "NA"), fileConn)
+    //     close(fileConn)
+    // }
 
 
     """
@@ -1545,27 +1574,6 @@ process reformat_qc {
     write.csv(cell_qc, quote=FALSE, file="temp_fold/$cell_qc")
     write.csv(df, file=paste0("$key", "_sample_stats.csv"), quote=FALSE, row.names=FALSE)
     saveRDS(cds, file="temp_fold/$cds_object")
-    
-    if ("$key" == "Barnyard") {
-        fData(cds)\$mouse <- grepl("ENSMUSG", fData(cds)\$id)
-        fData(cds)\$human <- grepl("ENSG", fData(cds)\$id)
-
-        pData(cds)\$mouse_reads <- Matrix::colSums(exprs(cds)[fData(cds)\$mouse,])
-        pData(cds)\$human_reads <- Matrix::colSums(exprs(cds)[fData(cds)\$human,])
-        pData(cds)\$total_reads <- pData(cds)\$mouse_reads + pData(cds)\$human_reads
-        pData(cds)\$human_perc <- pData(cds)\$human_reads/pData(cds)\$total_reads
-        pData(cds)\$mouse_perc <- pData(cds)\$mouse_reads/pData(cds)\$total_reads
-        pData(cds)\$collision <- ifelse(pData(cds)\$human_perc >= .9 | pData(cds)\$mouse_perc >= .9, FALSE, TRUE)
-
-        collision_rate <- round(sum(pData(cds)\$collision/nrow(pData(cds))) * 200, 1)
-        fileConn<-file("Barn_collision.txt")
-        writeLines(paste0("$key", "\t", collision_rate, "%"), fileConn)
-        close(fileConn)
-    } else {
-        fileConn<-file("${key}_no_collision.txt")
-        writeLines(paste0("$key", "\t", "NA"), fileConn)
-        close(fileConn)
-    }
 
     """
 }
@@ -1614,7 +1622,9 @@ Process: generate_qc_metrics
 // See notes above for info on temp_dir
 temp_dir.into{temp_dir_copy01; temp_dir_copy02}
 
-for_gen_qc = rscrub_out.join(umis_per_cell)
+
+
+for_gen_qc = rscrub_out.join(umis_per_cell).join(for_gen_qc_emptyDrops)
 save_knee = {params.output_dir + "/" + it - ~/_knee_plot.png/ + "/" + it}
 save_umap = {params.output_dir + "/" + it - ~/_UMAP.png/ + "/" + it}
 save_cellqc = {params.output_dir + "/" + it - ~/_cell_qc.png/ + "/" + it}
@@ -1636,12 +1646,14 @@ process generate_qc_metrics {
     // publishDir path: "${params.output_dir}/", saveAs: save_empty_hash_plot pattern: "*_hash_knee_plot.png", mode: 'copy'
 
     input:
-        set key, file(cds_object), file(cell_qc), file(umis_per_cell) from for_gen_qc
+        set key, file(cds_object), file(cell_qc), file(umis_per_cell), file(emptydrops) from for_gen_qc
+        // file(emptydrops) from for_gen_qc_emptyDrops
          
     output:
         file("*.png") into qc_plots
         file("*.txt") into cutoff
         file("*.csv") into rt_stats
+        file("*collision.txt") into collision
 
 
     """
@@ -1649,7 +1661,7 @@ process generate_qc_metrics {
     set -ueo pipefail
 
     generate_qc.R\
-        $cds_object $umis_per_cell $key \
+        $cds_object $umis_per_cell $key $emptydrops \
         --specify_cutoff $params.umi_cutoff
 
     """
