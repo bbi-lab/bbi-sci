@@ -1125,7 +1125,7 @@ process make_matrix {
 
     input:
         set key, file(cell_gene_count), file(logfile), val(gtf_path) from make_matrix_prepped
-
+ 
     output:
         set key, file("*cell_annotations.txt"), file("*umi_counts.mtx"), file("*gene_annotations.txt"), val(gtf_path), file("make_matrix.log") into mat_output
 
@@ -1207,7 +1207,6 @@ process run_emptyDrops {
     # bash watch for errors
     set -ueo pipefail
 
-    echo "test2"
     output_file="${key}_emptyDrops.RDS"
 
     cat ${logfile} > run_emptyDrops.log
@@ -1309,8 +1308,6 @@ process make_cds {
     """
     # bash watch for errors
     set -ueo pipefail
-
-    echo "test"
 
     cat ${logfile} > make_cds.log
     printf "** Start process 'make_cds' at: \$(date)\n\n" >> make_cds.log
@@ -1477,7 +1474,6 @@ Process: reformat_qc
 
  Summary:
     Add scrublet info to cell_qc and cds object
-    Calculate collision rate for barnyard
     Calculate sample statistics
 
  Downstream:
@@ -1647,7 +1643,6 @@ process generate_qc_metrics {
 
     input:
         set key, file(cds_object), file(cell_qc), file(umis_per_cell), file(emptydrops) from for_gen_qc
-        // file(emptydrops) from for_gen_qc_emptyDrops
          
     output:
         file("*.png") into qc_plots

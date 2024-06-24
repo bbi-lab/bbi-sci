@@ -454,6 +454,11 @@ gen_plots <- function(sample_name, sample_path) {
     samp_cds <- reduce_dimension(samp_cds)
     samp_cds <- cluster_cells(samp_cds, k=ceiling(sqrt(dim(samp_cds)[2])*0.25))
 
+    # Reduce number of clusters if clusters are > 12 
+    if (dim(table(clusters(samp_cds))) > 12 ) {
+      samp_cds <- cluster_cells(samp_cds, k=ceiling(sqrt(dim(samp_cds)[2])*0.75))
+    }  
+   
     # Generate UMI and mitochondrial stats by rt barcode 
     samp_cds <- rt_stats(sample_name, samp_cds)
     colpal = well_check(sample_name, samp_cds)
