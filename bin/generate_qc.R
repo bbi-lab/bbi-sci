@@ -15,10 +15,14 @@ parser = argparse::ArgumentParser(description='Script to generate qc plots.')
 parser$add_argument('cds_path', help='File with cds.')
 parser$add_argument('umis_file', help='File with umis_per_barcode.')
 parser$add_argument('sample_name', help='Sample name.')
+parser$add_argument('empty_drops', help='RDS file from emptyDrops.')
 parser$add_argument('--specify_cutoff', type='integer', help='Optional. Specifies a cutoff rather than choosing a UMI cutoff automatically.')
 args = parser$parse_args()
 
 sample_name <- args$sample_name
+
+# Read empty drops RDS object
+emptydrops_data <- readRDS(args$empty_drops)
 
 
 #################################################
@@ -56,7 +60,6 @@ n_fun <- function(y){return(data.frame(y=max(y), label = paste0(length(y))))}
 # returns with a cds with the extracted information 
 # Write csv for UMI and mitochondrial UMI summary stats by RT barcode
 rt_stats <- function(sample_name, cds) {
-  print("rt stats...")
   temp_cds <- extractBarcode(cds)
 
 
@@ -199,9 +202,9 @@ well_check <- function(sample_name, cds) {
   well_check_combined <- plot_grid(mito_rt_plot, umi_rt_plot, 
                          perc_clust_plot, perc_clust_rt, 
                          nrow=4, align='hv',
-                         rel_heights = c(1.5,1.5,1,1))
+                         rel_heights = c(1,1,1,2))
 
-  ggsave(paste0(sample_name, "_wellcheck.png"), well_check_combined, width=14, height = 17)
+  ggsave(paste0(sample_name, "_wellcheck.png"), well_check_combined, width=15, height = 30)
   
   return (colpal) # return colors used for clusters
 }
@@ -435,14 +438,34 @@ plot_cells_simp <- function(cds,
 
 gen_plots <- function(sample_name, sample_path) {
   samp_cds <- readRDS(sample_path)
-  garnett_mods <- names(colData(samp_cds))[grepl("garnett_type", names(colData(samp_cds)))]
 
+  garnett_mods <- names(colData(samp_cds))[grepl("garnett_type", names(colData(samp_cds)))]  
 
   samp_cds <- tryCatch({
+    
+    # If Empty drops was ran, then filter out cds object for Empty Drops FDR < 0.01
+    if(is(emptydrops_data, 'DFrame')) {
+      keep_na <- samp_cds[,is.na(colData(samp_cds)$emptyDrops_FDR)]
+      keep_cells <- samp_cds[,!is.na(colData(samp_cds)$emptyDrops_FDR) & colData(samp_cds)$emptyDrops_FDR <= 0.01]
+      samp_cds <- combine_cds(list(keep_na, keep_cells), sample_col_name="og_cds")
+    }
+    
     samp_cds <- preprocess_cds(samp_cds)
     samp_cds <- reduce_dimension(samp_cds)
-    samp_cds <- cluster_cells(samp_cds)
+    samp_cds <- cluster_cells(samp_cds, k=ceiling(sqrt(dim(samp_cds)[2])*0.25))
 
+    # Reduce number of clusters if clusters are > 12 
+    if (dim(table(clusters(samp_cds))) > 12 ) {
+      samp_cds <- cluster_cells(samp_cds, k=ceiling(sqrt(dim(samp_cds)[2])*0.75))
+    }  
+
+    # Increase number of clusters if clusters are < 5
+    if (dim(table(clusters(samp_cds))) < 5 ) {
+      samp_cds <- cluster_cells(samp_cds, k=ceiling(sqrt(dim(samp_cds)[2])*0.1))
+    }  
+
+
+   
     # Generate UMI and mitochondrial stats by rt barcode 
     samp_cds <- rt_stats(sample_name, samp_cds)
     colpal = well_check(sample_name, samp_cds)
@@ -520,7 +543,8 @@ cds <- gen_plots(args$sample_name, args$cds_path)
 
 # Knee plot
 
-cutoff = NULL
+# cutoff = NULL
+cutoff = args$specify_cutoff
 gen_knee <- function(sample_name, cutoff) {
 
   
@@ -540,30 +564,61 @@ gen_knee <- function(sample_name, cutoff) {
     close(fileConn)
   } else {
     # Get the two populations with mclust
+    # if(is.null(cutoff)) {
+    #   background_call = Mclust(data.frame(log10(df$n.umi)),G=c(2))
+    #   cutoff = min(df[which(background_call$classification == 2 & background_call$uncertainty < 0.005),3])
+    # } else  {
+    #   cutoff = args$cutoff
+    # }
+
     if(is.null(cutoff)) {
       background_call = Mclust(data.frame(log10(df$n.umi)),G=c(2))
       cutoff = min(df[which(background_call$classification == 2 & background_call$uncertainty < 0.005),3])
-    } else  {
-      cutoff = args$cutoff
+    } 
+
+    plot = NULL
+
+    # Color barcode rank knee plot by empty drops FDR if empty drops was called 
+    if(is(emptydrops_data, 'DFrame')) {
+
+      df = cbind(df, emptyDrops_FDR=emptydrops_data$FDR)
+      df$emptyDrops_FDR_0.01 <- ifelse(is.na(emptydrops_data$FDR), "NA", ifelse(df$emptyDrops_FDR <= 0.01, "TRUE", "FALSE"))
+      df = df %>% mutate(n.umi.rank = min_rank(-n.umi))
+
+      plot = ggplot(df %>%
+                      arrange(-n.umi) %>%
+                      select(n.umi, n.umi.rank, emptyDrops_FDR_0.01)
+                    %>% distinct(),
+                    aes(x = n.umi.rank, y = n.umi, color=emptyDrops_FDR_0.01)) +
+        geom_point(size=1, shape=1, stroke=0.3) +
+        scale_color_manual(values = c("TRUE" = "cornflowerblue", "FALSE" = "red", "NA"="grey")) +
+        scale_x_log10() +
+        scale_y_log10() +
+        xlab("# of barcodes") +
+        ylab("UMI count threshold") +
+        theme_bw() + 
+        theme(legend.position="bottom")
+    } else {
+    # Output plot
+      df = df %>% mutate(n.umi.rank = min_rank(-n.umi))
+
+      plot = ggplot(df %>%
+                      arrange(-n.umi) %>%
+                      select(n.umi, n.umi.rank)
+                    %>% distinct(),
+                    aes(x = n.umi.rank, y = n.umi)) +
+        geom_point(size=1, shape=1, stroke=0.3, color = "black") +
+        # geom_line(size = 0.8) +
+        scale_x_log10() +
+        scale_y_log10() +
+        xlab("# of barcodes") +
+        ylab("UMI count threshold") +
+        theme_bw()
     }
     
-    # Output plot
-    df = df %>% mutate(n.umi.rank = min_rank(-n.umi))
-    
-    plot = ggplot(df %>%
-                    arrange(-n.umi) %>%
-                    select(n.umi, n.umi.rank)
-                  %>% distinct(),
-                  aes(x = n.umi.rank, y = n.umi)) +
-      geom_line(size = 0.8) +
-      scale_x_log10() +
-      scale_y_log10() +
-      xlab("# of barcodes") +
-      ylab("UMI count threshold") +
-      theme_bw()
-    
     plot = plot +
-      geom_hline(yintercept = cutoff, size = 1.2, color = "firebrick2")
+      geom_hline(aes(yintercept = cutoff), linetype="dotted", size = .5, color = "firebrick2") + 
+      annotate("text", x = max(df$n.umi.rank), y = cutoff, label = "umi cutoff", vjust = -0.5, hjust = 1, size = 2) 
     
     ggsave(paste0(sample_name, "_knee_plot.png"), plot = plot, units = "in", width = 3.5*1.3, height = 3.5)
     
@@ -605,6 +660,13 @@ if (sample_name == "Barnyard") {
   ggsave("Barnyard_plot.png", plot = plot, units = "in", width = 3.5*1.3, height = 3.5)
 
   collision_rate <- round(sum(pData(cds)$collision/nrow(pData(cds))) * 200, 1)
+  fileConn<-file("Barn_collision.txt")
+  writeLines(paste0(args$sample_name, "\t", collision_rate, "%"), fileConn)
+  close(fileConn)
 
+} else {
+    fileConn<-file(paste0(args$sample_name, "_no_collision.txt"))
+    writeLines(paste0(args$sample_name, "\t", "NA"), fileConn)
+    close(fileConn)
 }
 

@@ -1125,7 +1125,7 @@ process make_matrix {
 
     input:
         set key, file(cell_gene_count), file(logfile), val(gtf_path) from make_matrix_prepped
-
+ 
     output:
         set key, file("*cell_annotations.txt"), file("*umi_counts.mtx"), file("*gene_annotations.txt"), val(gtf_path), file("make_matrix.log") into mat_output
 
@@ -1201,6 +1201,7 @@ process run_emptyDrops {
 
     output:
         set key, file(cell_data), file(umi_matrix), file(gene_data), file("*_emptyDrops.RDS"), val(gtf_path), file("run_emptyDrops.log") into emptyDrops_output
+        set key, file("*_emptyDrops.RDS") into for_gen_qc_emptyDrops
 
 """
     # bash watch for errors
@@ -1270,6 +1271,7 @@ Process: make_cds
  Downstream:
     run_scrublet
     calc_cell_totals
+    generate_qc
 
  Published:
 
@@ -1278,6 +1280,7 @@ Process: make_cds
 *************/
 
 emptyDrops_output.combine(fraction_per_cell_intronic, by:0).set{emptyDrops_fraction_intronic}
+// emptyDrops_fraction_intronic.into{emptyDrops_fraction_intronic_copy01; emptyDrops_fraction_intronic_copy02}
 
 /*
 ** Diagnostic.
@@ -1286,13 +1289,13 @@ emptyDrops_fraction_intronic_tmp.view()
 */
 
 
-save_cds = {params.output_dir + "/" + it - ~/_cds.RDS/ + "/" + it}
-save_cell_qc = {params.output_dir + "/" + it - ~/_cell_qc.csv/ + "/" + it}
+// save_cds = {params.output_dir + "/" + it - ~/_cds.RDS/ + "/" + it}
+// save_cell_qc = {params.output_dir + "/" + it - ~/_cell_qc.csv/ + "/" + it}
 
 process make_cds {
     cache 'lenient'
-    publishDir path: "${params.output_dir}/", saveAs: save_cds, pattern: "*cds.RDS", mode: 'copy'
-    publishDir path: "${params.output_dir}/", saveAs: save_cell_qc, pattern: "*cell_qc.csv", mode: 'copy'
+    // publishDir path: "${params.output_dir}/", saveAs: save_cds, pattern: "*cds.RDS", mode: 'copy'
+    // publishDir path: "${params.output_dir}/", saveAs: save_cell_qc, pattern: "*cell_qc.csv", mode: 'copy'
 
 
     input:
@@ -1471,7 +1474,6 @@ Process: reformat_qc
 
  Summary:
     Add scrublet info to cell_qc and cds object
-    Calculate collision rate for barnyard
     Calculate sample statistics
 
  Downstream:
@@ -1508,8 +1510,31 @@ process reformat_qc {
     output:
         set key, file("temp_fold/*.RDS"), file("temp_fold/*.csv") into rscrub_out
         file("*sample_stats.csv") into sample_stats
-        file("*collision.txt") into collision
+        // file("*collision.txt") into collision
         set key, file("temp_fold") into temp_dir
+
+
+    
+    // if ("$key" == "Barnyard") {
+    //     fData(cds)\$mouse <- grepl("ENSMUSG", fData(cds)\$id)
+    //     fData(cds)\$human <- grepl("ENSG", fData(cds)\$id)
+
+    //     pData(cds)\$mouse_reads <- Matrix::colSums(exprs(cds)[fData(cds)\$mouse,])
+    //     pData(cds)\$human_reads <- Matrix::colSums(exprs(cds)[fData(cds)\$human,])
+    //     pData(cds)\$total_reads <- pData(cds)\$mouse_reads + pData(cds)\$human_reads
+    //     pData(cds)\$human_perc <- pData(cds)\$human_reads/pData(cds)\$total_reads
+    //     pData(cds)\$mouse_perc <- pData(cds)\$mouse_reads/pData(cds)\$total_reads
+    //     pData(cds)\$collision <- ifelse(pData(cds)\$human_perc >= .9 | pData(cds)\$mouse_perc >= .9, FALSE, TRUE)
+
+    //     collision_rate <- round(sum(pData(cds)\$collision/nrow(pData(cds))) * 200, 1)
+    //     fileConn<-file("Barn_collision.txt")
+    //     writeLines(paste0("$key", "\t", collision_rate, "%"), fileConn)
+    //     close(fileConn)
+    // } else {
+    //     fileConn<-file("${key}_no_collision.txt")
+    //     writeLines(paste0("$key", "\t", "NA"), fileConn)
+    //     close(fileConn)
+    // }
 
 
     """
@@ -1545,27 +1570,6 @@ process reformat_qc {
     write.csv(cell_qc, quote=FALSE, file="temp_fold/$cell_qc")
     write.csv(df, file=paste0("$key", "_sample_stats.csv"), quote=FALSE, row.names=FALSE)
     saveRDS(cds, file="temp_fold/$cds_object")
-    
-    if ("$key" == "Barnyard") {
-        fData(cds)\$mouse <- grepl("ENSMUSG", fData(cds)\$id)
-        fData(cds)\$human <- grepl("ENSG", fData(cds)\$id)
-
-        pData(cds)\$mouse_reads <- Matrix::colSums(exprs(cds)[fData(cds)\$mouse,])
-        pData(cds)\$human_reads <- Matrix::colSums(exprs(cds)[fData(cds)\$human,])
-        pData(cds)\$total_reads <- pData(cds)\$mouse_reads + pData(cds)\$human_reads
-        pData(cds)\$human_perc <- pData(cds)\$human_reads/pData(cds)\$total_reads
-        pData(cds)\$mouse_perc <- pData(cds)\$mouse_reads/pData(cds)\$total_reads
-        pData(cds)\$collision <- ifelse(pData(cds)\$human_perc >= .9 | pData(cds)\$mouse_perc >= .9, FALSE, TRUE)
-
-        collision_rate <- round(sum(pData(cds)\$collision/nrow(pData(cds))) * 200, 1)
-        fileConn<-file("Barn_collision.txt")
-        writeLines(paste0("$key", "\t", collision_rate, "%"), fileConn)
-        close(fileConn)
-    } else {
-        fileConn<-file("${key}_no_collision.txt")
-        writeLines(paste0("$key", "\t", "NA"), fileConn)
-        close(fileConn)
-    }
 
     """
 }
@@ -1614,7 +1618,9 @@ Process: generate_qc_metrics
 // See notes above for info on temp_dir
 temp_dir.into{temp_dir_copy01; temp_dir_copy02}
 
-for_gen_qc = rscrub_out.join(umis_per_cell)
+
+
+for_gen_qc = rscrub_out.join(umis_per_cell).join(for_gen_qc_emptyDrops)
 save_knee = {params.output_dir + "/" + it - ~/_knee_plot.png/ + "/" + it}
 save_umap = {params.output_dir + "/" + it - ~/_UMAP.png/ + "/" + it}
 save_cellqc = {params.output_dir + "/" + it - ~/_cell_qc.png/ + "/" + it}
@@ -1636,12 +1642,13 @@ process generate_qc_metrics {
     // publishDir path: "${params.output_dir}/", saveAs: save_empty_hash_plot pattern: "*_hash_knee_plot.png", mode: 'copy'
 
     input:
-        set key, file(cds_object), file(cell_qc), file(umis_per_cell) from for_gen_qc
+        set key, file(cds_object), file(cell_qc), file(umis_per_cell), file(emptydrops) from for_gen_qc
          
     output:
         file("*.png") into qc_plots
         file("*.txt") into cutoff
         file("*.csv") into rt_stats
+        file("*collision.txt") into collision
 
 
     """
@@ -1649,7 +1656,7 @@ process generate_qc_metrics {
     set -ueo pipefail
 
     generate_qc.R\
-        $cds_object $umis_per_cell $key \
+        $cds_object $umis_per_cell $key $emptydrops \
         --specify_cutoff $params.umi_cutoff
 
     """
@@ -1789,13 +1796,13 @@ Process: assign_hash
 make_hash_cds = temp_dir_copy01.join(hash_mats).join(for_assign_hash_umis)
 
 save_hash_cds = {params.output_dir + "/" + it - ~/_hash_cds.RDS/ + "/" + it}
-save_cell_qc = {params.output_dir + "/" + it - ~/_cell_qc.csv/ + "/" + it}
+// save_cell_qc = {params.output_dir + "/" + it - ~/_cell_qc.csv/ + "/" + it}
 save_hash_table = {params.output_dir + "/" + it - ~/_hash_table.csv/ + "/" + it}
 
 process assign_hash {
     cache 'lenient'
     publishDir path: "${params.output_dir}/", saveAs: save_hash_cds, pattern: "*_hash_cds.RDS", mode: 'copy'
-    publishDir path: "${params.output_dir}/", saveAs: save_cell_qc, pattern: "*cell_qc.csv", mode: 'copy'
+    // publishDir path: "${params.output_dir}/", saveAs: save_cell_qc, pattern: "*cell_qc.csv", mode: 'copy'
     publishDir path: "${params.output_dir}/", saveAs: save_hash_table, pattern: "*_hash_table.csv", mode: 'copy'
 
     input:
@@ -1804,7 +1811,7 @@ process assign_hash {
     output:
         file("*hash_cds.RDS") into hash_cds
         file("*hash_table.csv") into hash_table
-        file("*cell_qc.csv") into cell_qc_out
+        // file("*cell_qc.csv") into cell_qc_out
 
     when: 
         params.hash_list != false 
@@ -2161,13 +2168,13 @@ Process: publish_cds_and_cell_qc
 
 *************/
 
-// save_cds = {params.output_dir + "/" + it - ~/_cds.RDS/ + "/" + it}
-// save_cell_qc = {params.output_dir + "/" + it - ~/_cell_qc.csv/ + "/" + it}
+save_cds = {params.output_dir + "/" + it - ~/_cds.RDS/ + "/" + it}
+save_cell_qc = {params.output_dir + "/" + it - ~/_cell_qc.csv/ + "/" + it}
 
 process publish_cds_and_cell_qc {
     cache 'lenient'
-    // publishDir path: "${params.output_dir}/", saveAs: save_cds, pattern: "*cds.RDS", mode: 'copy'
-    // publishDir path: "${params.output_dir}/", saveAs: save_cell_qc, pattern: "*cell_qc.csv", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_cds, pattern: "*cds.RDS", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_cell_qc, pattern: "*cell_qc.csv", mode: 'copy'
 
     input:
         set key,file(cds_dir) from temp_dir_copy02
@@ -2182,7 +2189,7 @@ process publish_cds_and_cell_qc {
     """
     # bash watch for errors
     set -ueo pipefail
-
+    echo "test"
     cp $cds_dir/*.RDS . 
     cp $cds_dir/*.csv . 
 
