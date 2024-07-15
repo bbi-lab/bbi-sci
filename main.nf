@@ -1289,13 +1289,13 @@ emptyDrops_fraction_intronic_tmp.view()
 */
 
 
-save_cds = {params.output_dir + "/" + it - ~/_cds.RDS/ + "/" + it}
-save_cell_qc = {params.output_dir + "/" + it - ~/_cell_qc.csv/ + "/" + it}
+// save_cds = {params.output_dir + "/" + it - ~/_cds.RDS/ + "/" + it}
+// save_cell_qc = {params.output_dir + "/" + it - ~/_cell_qc.csv/ + "/" + it}
 
 process make_cds {
     cache 'lenient'
-    publishDir path: "${params.output_dir}/", saveAs: save_cds, pattern: "*cds.RDS", mode: 'copy'
-    publishDir path: "${params.output_dir}/", saveAs: save_cell_qc, pattern: "*cell_qc.csv", mode: 'copy'
+    // publishDir path: "${params.output_dir}/", saveAs: save_cds, pattern: "*cds.RDS", mode: 'copy'
+    // publishDir path: "${params.output_dir}/", saveAs: save_cell_qc, pattern: "*cell_qc.csv", mode: 'copy'
 
 
     input:
@@ -1796,13 +1796,13 @@ Process: assign_hash
 make_hash_cds = temp_dir_copy01.join(hash_mats).join(for_assign_hash_umis)
 
 save_hash_cds = {params.output_dir + "/" + it - ~/_hash_cds.RDS/ + "/" + it}
-save_cell_qc = {params.output_dir + "/" + it - ~/_cell_qc.csv/ + "/" + it}
+// save_cell_qc = {params.output_dir + "/" + it - ~/_cell_qc.csv/ + "/" + it}
 save_hash_table = {params.output_dir + "/" + it - ~/_hash_table.csv/ + "/" + it}
 
 process assign_hash {
     cache 'lenient'
     publishDir path: "${params.output_dir}/", saveAs: save_hash_cds, pattern: "*_hash_cds.RDS", mode: 'copy'
-    publishDir path: "${params.output_dir}/", saveAs: save_cell_qc, pattern: "*cell_qc.csv", mode: 'copy'
+    // publishDir path: "${params.output_dir}/", saveAs: save_cell_qc, pattern: "*cell_qc.csv", mode: 'copy'
     publishDir path: "${params.output_dir}/", saveAs: save_hash_table, pattern: "*_hash_table.csv", mode: 'copy'
 
     input:
@@ -1811,7 +1811,7 @@ process assign_hash {
     output:
         file("*hash_cds.RDS") into hash_cds
         file("*hash_table.csv") into hash_table
-        file("*cell_qc.csv") into cell_qc_out
+        // file("*cell_qc.csv") into cell_qc_out
 
     when: 
         params.hash_list != false 
@@ -2168,13 +2168,13 @@ Process: publish_cds_and_cell_qc
 
 *************/
 
-// save_cds = {params.output_dir + "/" + it - ~/_cds.RDS/ + "/" + it}
-// save_cell_qc = {params.output_dir + "/" + it - ~/_cell_qc.csv/ + "/" + it}
+save_cds = {params.output_dir + "/" + it - ~/_cds.RDS/ + "/" + it}
+save_cell_qc = {params.output_dir + "/" + it - ~/_cell_qc.csv/ + "/" + it}
 
 process publish_cds_and_cell_qc {
     cache 'lenient'
-    // publishDir path: "${params.output_dir}/", saveAs: save_cds, pattern: "*cds.RDS", mode: 'copy'
-    // publishDir path: "${params.output_dir}/", saveAs: save_cell_qc, pattern: "*cell_qc.csv", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_cds, pattern: "*cds.RDS", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_cell_qc, pattern: "*cell_qc.csv", mode: 'copy'
 
     input:
         set key,file(cds_dir) from temp_dir_copy02
@@ -2189,7 +2189,7 @@ process publish_cds_and_cell_qc {
     """
     # bash watch for errors
     set -ueo pipefail
-
+    echo "test"
     cp $cds_dir/*.RDS . 
     cp $cds_dir/*.csv . 
 

@@ -439,17 +439,17 @@ plot_cells_simp <- function(cds,
 gen_plots <- function(sample_name, sample_path) {
   samp_cds <- readRDS(sample_path)
 
-  # If Empty drops was ran, then filter out cds object for Empty Drops FDR < 0.01
-  if(is(emptydrops_data, 'DFrame')) {
-    keep_na <- samp_cds[,is.na(colData(samp_cds)$emptyDrops_FDR)]
-    keep_cells <- samp_cds[,!is.na(colData(samp_cds)$emptyDrops_FDR) & colData(samp_cds)$emptyDrops_FDR <= 0.01]
-    samp_cds <- combine_cds(list(keep_na, keep_cells), sample_col_name="og_cds")
-  }
-
-  garnett_mods <- names(colData(samp_cds))[grepl("garnett_type", names(colData(samp_cds)))]
-
+  garnett_mods <- names(colData(samp_cds))[grepl("garnett_type", names(colData(samp_cds)))]  
 
   samp_cds <- tryCatch({
+    
+    # If Empty drops was ran, then filter out cds object for Empty Drops FDR < 0.01
+    if(is(emptydrops_data, 'DFrame')) {
+      keep_na <- samp_cds[,is.na(colData(samp_cds)$emptyDrops_FDR)]
+      keep_cells <- samp_cds[,!is.na(colData(samp_cds)$emptyDrops_FDR) & colData(samp_cds)$emptyDrops_FDR <= 0.01]
+      samp_cds <- combine_cds(list(keep_na, keep_cells), sample_col_name="og_cds")
+    }
+    
     samp_cds <- preprocess_cds(samp_cds)
     samp_cds <- reduce_dimension(samp_cds)
     samp_cds <- cluster_cells(samp_cds, k=ceiling(sqrt(dim(samp_cds)[2])*0.25))
