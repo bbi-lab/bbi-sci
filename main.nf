@@ -35,7 +35,7 @@ params.skip_doublet_detect = false
 params.run_emptyDrops = true
 params.hash_umi_cutoff = 5
 params.hash_ratio = false
-params.hash_dup = false
+params.hash_dup = false // Default is false. Other options are "p5" or "pcr_plate". params.hash_list must also be true.
 
 
 //print usage
@@ -74,7 +74,7 @@ if (params.help) {
     log.info '    params.skip_doublet_detect = false         Whether to skip doublet detection, i.e. scrublet - useful for very large datasets.'
     log.info '    params.hash_umi_cutoff = 5                 The hash umi cutoff to determine hash vs background in top to second best hash oligo. Default is 5'
     log.info '    params.hash_ratio = false                  The min hash umi ratio for top to second best. Default is false and not filtered'
-    log.info '    params.hash_dup = false                    Whether to run hash PCR duplication rate. params.hash_list also needs to be set to true. Default is false.'
+    log.info '    params.hash_dup = false                    Whether to run hash PCR duplication rate per plate and what indicates a plate. Options are "p5" and "pcr_plate". params.hash_list also needs to be set to true. Default is false.'
     log.info 'Issues? Contact hpliner@uw.edu'
     exit 1
 }
@@ -2071,11 +2071,6 @@ Process: calc_tot_hash_dup
  Notes:
     runs only when params.hash_list != false and params.hash_dup!= false
 
-    Checks p7 parameters to see if a whole 96-well p7 plate was used or only p7 rows to determine 
-    PCR plate. If params.p7_rows is equal or less than 2 rows (A-H), then there are less than 
-    24 wells (2 x 12) indicating the p7 is by rows so group by pcr plates. If params.p7_rows is greater or equal to 
-    7 rows, then a whole p7 plate is used ( 7 x 12 + more) so group by p5 pcr plates. 
-    
 *************/
 
 
@@ -2114,16 +2109,13 @@ process calc_tot_hash_dup {
         dup = dup %>%
             separate(Cell, into = c("p5", "p7", "rt_plate_well", "lig_well"), sep = "_") %>%
             mutate(pcr_plate = paste(str_sub(p7, start = 1, end = 1), str_sub(p5, start = 2, end = 3), sep = ""))
-        
-        num_p7_rows = nchar(gsub("\\\\s+", "", "$params.p7_rows"))
 
-        if (num_p7_rows <= 2) {
+        if ("$params.hash_dup" == 'pcr_plate') {
             dup = dup %>% group_by(pcr_plate) 
-
-        } else if(num_p7_rows >= 7 ) {
+        } else if("$params.hash_dup" == 'p5') {
             dup = dup %>% group_by(p5) 
         } else {
-            stop("Error: params.p7_rows is not within the expected range.")     
+            stop("params.hash_dup must be either 'pcr_plate' or 'p5'.")     
         }
 
         dup_rate = dup %>% summarize(dup_rate = 1-(sum(V4)/sum(V5))) %>% data.frame()
