@@ -1,0 +1,49 @@
+== Rust resources
+
+** Books
+
+The Rust Programming Language
+Kalbnik and Nichols
+Online version: https://doc.rust-lang.org/book/
+Printed version: No Starch Press
+
+Programming Rust. Fast, Safe Systems Development.
+Blandy, Orendorf, and Tindall
+Printed version: O'Reilly Media
+
+Rust for Rustaceans
+Gjengset
+Printed version: No Starch Press
+Note: this has not helped me yet.
+
+Rust Cookbook
+Rust Community?
+Online: https://rust-lang-nursery.github.io/rust-cookbook/
+
+Rust API Guidelines
+Rust Community?
+Online: https://rust-lang.github.io/api-guidelines/
+
+The Rust Performance Book
+Nicholas Nethercote and others
+Online: https://nnethercote.github.io/perf-book/title-page.html
+
+
+** 'Awesome' Rust Crates
+
+Online: https://github.com/rust-unofficial/awesome-rust?tab=readme-ov-file
+
+
+== Rust Use
+
+** Rust in the Linux Kernel
+
+https://thenewstack.io/rust-in-the-linux-kernel/
+
+
+** Lars Bergstrom (Google Director of Engineering): "Rust teams are twice as productive as teams using C++."
+
+https://www.reddit.com/r/rust/comments/1bpwmud/media_lars_bergstrom_google_director_of/
+
+
+

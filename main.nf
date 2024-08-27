@@ -386,8 +386,8 @@ process process_hashes {
     # bash watch for errors
     set -ueo pipefail
     
-    process_hashes.py --hash_sheet $params.hash_list \
-        --fastq <(zcat $input_fastq) --key $key
+    process_hashes --hash_sheet $params.hash_list \
+        --fastq $input_fastq --key $key
 
     """
 }

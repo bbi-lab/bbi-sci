@@ -1,0 +1,235 @@
+//use std::error::Error;
+use std::collections::{HashMap, HashSet};
+use ahash::RandomState;
+use process_hashes::barcode_utils;
+//use itertools::Itertools;
+extern crate clap;
+use clap::{Arg, Command};
+use seq_io::fastq;
+use seq_io::fastq::Record;
+use std::str;
+
+
+
+// url: https://www.reddit.com/r/rust/comments/jv3q3e/how_to_select_between_reading_from_a_file_and/
+
+#[inline(always)]
+// fn update_nested_maps(hash_key1: &String, hash_key2: String, set_key1: String, map1: &mut HashMap<String, HashMap<String, HashSet<String>>>, umi_new: &mut u32, tot_umi: &mut u32) -> Result<(), Box<dyn std::error::Error>> {
+fn update_nested_maps(hash_key1: &String, hash_key2: String, set_key1: String, map1: &mut ahash::HashMap<String, ahash::HashMap<String, ahash::HashSet<String>>>, umi_new: &mut u32, tot_umi: &mut u32) -> Result<(), Box<dyn std::error::Error>> {
+  /*
+  ** We expect that map1 was initialized with hash_key1 so we don't need
+  ** to use map1.entry(key1.to_string()).or_insert(HashMap::new()); instead,
+  ** we return an error if the hash_key1 isn't in map1.
+  let map2 = map1.entry(key1.to_string()).or_insert_with(|| HashMap::new());
+  */
+
+  let result = map1.get_mut(hash_key1);
+  let map2 = if let Some(map2) = result {
+    map2
+  }
+  else {
+    panic!("uh-oh");
+    return Err("Error: hash barcode not in hash_sheet file.".into())
+  };
+
+//  let set1 = map2.entry(hash_key2).or_insert_with(|| HashSet::new());
+  /*
+  ** Use AHash hasher for speed.
+  */
+  let set1 = map2.entry(hash_key2).or_insert_with(|| HashSet::with_capacity_and_hasher(256, ahash::RandomState::new()));
+
+  if(set1.insert(set_key1) == true) {
+    *umi_new += 1;
+  }
+
+  *tot_umi += 1; // bge
+
+  Ok(())
+}
+
+
+fn dump_nested_maps(map: &mut HashMap<String, HashMap<String, HashSet<String>>>) {
+  for key1 in map.keys() {
+    for key2 in map.get(key1).unwrap().keys() {
+      for key3 in map.get(key1).unwrap().get(key2).unwrap().into_iter() {
+        println!("table: key1: {}  key2: {}  key3: {}", key1, key2, key3);
+      }
+    }
+  }
+}
+
+fn main() {
+  /*
+  ** Get command line arguments.
+  */
+  let clarg = Command::new("process_hashes")
+        .version("0.1.0")
+        .about("Finds hash sequence reads in fastq file.")
+        .arg(Arg::new("hash_sheet")   //required=true, no default
+                  .required(true)
+                  .short('s')
+                  .long("hash_sheet")
+                  .help("Path to hash sample sheet."))
+        .arg(Arg::new("fastq")   // required=true
+                  .required(true)
+                  .short('f')
+                  .long("fastq")
+                  .help("Input fastq filename or '-' for stdin."))
+        .arg(Arg::new("hash_edit_distance")  // required=false, default=1
+                  .required(false)
+                  .default_value("1")
+                  .short('d')
+                  .long("hash_edit_distance")
+                  .value_parser(clap::value_parser!(usize))
+                  .help("Allowed edit distance for hashes."))
+        .arg(Arg::new("key")   //required=true
+                  .required(true)
+                  .short('k')
+                  .long("key")
+                  .help("Key for file name for output file."))
+        .get_matches();
+
+  let hash_sheet: String = clarg.get_one::<String>("hash_sheet").unwrap().to_string();
+  let fastq_filename: String = clarg.get_one::<String>("fastq").unwrap().to_string();
+  let hash_edit_distance: usize = *clarg.get_one::<usize>("hash_edit_distance").unwrap();
+  let key: String = clarg.get_one::<String>("key").unwrap().to_string();
+
+  println!("hash_sheet: {}", hash_sheet);
+  println!("fastq: {}", fastq_filename);
+  println!("edit_distance: {}", hash_edit_distance);
+  println!("key: {}", key);
+
+  /*
+  ** Set up hash whitelist map.
+  */
+  let hash_lookup = barcode_utils::read_barcode_file(&hash_sheet).unwrap();
+  let barcodes: Vec<String> = hash_lookup.keys().cloned().collect();
+  let hash_whitelist: Vec<HashMap<String, String>> = barcode_utils::construct_mismatch_to_whitelist_map(barcodes, 1, true).unwrap();
+
+  /*
+  ** Initialize counters.
+  */
+
+  /*
+  ** Count hash reads per cell.
+  */
+//  let mut hashdict: HashMap<String, HashMap<String, HashSet<String>>> = HashMap::with_capacity(256);
+  /*
+  ** Use AHash hasher for speed.
+  */
+//  let mut hashdict: HashMap<String, HashMap<String, HashSet<String>>> = HashMap::with_capacity_and_hasher(256, RandomState::new());
+  let mut hashdict: ahash::HashMap<String, ahash::HashMap<String, ahash::HashSet<String>>> = HashMap::with_capacity_and_hasher(256, ahash::RandomState::new());
+  for hashseq in hash_lookup.keys() {
+    hashdict.insert(hashseq.to_string(), ahash::HashMap::with_capacity_and_hasher(256, ahash::RandomState::new()));
+  }
+
+  /*
+  ** Count cells.
+  ** Each element is a distinct cell barcode. Use cells.get(&seq)
+  ** to get a reference to the barcode sequence. Here we use
+  ** barcode sequence references as keys in maps indexed by 'cell'.
+  */
+  let mut cells: HashSet<String> = HashSet::with_capacity(100000);
+
+  /*
+  ** Count total hashes assigned.
+  */
+  let mut hash_counts: Vec<u64> = vec![0; hash_edit_distance+1];
+
+  /*
+  ** Set up file handle and reader from either stdin or specified file.
+  */
+  let reader: Box<dyn std::io::Read> = if(fastq_filename == "-") {
+    println!("fastq is stdin");
+    Box::new(std::io::stdin())
+  }
+  else {
+    println!("fastq is file");
+    Box::new(std::fs::File::open(fastq_filename).unwrap())
+  };
+
+  let mut fastq_reader = fastq::Reader::new(reader);
+
+  /*
+  ** Loop through input reads.
+  */
+  let mut header: &str;
+  let mut seq: &str;
+  let mut hashbc: &str;
+  let mut hashval: &String = &"none".to_string();
+  let mut polya: &str;
+  let mut header_toks: Vec<&str>;
+  let mut len_header_toks: usize;
+  let mut cell_barc: String;
+  let mut umi: String;
+  let mut is_hash: bool;
+  let mut num_hash: u64 = 0;
+  let mut i_edit_distance: usize = 0;
+let mut k: u64 = 0;
+let mut tot_umi: u32 = 0;
+
+  while let Some(result) = fastq_reader.next() {
+
+/*
+    if(k > 5) {
+      break;
+    }
+*/
+
+    let record = result.unwrap();
+    header = std::str::from_utf8(record.head()).unwrap();
+    seq = std::str::from_utf8(record.seq()).unwrap();
+
+    hashbc = &seq[0..10];
+    polya = &seq[11..15];
+
+    is_hash = false;
+    if(polya == "AAAA") {
+      for i in (0..hash_edit_distance+1) {
+        if(hash_whitelist[i].contains_key(hashbc)) {
+          is_hash = true;
+          hashval = &(hash_whitelist[i][hashbc]);
+          i_edit_distance = i;
+          break;
+        }
+      }
+    }
+
+    if(!is_hash) {
+      continue;
+    }
+
+    header_toks = header.split("|").collect();
+    len_header_toks = header_toks.len();
+    cell_barc = header_toks[2..len_header_toks-1].join("_").to_string();
+    umi = header_toks[len_header_toks-1].to_string();
+
+//    println!("dat: {} {} {} {}", i_edit_distance, hashval, cell_barc, umi);
+
+    /*
+    ** Record distinct cells.
+    */
+    cells.insert(cell_barc.clone());
+
+    /*
+    ** Count distinct hash reads.
+    */
+    let mut umi_new: u32 = 0;
+    let _result = update_nested_maps(hashval, cell_barc, umi, &mut hashdict, &mut umi_new, &mut tot_umi);
+    if(umi_new != 0) {
+      hash_counts[i_edit_distance] += 1;
+    }
+
+k += 1; 
+    num_hash += 1;
+  }
+
+  // dump_nested_maps(&mut hashdict);
+
+//println!("hashdict {:#?}", hashdict);
+println!("hash_counts: {:#?}", hash_counts);
+println!("nrecord: {}", k);
+println!("nhash: {}", num_hash);
+println!("tot_umi: {}", tot_umi);
+}
+

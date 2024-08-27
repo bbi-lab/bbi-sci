@@ -1,0 +1,177 @@
+1. modify process_hashes.rs to dump the following information after identifying candidate hash reads
+     hash sequence
+     cell barcode sequence
+     umi sequence
+     edit distance
+
+2. run process_hashes.rs to collect hashdict (nested hash) read using stdout redirection
+
+note: look at loki:~/notes.process_hashes.matrix_tests.20240820.txt
+
+println!("hash_dict: {}|{}|{}", hashval, cell_barc, umi); // bge
+hash_dict: TAACCTTCGG|F02_F01_P05-C07_LIG101|CACCGCCG
+hash_dict: TACTGGCTCA|F02_F06_P07-C12_LIG202|TCTTACGG
+
+# get hashdict members
+cd /home/brent/src/rust/process_hashes/src
+run_rel.sh | grep '^hash_dict' > prchsh_rs.out.1
+wc -l prchsh_rs.out.1
+12583271 prchsh_rs.out.1
+
+# drop PCR duplicates
+awk '{print$2}' prchsh_rs.out.1 | sort -u > prchsh_rs.out.2
+wc -l prchsh_rs.out.2
+7066261 prchsh_rs.out.2
+
+# drop umi string
+awk 'BEGIN{FS="|"}{printf("%s|%s\n",$1, $2);}' prchsh_rs.out.2 > prchsh_rs.out.3
+
+# count uniq umis
+sort prchsh_rs.out.3 | uniq -c | sort > prchsh_rs.out.4
+wc -l prchsh_rs.out.4
+1031803 prchsh_rs.out.4
+
+# make table of count triplets
+sed 's/|/ /g' prchsh_rs.out.4 | awk '{print$2,$3,$1}' | sort > prchsh_rs.out.5
+wc -l prchsh_rs.out.5
+1031803 prchsh_rs.out.5
+
+
+3. run process_hashes.py to collect hashdict (nested hash) read using stdout redirection
+
+note: look at loki:~/notes.process_hashes.matrix_tests.20240820.txt
+
+print('hash_dict: %s|%s|%s' % (hashval, cell_barc, umi)) # bge
+hash_dict: TAACCTTCGG|F02_F01_P05-C07_LIG101|CACCGCCG
+hash_dict: TACTGGCTCA|F02_F06_P07-C12_LIG202|TCTTACGG
+
+# get hashdict members
+cd /home/brent/src/rust/process_hashes/src/python_hashes
+run_py.sh | grep '^hash_dict' > prchsh_py.out.1
+wc -l prchsh_py.out.1
+12583271 prchsh_py.out.1
+
+# drop PCR duplicates
+awk '{print$2}' prchsh_py.out.1 | sort -u > prchsh_py.out.2
+wc -l prchsh_py.out.2
+7066261 prchsh_py.out.2
+
+# drop umi string
+awk 'BEGIN{FS="|"}{printf("%s|%s\n",$1, $2);}' prchsh_py.out.2 > prchsh_py.out.3
+
+# count uniq umis
+sort prchsh_py.out.3 | uniq -c > prchsh_py.out.4
+wc -l prchsh_py.out.4
+1031803 prchsh_py.out.4
+
+# make table of count triplets
+sed 's/|/ /g' prchsh_py.out.4 | awk '{print$2,$3,$1}' | sort > prchsh_py.out.5
+wc -l python_hashes/prchsh_py.out.5
+1031803 python_hashes/prchsh_py.out.5
+
+4. Compare the files prchsh_rs.out.5 and prchsh_py.out.5
+
+cd cd /home/brent/src/rust/process_hashes/src
+diff prchsh_rs.out.5 python_hashes/prchsh_py.out.5
+<no difference>
+
+
+5. Compare process_hashes.rs and process_hashes.py output matrix files.
+
+cd /home/brent/src/rust/process_hashes/src
+run_rel.sh
+cd python_hashes
+run_py.sh
+cd ../../tests
+mm2triplets.py ../src/foop | sort > mm2triplets.py.rust
+cd python_hashes
+mm2triplets.py ../src/python_hashes/foo | sort > mm2triplets.py.python
+diff mm2triplets.py.rust mm2triplets.py.python
+<no difference>
+
+compare visually a small sample of the hash names and sequences
+cd /home/brent/src/rust/process_hashes/tests
+hash sheet file: /home/brent/work/data_sets/zebrafish/fastq_hashed/RNA3-072-a/timecourse_hash2.txt
+awk '{FS="|"}{print $1,$2}' mm2triplets.py.rust | sort -u | less
+<the hash sequences and hash names match in the small sample>
+
+
+6. Compare hash_count distributions.
+
+cd /home/brent/src/rust/process_hashes/src
+cp foop.hashumis.mtx foop.hashumis.mtx.trimmed
+vi foop.hashumis.mtx.trimmed  (trim off header lines)
+awk '{print$3}' foop.hashumis.mtx.trimmed | sort | uniq -c | sort -n | less
+# tail of the list above
+   2027 20
+   2269 19
+   2369 18
+   2550 17
+   2909 16
+   3257 15
+   3546 14
+   4183 13
+   4734 12
+   5404 11
+   6358 10
+   7350 9
+   9246 8
+  11509 7
+  15174 6
+  20825 5
+  31590 4
+  54308 3
+ 122050 2
+ 676721 1
+
+
+cd /home/brent/src/rust/process_hashes/src/python_hashes
+cp foo.hashumis.mtx foo.hashumis.mtx.trimmed  (process_hashes.py is fixed for this run)
+vi foo.hashumis.mtx.trimmed (trim off header lines)
+awk '{print$3}' foo.hashumis.mtx.trimmed | sort | uniq -c | sort -n | less
+   2027 20
+   2269 19
+   2369 18
+   2550 17
+   2909 16
+   3257 15
+   3546 14
+   4183 13
+   4734 12
+   5404 11
+   6358 10
+   7350 9
+   9246 8
+  11509 7
+  15174 6
+  20825 5
+  31590 4
+  54308 3
+ 122050 2
+ 676721 1
+
+
+Note: (the tail of) the hash_count distribution for the not fixed process_hashes.py version is
+   2547 20
+   2751 19
+   3191 18
+   3544 17
+   4007 16
+   4589 15
+   5290 14
+   6176 13
+   7119 12
+   8828 11
+  11115 10
+  14597 9
+  19754 2
+  20151 8
+  30185 7
+  53690 6
+ 150103 5
+ 227334 3
+ 407167 4
+
+Observation: as expected the minimum count is 4.
+
+

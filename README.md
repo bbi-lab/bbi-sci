@@ -79,8 +79,17 @@ Then from within R, follow the installation instructions for the following R pac
 - randomColoR: Run ```install.packages("randomcoloR")```
 
 
-Please note: If you are doing a hashing experiment, you need scipy, which is installed already in python 3.12.1.
+Please note: If you are doing a hashing experiment, you need to build the *process_hashes* program using the Rust compiler. To install the Rust compiler see
 
+https://www.rust-lang.org/tools/install
+
+Then go to bbi-sci/src/process_hashes and run the command
+
+```
+cargo build --release
+```
+
+After the build finishes, go to *bbi-sci/src/process_hashes/target/release* and copy the executable file *process_hashes* to *bbi-sci/bin*.
 
 Once monocle3 and scrublet are installed, install nextflow by typing:
 
