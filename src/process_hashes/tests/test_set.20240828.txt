@@ -1,0 +1,74 @@
+1. check *_hash_reads_per_cell.txt using process_hashes read output.
+
+cd /home/brent/git/bbi-sci/src/process_hashes/src
+* edit main.rs to add the following
+    /*
+    ** The following line if for checking the read parsing. Keep it
+    ** commented out unless necessary for testing.
+    */
+//    println!("hash_dict: {}|{}|{}", hashval, cell_barc, umi);
+    println!("hash_dict: {}|{}|{}", hash_lookup[hashval], cell_barc, umi);
+
+* build and run process hashes
+cargo build --release
+run_rel.sh > process_hashes.rust.out.hashdict.all_fastqs
+grep '^hash_dict:' process_hashes.rust.out.hashdict.all_fastqs |  cut -f 2-  -d ' ' > process_hashes.rust.out.hashdict.all_fastqs.trimmed
+
+head process_hashes.rust.out.hashdict.all_fastqs.trimmed
+NA_reference-rna_6_2_None_control_NA_0_1_8-somite_13_28_0_P02_F8|F02_E02_P07-H06_LIG217|GAGGCTAT
+NA_reference-rna_6_2_None_control_NA_0_1_8-somite_13_28_0_P02_E8|F02_F06_P08-E06_LIG169|CGATACGC
+
+* make ref_hash_reads_per_cell.txt
+export LC_ALL=C
+awk 'BEGIN{FS="|"} {print $2}'  process_hashes.rust.out.hashdict.all_fastqs.trimmed | sort | uniq -c | awk '{printf("SeahubZ01\t%s\t%s\n", $2, $1);}' | sort -n >  process_hashes.rust.out.hashdict.all_fastqs.trimmed.test_01
+
+diff process_hashes.rust.out.hashdict.all_fastqs.trimmed.test_01 foop_hash_reads_per_cell.txt
+(no difference)
+
+
+2. check *_hash_umis_per_cell.txt using process_hashes read output.
+
+cd /home/brent/git/bbi-sci/src/process_hashes/src
+* edit main.rs to add the following
+    /*
+    ** The following line if for checking the read parsing. Keep it
+    ** commented out unless necessary for testing.
+    */
+//    println!("hash_dict: {}|{}|{}", hashval, cell_barc, umi);
+    println!("hash_dict: {}|{}|{}", hash_lookup[hashval], cell_barc, umi);
+
+* build and run process hashes
+cargo build --release
+run_rel.sh > process_hashes.rust.out.hashdict.all_fastqs
+grep '^hash_dict:' process_hashes.rust.out.hashdict.all_fastqs |  cut -f 2-  -d ' ' > process_hashes.rust.out.hashdict.all_fastqs.trimmed
+
+head process_hashes.rust.out.hashdict.all_fastqs.trimmed
+NA_reference-rna_6_2_None_control_NA_0_1_8-somite_13_28_0_P02_F8|F02_E02_P07-H06_LIG217|GAGGCTAT
+NA_reference-rna_6_2_None_control_NA_0_1_8-somite_13_28_0_P02_E8|F02_F06_P08-E06_LIG169|CGATACGC
+
+* make ref_hash_umis_per_cell.txt
+
+sort -u process_hashes.rust.out.hashdict.all_fastqs.trimmed | awk 'BEGIN{FS="|"} {printf("%s\n", $2);}' | sort | uniq -c | awk '{printf("SeahubZ01\t%s\t%s\n", $2, $1);}' | sort -n >  process_hashes.rust.out.hashdict.all_fastqs.trimmed.test_02
+
+diff foop_hash_umis_per_cell.txt.sorted process_hashes.rust.out.hashdict.all_fastqs.trimmed.test_02 | less
+(no difference)
+
+3. check *_hash_assigned_table.txt  using process_hashes read output.
+
+target: SeahubZ01_hash_assigned_table.txt
+SeahubZ01       F02_E01_P05-A01_LIG1    NA_reference-rna_5_2_None_control_NA_0_0_shield_6_28_0_P01_C12  1
+SeahubZ01       F02_E01_P05-A01_LIG1    NA_reference-rna_5_2_None_control_NA_0_0_shield_6_28_0_P01_E10  1
+SeahubZ01       F02_E01_P05-A01_LIG1    NA_reference-rna_6_2_None_control_NA_0_1_12-somite_15_28_0_P02_D10      1
+
+sort -u process_hashes.rust.out.hashdict.all_fastqs.trimmed | awk 'BEGIN{FS="|"} {printf("%s|%s\n", $2, $1);}' > process_hashes.rust.out.hashdict.all_fastqs.trimmed.test_03a
+
+sort process_hashes.rust.out.hashdict.all_fastqs.trimmed.test_03a | uniq -c > process_hashes.rust.out.hashdict.all_fastqs.trimmed.test_03b
+
+awk '{printf("%s|%s\n", $2, $1);}' process_hashes.rust.out.hashdict.all_fastqs.trimmed.test_03b > process_hashes.rust.out.hashdict.all_fastqs.trimmed.test_03c
+
+awk 'BEGIN{FS="|"}{printf("SeahubZ01\t%s\t%s\t%s\n", $1, $2, $3);}' process_hashes.rust.out.hashdict.all_fastqs.trimmed.test_03c > process_hashes.rust.out.hashdict.all_fastqs.trimmed.test_03d
+
+sort -n process_hashes.rust.out.hashdict.all_fastqs.trimmed.test_03d > process_hashes.rust.out.hashdict.all_fastqs.trimmed.test_03e
+(no difference)
+
+

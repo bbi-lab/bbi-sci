@@ -13,7 +13,7 @@ pub mod barcode_utils {
   use itertools::Itertools;
   use csv::{ReaderBuilder, Trim};
   use serde::Deserialize;
-  use regex::Regex;
+
 
   /// Read a barcode TSV file that has the format
   ///
@@ -26,10 +26,6 @@ pub mod barcode_utils {
   ///
   /// A hash map: the key is the barcode sequence and the value is
   /// the barcode name.
-  ///
-  /// Notes:
-  ///
-  ///- the barcode sequence names are edit to replace [ )(=_/] with [.].
   ///
   /// Based on URL: https://stackoverflow.com/questions/78639668/fast-reading-from-a-tsv-file-in-rust
   #[derive(Deserialize)]
@@ -51,16 +47,11 @@ pub mod barcode_utils {
   let mut hash_map: HashMap<String, String> = HashMap::new();
 
   /*
-  ** Build regex for replacing characters in names.
-  */
-  let re = Regex::new(r"[ )(=_/-]").unwrap();
-
-  /*
   ** Read the file and store the names and sequences.
   */
   for result in tsv_reader.deserialize() {
      let record: Record = result?;
-     hash_map.entry(record.hash_barcode.to_owned()).or_insert_with(|| re.replace_all(&(record.hash_name), ".").to_string());
+     hash_map.entry(record.hash_barcode.to_owned()).or_insert(record.hash_name.to_string());
   }
 
   Ok(hash_map)

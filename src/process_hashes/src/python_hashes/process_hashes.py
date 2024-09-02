@@ -87,7 +87,7 @@ if __name__ == '__main__':
         umi = line1.split("|")[-1]
 
         # Uncomment the following line for checking the hashdict.
-        print("hash_dict: %s|%s|%s" % (hashval, cell_barc, umi)) # bge
+#        print("hash_dict: %s|%s|%s" % (hashval, cell_barc, umi)) # bge
 
         cells.add(cell_barc)
         if cell_barc in hashdict[hashval]:

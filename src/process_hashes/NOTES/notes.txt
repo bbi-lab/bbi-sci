@@ -11,6 +11,10 @@ Programming Rust. Fast, Safe Systems Development.
 Blandy, Orendorf, and Tindall
 Printed version: O'Reilly Media
 
+Comprehensive Rust
+Android Team at Google
+Online: https://google.github.io/comprehensive-rust/
+
 Rust for Rustaceans
 Gjengset
 Printed version: No Starch Press
@@ -27,6 +31,9 @@ Online: https://rust-lang.github.io/api-guidelines/
 The Rust Performance Book
 Nicholas Nethercote and others
 Online: https://nnethercote.github.io/perf-book/title-page.html
+
+Rust by Example
+Online: https://doc.rust-lang.org/rust-by-example/
 
 
 ** 'Awesome' Rust Crates
