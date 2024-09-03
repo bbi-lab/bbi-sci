@@ -1,3 +1,46 @@
+== Advantages for program users'
+
+  o  easy compiler installation
+  o  easy to build, one-step compiling and linking
+  o  transparent package version control
+  o  executables are fast
+  o  fairly memory efficient
+
+
+== Advantages for programmers
+
+  o  memory management is guaranteed to be 'safe'
+  o  multi-threading and concurrency are guaranteed to be 'safe'
+  o  'automatic' heap management (compiler 'drops' allocated memory when
+     variables go out of scope)
+  o  compiler gives fairly good error messages with often helpful suggestions
+  o  standard features such as structs, tuples, vectors, associative arrays,
+     sets, iterators, enums, generics, traits, interface to C libraries,
+     closures, ...
+  o  there are numerous packages, for example, reading/writing fastq
+     and fasta files, sparse matrices, reading and writing matrix market files,
+     ...
+  o  transparent compiler version control
+
+
+== Downsides
+
+  o  Rust has some new concepts such as value ownership and lifetimes
+  o  Rust does not have extensive OOP features
+
+
+== Linux Torvalds and Linux
+
+https://thenewstack.io/rust-in-the-linux-kernel/
+
+
+== Lars Bergstrom
+
+Rust teams ... are more than twice as productive as teams using C++.
+
+https://www.youtube.com/watch?v=6mZRWFQRvmw&t=27012s
+
+
 == Rust resources
 
 ** Books
@@ -39,18 +82,4 @@ Online: https://doc.rust-lang.org/rust-by-example/
 ** 'Awesome' Rust Crates
 
 Online: https://github.com/rust-unofficial/awesome-rust?tab=readme-ov-file
-
-
-== Rust Use
-
-** Rust in the Linux Kernel
-
-https://thenewstack.io/rust-in-the-linux-kernel/
-
-
-** Lars Bergstrom (Google Director of Engineering): "Rust teams are twice as productive as teams using C++."
-
-https://www.reddit.com/r/rust/comments/1bpwmud/media_lars_bergstrom_google_director_of/
-
-
 
