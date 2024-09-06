@@ -255,6 +255,30 @@ fn write_matrix(key: &String, row_names: Vec<String>, col_names: Vec<String>, sm
 }
 
 
+/*
+** This appears to be an intermediate file for the original pipeline and
+** is no longer needed.
+fn write_hash_combined(hashdict: &HashMap<String, HashMap<String, HashMap<String, u64>>>, hash_lookup: &HashMap<String, String>,sample_name: &String, key: &String) -> Result<(), std::io::Error> {
+  let file_name = format!("{}_hash_combined", *key);
+  let path = Path::new(&file_name);
+  let file = File::create(path).expect(&format!("unable to open file {}", file_name));
+  let mut writer = BufWriter::new(file);
+
+  for hash_seq in hashdict.keys() {
+    for cell_name in hashdict[hash_seq].keys() {
+      for umi_seq in hashdict[hash_seq][cell_name].keys() {
+        let _ = writeln!(writer, "{}\t{}\t{}\t{}\t{}", *sample_name, cell_name, umi_seq, hash_lookup[hash_seq], hashdict[hash_seq][cell_name][umi_seq]);
+      }
+    }
+  }
+
+  let _ = writer.flush();
+  std::mem::drop(writer);
+
+  Ok(())
+}
+*/
+
 fn make_per_cell_statistics(cells: &HashSet<String>, hashdict: &HashMap<String, HashMap<String, HashMap<String, u64>>>) -> Result<HashMap<String, Vec<u64>>, std::io::Error> {
 
   /*
@@ -569,9 +593,15 @@ fn main() {
 
   /*
   ** Write matrix.
+  ** Note: row_names and col_names were moved and dropped internally.
   */
   let _ = write_matrix(&key, row_names, col_names, &smat);
   drop(smat);
+
+  /*
+  ** Write hash combined file.
+  let _ = write_hash_combined(&hashdict, &hash_lookup, &sample_name, &key).expect("bad status: write_hash_combined");
+  */
 
   /*
   ** Make per-cell statistics.

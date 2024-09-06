@@ -336,6 +336,10 @@ Process: process_hashes
     hash_mtx - MatrixMarket matrix of hash information
     hash_cell - Cell info for matrix of hash information
     hash_hash - Hash info for matrix of hash information
+    hash_reads_per_cell.txt
+    hash_umis_per_cell.txt
+    hash_assigned_table.txt
+    hash_dup_per_cell.txt
 
  Pass through:
 
@@ -348,6 +352,10 @@ Process: process_hashes
     hash_mtx - MatrixMarket matrix of hash information
     hash_cell - Cell info for matrix of hash information
     hash_hash - Hash info for matrix of hash information
+    hash_reads_per_cell.txt
+    hash_umis_per_cell.txt
+    hash_assigned_table.txt
+    hash_dup_per_cell.txt
 
  Notes:
     Only when params.hash = true
@@ -355,29 +363,44 @@ Process: process_hashes
 *************/
 
 //  Group fastqs for finding hash barcodes
-// Second channel will be used to calculate hash PCR duplication rate 
-fastqs_out.into{fastqs_out_copy01; fastqs_for_hash_copy02}
-
-fastqs_out_copy01
+fastqs_out
     .groupTuple()
-    .set { fastqs_for_hash_copy01 }
+    .set { fastqs_for_hash }
 
 save_hash_cell = {params.output_dir + "/" + it - ~/.hashumis_cells.txt/ + "/" + it}
 save_hash_hash = {params.output_dir + "/" + it - ~/.hashumis_hashes.txt/ + "/" + it}
 save_hash_mtx = {params.output_dir + "/" + it - ~/.hashumis.mtx/ + "/" + it}
 
+save_hash_reads = {params.output_dir + "/" + it - ~/_hash_reads_per_cell.txt/ + "/" + it}
+save_hash_umis = {params.output_dir + "/" + it - ~/_hash_umis_per_cell.txt/ + "/" + it}
+save_hash_table = {params.output_dir + "/" + it - ~/_hash_assigned_table.txt/ + "/" + it}
+save_hash_dup = {params.output_dir + "/" + it - ~/_hash_dup_per_cell.txt/ + "/" + it}
+
+// save_sorted_hash = {params.output_dir + "/" + it - ~/_sorted_hash_combined.gz/ + "/" + it}
+
+/*
+** We no longer need or make the _sorted_hash_combined file.
+*/
 process process_hashes {
     cache 'lenient'
     publishDir path: "${params.output_dir}/", saveAs: save_hash_cell, pattern: "*hashumis_cells.txt", mode: 'copy'
     publishDir path: "${params.output_dir}/", saveAs: save_hash_hash, pattern: "*hashumis_hashes.txt", mode: 'copy'
     publishDir path: "${params.output_dir}/", saveAs: save_hash_mtx, pattern: "*.mtx", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_hash_reads, pattern: "*hash_reads_per_cell.txt", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_hash_umis, pattern: "*hash_umis_per_cell.txt", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_hash_table, pattern: "*hash_assigned_table.txt", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_hash_dup, pattern: "*hash_dup_per_cell.txt", mode: 'copy'
+//    publishDir path: "${params.output_dir}/", saveAs: save_sorted_hash, pattern: "*sorted_hash_combined.gz", mode: 'copy'
 
     input:
-        set key, file(input_fastq) from fastqs_for_hash_copy01
+        set key, file(input_fastq) from fastqs_for_hash
 
     output:
         file("*hash.log") into hash_logs
         set key, file("*mtx"), file("*hashumis_cells.txt"), file("*hashumis_hashes.txt") into hash_mats
+        set key, file("*hash_reads_per_cell.txt"), file("*hash_umis_per_cell.txt"), file("*hash_assigned_table.txt") into hash_results
+        set key, file("*hash_dup_per_cell.txt") into for_hash_calc
+//        set key, file("*_sorted_hash_combined.gz") into sorted_hash_combined
 
     when:
         params.hash_list != false
@@ -387,7 +410,10 @@ process process_hashes {
     set -ueo pipefail
     
     process_hashes --hash_sheet $params.hash_list \
-        --fastq $input_fastq --key $key
+        --fastq $input_fastq --key $key --sample_name $key
+
+#    LL_ALL=C sort ${key}_hash_combined -S 50G -T /tmp/ -k2,2 -k4,4 -k3,3 --parallel=8 > ${key}_sorted_hash_combined
+#    pigz -p 8 "${key}_sorted_hash_combined"
 
     """
 }
@@ -1802,7 +1828,6 @@ save_hash_table = {params.output_dir + "/" + it - ~/_hash_table.csv/ + "/" + it}
 process assign_hash {
     cache 'lenient'
     publishDir path: "${params.output_dir}/", saveAs: save_hash_cds, pattern: "*_hash_cds.RDS", mode: 'copy'
-    // publishDir path: "${params.output_dir}/", saveAs: save_cell_qc, pattern: "*cell_qc.csv", mode: 'copy'
     publishDir path: "${params.output_dir}/", saveAs: save_hash_table, pattern: "*_hash_table.csv", mode: 'copy'
 
     input:
@@ -1811,7 +1836,6 @@ process assign_hash {
     output:
         file("*hash_cds.RDS") into hash_cds
         file("*hash_table.csv") into hash_table
-        // file("*cell_qc.csv") into cell_qc_out
 
     when: 
         params.hash_list != false 
@@ -1838,131 +1862,12 @@ process assign_hash {
 
 /*************
 
-Process: sort_hash
-
- Inputs:
-    input_fastq - fastq files 
-
- Outputs:
-    sorted_hash - sorted hash umi files 
-
- Pass through:
-
- Summary:
-    Takes in fastq files and finds hash umis using a hash oligo sample sheet.
-    The hash umis are then sorted by cell, hash oligo name, then hash umi. 
-
- Downstream:
-    combine_hash
-
- Published:
-
- Notes:
-    runs only when params.hash_list = true and params.hash_dup = true
-    
-*************/
-
-
-process sort_hash {
-    cache 'lenient'
-    
-    input:
-        set key, file(input_fastq) from fastqs_for_hash_copy02
-
-    output:
-        set key, file("*hash") into sorted_hash
-
-    when: 
-        params.hash_list != false && params.hash_dup != false
-    
-    script:
-        name = input_fastq.baseName - ~/.fastq/
-
-    
-    """
-    # bash watch for errors
-    set -ueo pipefail
-
-    LL_ALL=C zcat $input_fastq | parseHash.awk $params.hash_list -\
-    | sed -e 's/|/,/g'\
-    | awk 'BEGIN {FS=","; OFS="\t";} {print \$2,\$3"_"\$4"_"\$5,\$6,\$7,\$8}' \
-    | awk -v S="$key" 'BEGIN {FS="\t"; OFS="\t";} {print S, \$2, \$3, \$4}' \
-    | sort -S 50G -T /tmp/ -k2,2 -k4,4 -k3,3 --parallel=8 > "${name}_sorted_hash"
-
-    """
-}
-
-/*************
-
-Process: combine_hash
-
- Inputs:
-    for_combine_hash - all of the sorted hash umi files for a sample 
-
- Outputs:
-    for_calc_hash_dup - a combined, sorted hash umi file
-
-
- Pass through:
-
- Summary:
-    Takes a multiple sorted hash umi files that were sorted in parallel 
-    merges the sorted files together. 
-
- Downstream:
-    calc_hash_dup
-
- Published:
-    for_calc_hash_dup - all of the sorted hash umis in a gzipped format 
-
- Notes:
-    runs only when params.hash_list = true
-    
-*************/
-
-sorted_hash
-    .groupTuple()
-    .set { for_combine_hash }
-
-save_sorted_hash = {params.output_dir + "/" + it - ~/_sorted_hash_combined.gz/ + "/" + it}
-
-process combine_hash {
-    cache 'lenient'
-    publishDir path: "${params.output_dir}/", saveAs: save_sorted_hash, pattern: "*sorted_hash_combined.gz", mode: 'copy'
-
-    input:
-        set key, file(hash_file) from for_combine_hash
-
-    output:
-        set key, file("*.gz") into for_calc_hash_dup
-
-    when: 
-        params.hash_list != false && params.hash_dup != false
-    
-
-    """
-    # bash watch for errors
-    set -ueo pipefail
-    
-    LL_ALL=C sort -m \
-    *sorted_hash \
-    -S 50G -T /tmp/ -k2,2 -k4,4 -k3,3 --parallel=8 > ${key}_sorted_hash_combined
-    
-    pigz -p 8 "${key}_sorted_hash_combined"
-
-    """
-}
-
-/*************
-
 Process: calc_hash_dup
 
  Inputs:
     sorted_hash_combined - all sorted hash umis combined
 
  Outputs:
-    hash_results - .txt files with hash reads per cell, unique hash umis per cell, and a table of hash umis for each cell
-    for_hash_calc - hash duplication rate per cell 
     hash_knee - unique hash umi by RT barcode knee plot in .png format
 
 
@@ -1987,27 +1892,17 @@ Process: calc_hash_dup
     
 *************/
 
-save_hash_reads = {params.output_dir + "/" + it - ~/_hash_reads_per_cell.txt/ + "/" + it}
-save_hash_umis = {params.output_dir + "/" + it - ~/_hash_umis_per_cell.txt/ + "/" + it}
-save_hash_table = {params.output_dir + "/" + it - ~/_hash_assigned_table.txt/ + "/" + it}
 save_hash_knee = {params.output_dir + "/" + it - ~/_hash_knee_plot.png/ + "/" + it}
-save_hash_dup = {params.output_dir + "/" + it - ~/_hash_dup_per_cell.txt/ + "/" + it}
 
 process calc_hash_dup_cell {
     cache 'lenient'
-    publishDir path: "${params.output_dir}/", saveAs: save_hash_reads, pattern: "*hash_reads_per_cell.txt", mode: 'copy'
-    publishDir path: "${params.output_dir}/", saveAs: save_hash_umis, pattern: "*hash_umis_per_cell.txt", mode: 'copy'
-    publishDir path: "${params.output_dir}/", saveAs: save_hash_table, pattern: "*hash_assigned_table.txt", mode: 'copy'
     publishDir path: "${params.output_dir}/", saveAs: save_hash_knee, pattern: "*hash_knee_plot.png", mode: 'copy'
-    publishDir path: "${params.output_dir}/", saveAs: save_hash_dup, pattern: "*hash_dup_per_cell.txt", mode: 'copy'
 
     input:
-        set key, file(hash_file) from for_calc_hash_dup
+        set key, file(hash_reads_per_cell), file(hash_umis_per_cell), file(hash_assigned_table)from hash_results
 
     output:
         file("*.png") into hash_knee
-        set key, file("*hash_reads_per_cell.txt"), file("*hash_umis_per_cell.txt"), file("*hash_assigned_table.txt") into hash_results
-        set key, file("*hash_dup_per_cell.txt") into for_hash_calc
 
     when: 
         params.hash_list != false && params.hash_dup != false
@@ -2018,31 +1913,9 @@ process calc_hash_dup_cell {
     # bash watch for errors
     set -ueo pipefail
 
-    zcat "${key}_sorted_hash_combined.gz" \
-    | datamash -g 2,3,4 count 3 \
-    | datamash -g 1 sum 4 \
-    | awk -v S=$key '{OFS="\t";} {print S, \$0}' > ${key}_hash_reads_per_cell.txt
-
-    zcat "${key}_sorted_hash_combined.gz" \
-    | uniq \
-    | awk -v S=$key '{OFS="\t";} {print \$0}'> ${key}_uniq_sorted_hash_combined
-
-    cat "${key}_uniq_sorted_hash_combined" \
-    | datamash -g 2,3,4 count 3 \
-    | datamash -g 1 sum 4 \
-    | awk -v S=$key '{OFS="\t";} {print S, \$0}' > ${key}_hash_umis_per_cell.txt
-
-    cat "${key}_uniq_sorted_hash_combined" \
-    | datamash -g 1,2,4 count 3 \
-    | awk -v S=$key '{OFS="\t";} {print \$0}' > ${key}_hash_assigned_table.txt
-
     knee-plot.R \
-    "${key}_hash_umis_per_cell.txt" \
+    "$hash_umis_per_cell" \
     $key 
-
-    paste "${key}_hash_umis_per_cell.txt" "${key}_hash_reads_per_cell.txt" \
-     | cut -f 1,2,6,3 \
-     | awk 'BEGIN {OFS="\t";} {dup = 100 * (1-\$3/\$4); print \$1,\$2,\$3,\$4,dup;}' > ${key}_hash_dup_per_cell.txt
 
     """
 }

@@ -7,7 +7,7 @@ from scipy.io import mmread
 from scipy.sparse import coo_matrix
 
 
-hash_sheet = '/home/brent/work/data_sets/zebrafish/fastq_hashed/RNA3-072-a/timecourse_hash2.txt'
+hash_sheet = '/net/bbi/vol1/data/regression_tests/sciRNAseq/reference_runs/nf.RNA3-072-a.ubuntu.ref_1/timecourse_hash2.txt'
 
 key = sys.argv[1]
 
