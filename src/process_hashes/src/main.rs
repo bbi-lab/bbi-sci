@@ -258,6 +258,7 @@ fn write_matrix(key: &String, row_names: Vec<String>, col_names: Vec<String>, sm
 /*
 ** This appears to be an intermediate file for the original pipeline and
 ** is no longer needed.
+**
 fn write_hash_combined(hashdict: &HashMap<String, HashMap<String, HashMap<String, u64>>>, hash_lookup: &HashMap<String, String>,sample_name: &String, key: &String) -> Result<(), std::io::Error> {
   let file_name = format!("{}_hash_combined", *key);
   let path = Path::new(&file_name);
@@ -600,6 +601,7 @@ fn main() {
 
   /*
   ** Write hash combined file.
+  **
   let _ = write_hash_combined(&hashdict, &hash_lookup, &sample_name, &key).expect("bad status: write_hash_combined");
   */
 

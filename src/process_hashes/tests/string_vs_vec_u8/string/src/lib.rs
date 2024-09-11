@@ -140,9 +140,7 @@ pub mod barcode_utils {
   /// edit distance and the barcode whitelist.
   ///
   /// Arguments:
-  ///- whitelist: sequences to expand as a vector of strings.
-  ///- edit_distance: maximum number of substitutions per sequence.
-  ///- allow_n: include Ns as substitutions.
+  /// * whitelist: xxx
   ///
   /// Return:
   ///
@@ -213,35 +211,6 @@ pub mod barcode_utils {
     }
 
     Ok(mismatch_to_whitelist_map)
-  }
-
-  /// Convert the output sequences of construct_mismatch_to_whitelist_map()
-  /// from String to Vec<u8> in order to avoid UTF-8 checking. My tests
-  /// suggest that using Vec<u8> rather than String may reduce the run
-  /// time by about 8% to 9% where the run time includes reading the fastq
-  /// input time and building the hashdict. My impression is that there is
-  /// no compelling reason to use references because Vecs and Strings are
-  /// stored as fat pointers with the strings/sequences being stored on the
-  /// heap.
-  ///
-  /// Argument:
-  ///- whitelist_map_string: the map list using Strings for sequences. This is returned by construct_mismatch_to_whitelist_map(), above.
-  ///
-  /// Return:
-  ///
-  /// A map list using Vec<u8> for sequences.
-  /// 
-  pub fn mismatch_to_whitelist_map_as_u8(whitelist_map_string: Vec<HashMap<String, String>>) -> Result<Vec<HashMap<Vec<u8>, Vec<u8>>>, Box<dyn Error>> {
-    let vec_len: usize = whitelist_map_string.len();
-    let mut whitelist_map_u8: Vec<HashMap<Vec<u8>, Vec<u8>>> = Vec::with_capacity(vec_len);
-    for i in 0..vec_len {
-      whitelist_map_u8.push(HashMap::new());
-      for key in whitelist_map_string[i].keys() {
-        whitelist_map_u8[i].insert(key.as_bytes().to_vec(), whitelist_map_string[i][key].as_bytes().to_vec());
-      }
-    } 
-  
-    Ok(whitelist_map_u8)
   }
 
 }

@@ -75,9 +75,14 @@ The Rust Performance Book
 Nicholas Nethercote and others
 Online: https://nnethercote.github.io/perf-book/title-page.html
 
+
+** Online resources
+
 Rust by Example
 Online: https://doc.rust-lang.org/rust-by-example/
 
+How not to learn Rust
+Oneline: https://dystroy.org/blog/how-not-to-learn-rust/
 
 ** 'Awesome' Rust Crates
 

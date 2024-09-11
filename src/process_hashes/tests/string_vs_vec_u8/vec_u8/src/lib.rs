@@ -9,11 +9,11 @@ pub mod barcode_utils {
 
   use std::io;
   use std::error::Error;
-  use std::collections::HashMap;
+//  use std::collections::HashMap;
   use itertools::Itertools;
   use csv::{ReaderBuilder, Trim};
   use serde::Deserialize;
-
+  use rustc_hash::FxHashMap;
 
   /// Read a barcode TSV file that has the format
   ///
@@ -34,7 +34,7 @@ pub mod barcode_utils {
     hash_barcode: String,
   }
 
-  pub fn read_barcode_file(file_path: &str) -> Result<HashMap<String, String>, Box<dyn Error>> {
+  pub fn read_barcode_file(file_path: &str) -> Result<FxHashMap<String, String>, Box<dyn Error>> {
   let fp = std::fs::File::open(file_path)?;
   let buf_reader = io::BufReader::new(fp);
   let mut tsv_reader = ReaderBuilder::new()
@@ -44,7 +44,7 @@ pub mod barcode_utils {
                          .comment(Some(b'#'))
                          .from_reader(buf_reader);
 
-  let mut hash_map: HashMap<String, String> = HashMap::new();
+  let mut hash_map: FxHashMap<String, String> = FxHashMap::default();
 
   /*
   ** Read the file and store the names and sequences.
@@ -136,7 +136,7 @@ pub mod barcode_utils {
   }
 
 
-  /// Construct a precomputed set  of all mismatches within a specified
+  /// Construct a precomputed set of all mismatches within a specified
   /// edit distance and the barcode whitelist.
   ///
   /// Arguments:
@@ -149,7 +149,7 @@ pub mod barcode_utils {
   /// A result enum containing a vector of maps of mismatched sequences to
   /// their whitelist sequences.
   ///
-  pub fn construct_mismatch_to_whitelist_map(whitelist: Vec<String>, edit_distance: usize, allow_n: bool) -> Result<Vec<HashMap<String, String>>, Box<dyn Error>> {
+  pub fn construct_mismatch_to_whitelist_map(whitelist: Vec<String>, edit_distance: usize, allow_n: bool) -> Result<Vec<FxHashMap<String, String>>, Box<dyn Error>> {
 
     /*
     ** Set whitelist sequences to upper-case.
@@ -162,16 +162,16 @@ pub mod barcode_utils {
     ** the hash maps are keyed by the sequences with substitutions and the
     ** values are the original whitelist sequences (no mismatches).
     */
-    let mut mismatch_to_whitelist_map: Vec<HashMap<String, String>> = Vec::with_capacity(edit_distance+1);
+    let mut mismatch_to_whitelist_map: Vec<FxHashMap<String, String>> = Vec::with_capacity(edit_distance+1);
     for _i in (0..edit_distance+1) {
-      mismatch_to_whitelist_map.push(HashMap::new());
+      mismatch_to_whitelist_map.push(FxHashMap::default());
     }
 
     /*
     ** Set the zero mismatch sequence maps where the key and
     ** value are the same.
     */
-    mismatch_to_whitelist_map[0] = whitelist_upper.iter().map(|s| (s.to_owned(), s.to_owned())).collect::<HashMap<String, String>>();
+    mismatch_to_whitelist_map[0] = whitelist_upper.iter().map(|s| (s.to_owned(), s.to_owned())).collect::<FxHashMap<String, String>>();
 
 
     /*
@@ -215,14 +215,31 @@ pub mod barcode_utils {
     Ok(mismatch_to_whitelist_map)
   }
 
+/*fn main() {
+  let mut string: String = String::from("agct");
+
+  println!("string: {}", string);
+
+  let bytes: &[u8] = string.as_bytes();
+  for b in bytes {
+    println!("b: {}  c: {}", b, *b as char);
+  }
+
+  println!("&[str]: {}", std::str::from_utf8(bytes).unwrap());
+}
+
+*/
+
   /// Convert the output sequences of construct_mismatch_to_whitelist_map()
   /// from String to Vec<u8> in order to avoid UTF-8 checking. My tests
-  /// suggest that using Vec<u8> rather than String may reduce the run
-  /// time by about 8% to 9% where the run time includes reading the fastq
-  /// input time and building the hashdict. My impression is that there is
-  /// no compelling reason to use references because Vecs and Strings are
-  /// stored as fat pointers with the strings/sequences being stored on the
-  /// heap.
+  /// suggests that using Vec<u8> rather than String may reduce the run
+  /// time by about 8% to 9%. My impression is that there is no compelling
+  /// reason to use references because Vecs and Strings are stored as
+  /// fat pointers with the strings/sequences being stored on the heap.
+  /// Using the FxHashMap hash algorithm reduces the runtime a bit as well.
+  /// The run time reduction in the hash map related operations alone
+  /// (trying to subtract the file read time) is substantial by my
+  /// estimation.
   ///
   /// Argument:
   ///- whitelist_map_string: the map list using Strings for sequences. This is returned by construct_mismatch_to_whitelist_map(), above.
@@ -230,19 +247,18 @@ pub mod barcode_utils {
   /// Return:
   ///
   /// A map list using Vec<u8> for sequences.
-  /// 
-  pub fn mismatch_to_whitelist_map_as_u8(whitelist_map_string: Vec<HashMap<String, String>>) -> Result<Vec<HashMap<Vec<u8>, Vec<u8>>>, Box<dyn Error>> {
+  ///
+  pub fn mismatch_to_whitelist_map_as_u8(whitelist_map_string: Vec<FxHashMap<String, String>>) -> Result<Vec<FxHashMap<Vec<u8>, Vec<u8>>>, Box<dyn Error>> {
     let vec_len: usize = whitelist_map_string.len();
-    let mut whitelist_map_u8: Vec<HashMap<Vec<u8>, Vec<u8>>> = Vec::with_capacity(vec_len);
+    let mut whitelist_map_u8: Vec<FxHashMap<Vec<u8>, Vec<u8>>> = Vec::with_capacity(vec_len);
     for i in 0..vec_len {
-      whitelist_map_u8.push(HashMap::new());
+      whitelist_map_u8.push(FxHashMap::default());
       for key in whitelist_map_string[i].keys() {
         whitelist_map_u8[i].insert(key.as_bytes().to_vec(), whitelist_map_string[i][key].as_bytes().to_vec());
       }
-    } 
-  
+    }
+
     Ok(whitelist_map_u8)
   }
 
 }
-
