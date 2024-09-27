@@ -84,7 +84,7 @@ if __name__ == '__main__':
             if lpost > lpre:
                 hashcounts[i] += 1
         else:
-            hashdict[hashval][cell_barc] = set(umi)
+            hashdict[hashval][cell_barc] = set([umi])
             hashcounts[i] += 1
                             
     data = []
