@@ -6,6 +6,7 @@ Mouse_gencode /net/bbi/vol1/data/genomes_stage/mouse_gencode/mouse_gencode_star 
 Mouse_liachko /net/bbi/vol1/data/genomes_stage/mouse_liachko/mouse_liachko_star 47
 Mouse_tdTomato /net/bbi/vol1/data/genomes_stage/mouse_tdtomato/mouse_tdtomato_star 47
 Mouse_tdTomato_WPRE /net/bbi/vol1/data/genomes_stage/mouse_tdtomato_wpre/mouse_tdtomato_wpre_star 47
+Mouse_ttbk1 /net/bbi/vol1/data/genomes_stage/mouse_ttbk1/mouse_ttbk1_star 47
 Barnyard    /net/bbi/vol1/data/genomes_stage/barnyard/barnyard_star  90
 Barnyard_gencode /net/bbi/vol1/data/genomes_stage/barnyard_gencode/barnyard_gencode_star 90
 Barnyard_10X_bbi /net/bbi/vol1/data/genomes_stage/barnyard_10X/barnyard_10X_homebrew/barnyard_10X_homebrew_star 90
