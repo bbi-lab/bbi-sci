@@ -15,12 +15,19 @@ extern crate clap;
 use clap::{Arg, Command};
 use seq_io::fastq::{Reader, Record};
 use sprs::CsMat;
-use detect_compression;
+use flate2::read::MultiGzDecoder;
 use regex::Regex;
 use itertools::Itertools;
 
 
-fn process_fastq_file<R: Read>(hash_edit_distance: usize, hash_whitelist: &Vec<HashMap<String, String>>, cells: &mut HashSet<String>, hash_counts: &mut Vec<u64>, hashdict: &mut HashMap<String, HashMap<String, HashMap<String, u64>>>, fastq_reader: &mut Reader<R>, num_hash: &mut u64, hash_lookup: &HashMap<String, String>) -> Result<(), Box<dyn std::error::Error>> {
+fn process_fastq_file<R: Read>(hash_edit_distance: usize,
+                               hash_whitelist: &Vec<HashMap<String, String>>,
+                               cells: &mut HashSet<String>,
+                               hash_counts: &mut Vec<u64>,
+                               hashdict: &mut HashMap<String, HashMap<String, HashMap<String, u64>>>,
+                               fastq_reader: &mut Reader<R>,
+                               num_hash: &mut u64,
+                               hash_lookup: &HashMap<String, String>) -> Result<(), Box<dyn std::error::Error>> {
 
   /*
   ** Loop through input reads.
@@ -255,10 +262,6 @@ fn write_matrix(key: &String, row_names: Vec<String>, col_names: Vec<String>, sm
 }
 
 
-/*
-** This appears to be an intermediate file for the original pipeline and
-** is no longer needed.
-**
 fn write_hash_combined(hashdict: &HashMap<String, HashMap<String, HashMap<String, u64>>>, hash_lookup: &HashMap<String, String>,sample_name: &String, key: &String) -> Result<(), std::io::Error> {
   let file_name = format!("{}_hash_combined", *key);
   let path = Path::new(&file_name);
@@ -268,6 +271,7 @@ fn write_hash_combined(hashdict: &HashMap<String, HashMap<String, HashMap<String
   for hash_seq in hashdict.keys() {
     for cell_name in hashdict[hash_seq].keys() {
       for umi_seq in hashdict[hash_seq][cell_name].keys() {
+        let _ = writeln!(writer, "{}\t{}\t{}\t{}", *sample_name, cell_name, umi_seq, hash_lookup[hash_seq]);
         let _ = writeln!(writer, "{}\t{}\t{}\t{}\t{}", *sample_name, cell_name, umi_seq, hash_lookup[hash_seq], hashdict[hash_seq][cell_name][umi_seq]);
       }
     }
@@ -278,7 +282,7 @@ fn write_hash_combined(hashdict: &HashMap<String, HashMap<String, HashMap<String
 
   Ok(())
 }
-*/
+
 
 fn make_per_cell_statistics(cells: &HashSet<String>, hashdict: &HashMap<String, HashMap<String, HashMap<String, u64>>>) -> Result<HashMap<String, Vec<u64>>, std::io::Error> {
 
@@ -465,6 +469,25 @@ fn dump_nested_maps(map: &mut HashMap<String, HashMap<String, HashMap<String, us
 }
 
 
+/*
+** Open and return a reader given a filename. If the filename ends in 'gz', return
+** the uncompressed file contents using flate2::MultiGzDecoder for uncompression.
+*/
+fn open_reader(filename: &str) -> Result<Box<dyn std::io::Read>, Box<dyn std::error::Error>> {
+  let file_extension = std::path::Path::new(filename)
+                                .extension()
+                                .and_then(std::ffi::OsStr::to_str).unwrap();
+  let file = std::fs::File::open(filename).expect(&format!("Error: unable to open file {}", &filename));
+  if(file_extension == "gz") {
+     let gzdecoder = MultiGzDecoder::new(file);
+     Ok(Box::new(gzdecoder) as Box<dyn std::io::Read>)
+  }
+  else {
+    Ok(Box::new(file) as Box<dyn std::io::Read>)
+  }
+}
+
+
 /// Find RNA-seq hash reads in a fastq file and write counts as a Matrix Market file.
 ///
 /// Arguments:
@@ -484,7 +507,7 @@ fn main() {
   ** Get command line arguments.
   */
   let clarg = Command::new("process_hashes")
-        .version("0.1.0")
+        .version(env!("CARGO_PKG_VERSION"))
         .about("Finds hash sequence reads in fastq file.")
         .arg(Arg::new("sample_name")  // required=true, no default
                   .required(true)
@@ -574,13 +597,13 @@ fn main() {
   */
   if(fastq_filenames[0] == "-") {
     let reader = Box::new(std::io::stdin());
-    let mut fastq_reader = Reader::new(reader);
+    let mut fastq_reader = seq_io::fastq::Reader::new(reader);
     let _ = process_fastq_file(hash_edit_distance, &hash_whitelist, &mut cells, &mut hash_counts, &mut hashdict, &mut fastq_reader, &mut num_hash, &hash_lookup);
   }
   else {
     for fastq_filename in fastq_filenames {
-      let reader = Box::new(detect_compression::DetectReader::open(fastq_filename).unwrap());
-      let mut fastq_reader = Reader::new(reader);
+      let reader = open_reader(&fastq_filename).unwrap();
+      let mut fastq_reader = seq_io::fastq::Reader::new(reader);
       let _ = process_fastq_file(hash_edit_distance, &hash_whitelist, &mut cells, &mut hash_counts, &mut hashdict, &mut fastq_reader, &mut num_hash, &hash_lookup);
     }
   };
@@ -601,9 +624,8 @@ fn main() {
 
   /*
   ** Write hash combined file.
-  **
-  let _ = write_hash_combined(&hashdict, &hash_lookup, &sample_name, &key).expect("bad status: write_hash_combined");
   */
+  let _ = write_hash_combined(&hashdict, &hash_lookup, &sample_name, &key).expect("bad status: write_hash_combined");
 
   /*
   ** Make per-cell statistics.

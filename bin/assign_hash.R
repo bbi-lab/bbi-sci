@@ -69,6 +69,8 @@ assign_hash_labels <-
 
 
     #hash_hits = background_subtracted_test_hashes * (qvals < qval_thresh)
+    best_hash_umi = apply(background_subtracted_test_hashes, 1, function(x) { y = sort(x, decreasing=TRUE); round(y[1],4)})
+    second_best_hash_umi = apply(background_subtracted_test_hashes, 1, function(x) { y = sort(x, decreasing=TRUE); round(y[2],4)})
     top_to_second_best_ratios = apply(background_subtracted_test_hashes, 1, function(x) { y = sort(x, decreasing=TRUE); y[1] / y[2]})
     
     top_hash = apply(background_subtracted_test_hashes, 1, function(x) {
@@ -86,7 +88,9 @@ assign_hash_labels <-
                                #hit = qvals < qval_thresh,
                                top_to_second_best_ratio = top_to_second_best_ratios,
                                #unambiguous_hit = top_to_second_best_ratios > min_best_vs_second_best_ratio,
-                               top_oligo = top_hash)
+                               top_oligo = top_hash,
+                               best_hash_umi = best_hash_umi,
+                               second_best_hash_umi = second_best_hash_umi)
   }
 
 cds <- readRDS(args$cds)
@@ -163,6 +167,8 @@ if (dim(corrected_hash_table)[1] != 0) {
   colData(cds)$qval = merged$qval
   colData(cds)$top_to_second_best_ratio = merged$top_to_second_best_ratio
   colData(cds)$top_oligo = merged$top_oligo
+  colData(cds)$best_hash_umi = merged$best_hash_umi
+  colData(cds)$second_best_hash_umi = merged$second_best_hash_umi
 
   # Drop any cells with less than hash umi cutoff and top to second best hash ratio
   # cds <- cds[,colData(cds)$hash_umis >= args$hash_umi_cutoff]
