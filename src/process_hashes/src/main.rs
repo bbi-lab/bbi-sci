@@ -271,7 +271,7 @@ fn write_hash_combined(hashdict: &HashMap<String, HashMap<String, HashMap<String
   for hash_seq in hashdict.keys() {
     for cell_name in hashdict[hash_seq].keys() {
       for umi_seq in hashdict[hash_seq][cell_name].keys() {
-        let _ = writeln!(writer, "{}\t{}\t{}\t{}", *sample_name, cell_name, umi_seq, hash_lookup[hash_seq]);
+//        let _ = writeln!(writer, "{}\t{}\t{}\t{}", *sample_name, cell_name, umi_seq, hash_lookup[hash_seq]);
         let _ = writeln!(writer, "{}\t{}\t{}\t{}\t{}", *sample_name, cell_name, umi_seq, hash_lookup[hash_seq], hashdict[hash_seq][cell_name][umi_seq]);
       }
     }
@@ -624,8 +624,8 @@ fn main() {
 
   /*
   ** Write hash combined file.
-  */
   let _ = write_hash_combined(&hashdict, &hash_lookup, &sample_name, &key).expect("bad status: write_hash_combined");
+  */
 
   /*
   ** Make per-cell statistics.
