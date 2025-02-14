@@ -120,10 +120,6 @@ json_info <- list("run_name" = project_name,
                   "sample_list" = sample_list,
                   "barn_collision" = barn_collision,
                   "sample_stats" = all_dup_lst)
-
-print(all_dups)
-class(all_dups) 
-
                  
 fileConn<-file("data.js")
 writeLines(c("const run_data =", toJSON(json_info, na='null',  pretty=TRUE, auto_unbox=TRUE)), fileConn)
