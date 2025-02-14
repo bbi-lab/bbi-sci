@@ -11,7 +11,7 @@ parser$add_argument('barn_col', help='File of concatenated collision values.')
 parser$add_argument('garnett_csv', help='File of Garnett models or false.')
 args = parser$parse_args()
 
-all_dups <- read.csv(args$dup_file, header=FALSE, stringsAsFactors=FALSE)
+all_dups <- read.csv(args$dup_file, header=FALSE, stringsAsFactors=FALSE, colClasses="character")
 output_folder <- args$output_folder
 count_info <- read.table(args$cell_counts, stringsAsFactors=FALSE)
 
@@ -120,7 +120,7 @@ json_info <- list("run_name" = project_name,
                   "sample_list" = sample_list,
                   "barn_collision" = barn_collision,
                   "sample_stats" = all_dup_lst)
-                  
+                 
 fileConn<-file("data.js")
 writeLines(c("const run_data =", toJSON(json_info, na='null',  pretty=TRUE, auto_unbox=TRUE)), fileConn)
 close(fileConn)
