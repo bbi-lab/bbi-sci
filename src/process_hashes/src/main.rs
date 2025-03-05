@@ -7,8 +7,8 @@ use std::path::Path;
 use std::fs::File;
 use std::io::{Read, Write, BufWriter};
 use std::str;
-use std::collections::{HashMap, HashSet};
-use std::collections::hash_map::Entry;
+use std::collections::{BTreeMap, BTreeSet};
+use std::collections::btree_map::Entry;
 
 use process_hashes::barcode_utils;
 extern crate clap;
@@ -21,13 +21,13 @@ use itertools::Itertools;
 
 
 fn process_fastq_file<R: Read>(hash_edit_distance: usize,
-                               hash_whitelist: &Vec<HashMap<String, String>>,
-                               cells: &mut HashSet<String>,
+                               hash_whitelist: &Vec<BTreeMap<String, String>>,
+                               cells: &mut BTreeSet<String>,
                                hash_counts: &mut Vec<u64>,
-                               hashdict: &mut HashMap<String, HashMap<String, HashMap<String, u64>>>,
+                               hashdict: &mut BTreeMap<String, BTreeMap<String, BTreeMap<String, u64>>>,
                                fastq_reader: &mut Reader<R>,
                                num_hash: &mut u64,
-                               hash_lookup: &HashMap<String, String>) -> Result<(), Box<dyn std::error::Error>> {
+                               hash_lookup: &BTreeMap<String, String>) -> Result<(), Box<dyn std::error::Error>> {
 
   /*
   ** Loop through input reads.
@@ -108,12 +108,12 @@ fn process_fastq_file<R: Read>(hash_edit_distance: usize,
 
 
 #[inline(always)]
-fn update_nested_maps(hash_key1: &String, hash_key2: String, hash_key3: String, map1: &mut HashMap<String, HashMap<String, HashMap<String, u64>>>, umi_new: &mut usize) -> Result<(), Box<dyn std::error::Error>> {
+fn update_nested_maps(hash_key1: &String, hash_key2: String, hash_key3: String, map1: &mut BTreeMap<String, BTreeMap<String, BTreeMap<String, u64>>>, umi_new: &mut usize) -> Result<(), Box<dyn std::error::Error>> {
   /*
   ** We expect that map1 was initialized with hash_key1 so we don't need
-  ** to use map1.entry(key1.to_string()).or_insert(HashMap::new()); instead,
+  ** to use map1.entry(key1.to_string()).or_insert(BTreeMap::new()); instead,
   ** we return an error if the hash_key1 isn't in map1.
-  let map2 = map1.entry(key1.to_string()).or_insert_with(|| HashMap::new()).expect("unable to insert key/value pair");
+  let map2 = map1.entry(key1.to_string()).or_insert_with(|| BTreeMap::new()).expect("unable to insert key/value pair");
   */
 
   /*
@@ -124,7 +124,7 @@ fn update_nested_maps(hash_key1: &String, hash_key2: String, hash_key3: String, 
   /*
   ** map2 key is cell barcode (hash_key2).
   */
-  let map3 = map2.entry(hash_key2).or_insert_with(|| HashMap::new());
+  let map3 = map2.entry(hash_key2).or_insert_with(|| BTreeMap::new());
 
   /*
   ** map3 key is UMI barcode (hash_key3).
@@ -140,16 +140,16 @@ fn update_nested_maps(hash_key1: &String, hash_key2: String, hash_key3: String, 
 }
 
 
-fn make_sparse_matrix(cells: &HashSet<String>, hash_lookup: &HashMap<String, String>, map: &HashMap<String, HashMap<String, HashMap<String, u64>>>) -> Result<(Vec<String>, Vec<String>, CsMat<usize>), Box<dyn std::error::Error>> {
+fn make_sparse_matrix(cells: &BTreeSet<String>, hash_lookup: &BTreeMap<String, String>, map: &BTreeMap<String, BTreeMap<String, BTreeMap<String, u64>>>) -> Result<(Vec<String>, Vec<String>, CsMat<usize>), Box<dyn std::error::Error>> {
 
   /*
   ** Note: it's possible to use the indexing operator
-  **       with a HashMap get() operation, as long as
+  **       with a BTreeMap get() operation, as long as
   **       one can be certain that the key exists in
-  **       the HashMap.
+  **       the BTreeMap.
   */
   let mut num_hash: usize = 0;
-  let mut cell_counter: HashSet<String> = HashSet::new();
+  let mut cell_counter: BTreeSet<String> = BTreeSet::new();
   for key1 in map.keys() {
     if(!map[key1].is_empty()) {
       num_hash += 1;
@@ -185,7 +185,7 @@ fn make_sparse_matrix(cells: &HashSet<String>, hash_lookup: &HashMap<String, Str
   /*
   ** Cell names.
   */
-  let mut col_names: Vec<String> = Vec::with_capacity(num_cell);
+  let mut col_names: Vec<String> = Vec::with_capacity(num_hash);
   for col_name in cells {
     col_names.push(col_name.to_string());
   }
@@ -262,7 +262,7 @@ fn write_matrix(key: &String, row_names: Vec<String>, col_names: Vec<String>, sm
 }
 
 
-fn write_hash_combined(hashdict: &HashMap<String, HashMap<String, HashMap<String, u64>>>, hash_lookup: &HashMap<String, String>,sample_name: &String, key: &String) -> Result<(), std::io::Error> {
+fn write_hash_combined(hashdict: &BTreeMap<String, BTreeMap<String, BTreeMap<String, u64>>>, hash_lookup: &BTreeMap<String, String>,sample_name: &String, key: &String) -> Result<(), std::io::Error> {
   let file_name = format!("{}_hash_combined", *key);
   let path = Path::new(&file_name);
   let file = File::create(path).expect(&format!("unable to open file {}", file_name));
@@ -284,13 +284,12 @@ fn write_hash_combined(hashdict: &HashMap<String, HashMap<String, HashMap<String
 }
 
 
-fn make_per_cell_statistics(cells: &HashSet<String>, hashdict: &HashMap<String, HashMap<String, HashMap<String, u64>>>) -> Result<HashMap<String, Vec<u64>>, std::io::Error> {
+fn make_per_cell_statistics(cells: &BTreeSet<String>, hashdict: &BTreeMap<String, BTreeMap<String, BTreeMap<String, u64>>>) -> Result<BTreeMap<String, Vec<u64>>, std::io::Error> {
 
   /*
   ** Check hashdict cell count.
   */
-  let num_cell: usize = 0;
-  let mut cell_name_set: HashSet<String> = HashSet::new();
+  let mut cell_name_set: BTreeSet<String> = BTreeSet::new();
 
   for hash_seq in hashdict.keys() {
     for cell_name in hashdict[hash_seq].keys() {
@@ -308,7 +307,7 @@ fn make_per_cell_statistics(cells: &HashSet<String>, hashdict: &HashMap<String, 
   ** map[cell_name][1]  umi counts per cell
   */
   let zero: u64 = 0;
-  let mut cell_counter: HashMap<String, Vec<u64>> = HashMap::with_capacity(num_cell);
+  let mut cell_counter: BTreeMap<String, Vec<u64>> = BTreeMap::new();
   for cell_name in &cell_name_set {
     cell_counter.insert(cell_name.to_string(), vec!(zero, zero));
   }
@@ -328,7 +327,7 @@ fn make_per_cell_statistics(cells: &HashSet<String>, hashdict: &HashMap<String, 
 }
 
 
-fn write_per_cell_statistics(cell_counter: &HashMap<String, Vec<u64>>, sample_name: &String, key: &String) -> Result<(), std::io::Error> {
+fn write_per_cell_statistics(cell_counter: &BTreeMap<String, Vec<u64>>, sample_name: &String, key: &String) -> Result<(), std::io::Error> {
   let mut file_name: String;
   let mut path: &Path;
   let mut file: File;
@@ -389,13 +388,12 @@ fn write_per_cell_statistics(cell_counter: &HashMap<String, Vec<u64>>, sample_na
 }
 
 
-fn make_hash_assignment_table(cells: &HashSet<String>, hashdict: &HashMap<String, HashMap<String, HashMap<String, u64>>>) -> Result<HashMap<String, HashMap<String, u64>>, Box<dyn std::error::Error>> {
+fn make_hash_assignment_table(cells: &BTreeSet<String>, hashdict: &BTreeMap<String, BTreeMap<String, BTreeMap<String, u64>>>) -> Result<BTreeMap<String, BTreeMap<String, u64>>, Box<dyn std::error::Error>> {
 
   /*
   ** Check hashdict cell count.
   */
-  let num_cell: usize = 0;
-  let mut cell_name_set: HashSet<String> = HashSet::new();
+  let mut cell_name_set: BTreeSet<String> = BTreeSet::new();
 
   for hash_seq in hashdict.keys() {
     for cell_name in hashdict[hash_seq].keys() {
@@ -410,14 +408,14 @@ fn make_hash_assignment_table(cells: &HashSet<String>, hashdict: &HashMap<String
   /*
   ** map[cell_name][hash_seq]
   */
-  let mut hash_counter: HashMap<String, HashMap<String, u64>> = HashMap::with_capacity(num_cell);
+  let mut hash_counter: BTreeMap<String, BTreeMap<String, u64>> = BTreeMap::new();
 
   /*
-  ** Set up HashMap of HashMaps.
+  ** Set up BTreeMap of BTreeMaps.
   **   map[cell_name][hash_seq] is a u64 counter of the number of umis.
   */
   for cell_name in cell_name_set {
-    hash_counter.insert(cell_name, HashMap::new());
+    hash_counter.insert(cell_name, BTreeMap::new());
   }
 
   /*
@@ -425,7 +423,7 @@ fn make_hash_assignment_table(cells: &HashSet<String>, hashdict: &HashMap<String
   */
   for hash_seq in hashdict.keys() {
     for cell_name in hashdict[hash_seq].keys() {
-      let hash_map = hash_counter.entry(cell_name.to_string()).or_insert_with(|| HashMap::new());
+      let hash_map = hash_counter.entry(cell_name.to_string()).or_insert_with(|| BTreeMap::new());
       let counter = hash_map.entry(hash_seq.to_string()).or_insert(0);
       *counter += u64::try_from(hashdict[hash_seq][cell_name].len()).expect("bad status: unable to convert usize to u64.");
     }
@@ -435,7 +433,7 @@ fn make_hash_assignment_table(cells: &HashSet<String>, hashdict: &HashMap<String
 }
 
 
-fn write_hash_assignment_table(hash_lookup: &HashMap<String, String>, hash_counter: &HashMap<String, HashMap<String, u64>>, sample_name: &String, key: &String) -> Result<(), std::io::Error> {
+fn write_hash_assignment_table(hash_lookup: &BTreeMap<String, String>, hash_counter: &BTreeMap<String, BTreeMap<String, u64>>, sample_name: &String, key: &String) -> Result<(), std::io::Error> {
 
   /*
   ** Write hash assignment table.
@@ -458,7 +456,7 @@ fn write_hash_assignment_table(hash_lookup: &HashMap<String, String>, hash_count
 
 
 #[allow(dead_code)]
-fn dump_nested_maps(map: &mut HashMap<String, HashMap<String, HashMap<String, usize>>>) {
+fn dump_nested_maps(map: &mut BTreeMap<String, BTreeMap<String, BTreeMap<String, usize>>>) {
   for key1 in map.keys() {
     for key2 in map.get(key1).unwrap().keys() {
       for key3 in map.get(key1).unwrap().get(key2).unwrap().keys() {
@@ -555,7 +553,7 @@ fn main() {
   */
   let hash_lookup = barcode_utils::read_barcode_file(&hash_sheet).unwrap();
   let barcodes: Vec<String> = hash_lookup.keys().cloned().collect();
-  let hash_whitelist: Vec<HashMap<String, String>> = barcode_utils::construct_mismatch_to_whitelist_map(barcodes, 1, true).unwrap();
+  let hash_whitelist: Vec<BTreeMap<String, String>> = barcode_utils::construct_mismatch_to_whitelist_map(barcodes, 1, true).unwrap();
 
   /*
   ** Initialize counters...
@@ -564,9 +562,9 @@ fn main() {
   /*
   ** Hash reads per cell counter.
   */
-  let mut hashdict: HashMap<String, HashMap<String, HashMap<String, u64>>> = HashMap::with_capacity(256);
+  let mut hashdict: BTreeMap<String, BTreeMap<String, BTreeMap<String, u64>>> = BTreeMap::new();
   for hashseq in hash_lookup.keys() {
-    hashdict.insert(hashseq.to_string(), HashMap::new());
+    hashdict.insert(hashseq.to_string(), BTreeMap::new());
   }
 
   /*
@@ -575,7 +573,7 @@ fn main() {
   ** to get a reference to the barcode sequence. Here we use
   ** barcode sequence references as keys in maps indexed by 'cell'.
   */
-  let mut cells: HashSet<String> = HashSet::with_capacity(100000);
+  let mut cells: BTreeSet<String> = BTreeSet::new();
 
   /*
   ** Total hashes assigned counter.
@@ -630,7 +628,7 @@ fn main() {
   /*
   ** Make per-cell statistics.
   */
-  let cell_counter: HashMap<String, Vec<u64>> = make_per_cell_statistics(&cells, &hashdict).expect("bad status: make_per_cell_statistics");
+  let cell_counter: BTreeMap<String, Vec<u64>> = make_per_cell_statistics(&cells, &hashdict).expect("bad status: make_per_cell_statistics");
 
   /*
   ** Write per-cell statistics.
@@ -641,7 +639,7 @@ fn main() {
   /*
   ** Make hash assignment table.
   */
-  let hash_counter: HashMap<String, HashMap<String, u64>> = make_hash_assignment_table(&cells, &hashdict).expect("bad status: make_hash_assignment_table.");
+  let hash_counter: BTreeMap<String, BTreeMap<String, u64>> = make_hash_assignment_table(&cells, &hashdict).expect("bad status: make_hash_assignment_table.");
 
   /*
   ** Write hash assignment table.

@@ -9,7 +9,7 @@ pub mod barcode_utils {
 
   use std::io;
   use std::error::Error;
-  use std::collections::HashMap;
+  use std::collections::BTreeMap;
   use itertools::Itertools;
   use csv::{ReaderBuilder, Trim};
   use serde::Deserialize;
@@ -34,7 +34,7 @@ pub mod barcode_utils {
     hash_barcode: String,
   }
 
-  pub fn read_barcode_file(file_path: &str) -> Result<HashMap<String, String>, Box<dyn Error>> {
+  pub fn read_barcode_file(file_path: &str) -> Result<BTreeMap<String, String>, Box<dyn Error>> {
   let fp = std::fs::File::open(file_path)?;
   let buf_reader = io::BufReader::new(fp);
   let mut tsv_reader = ReaderBuilder::new()
@@ -44,7 +44,7 @@ pub mod barcode_utils {
                          .comment(Some(b'#'))
                          .from_reader(buf_reader);
 
-  let mut hash_map: HashMap<String, String> = HashMap::new();
+  let mut hash_map: BTreeMap<String, String> = BTreeMap::new();
 
   /*
   ** Read the file and store the names and sequences.
@@ -149,7 +149,7 @@ pub mod barcode_utils {
   /// A result enum containing a vector of maps of mismatched sequences to
   /// their whitelist sequences.
   ///
-  pub fn construct_mismatch_to_whitelist_map(whitelist: Vec<String>, edit_distance: usize, allow_n: bool) -> Result<Vec<HashMap<String, String>>, Box<dyn Error>> {
+  pub fn construct_mismatch_to_whitelist_map(whitelist: Vec<String>, edit_distance: usize, allow_n: bool) -> Result<Vec<BTreeMap<String, String>>, Box<dyn Error>> {
 
     /*
     ** Set whitelist sequences to upper-case.
@@ -162,16 +162,16 @@ pub mod barcode_utils {
     ** the hash maps are keyed by the sequences with substitutions and the
     ** values are the original whitelist sequences (no mismatches).
     */
-    let mut mismatch_to_whitelist_map: Vec<HashMap<String, String>> = Vec::with_capacity(edit_distance+1);
+    let mut mismatch_to_whitelist_map: Vec<BTreeMap<String, String>> = Vec::with_capacity(edit_distance+1);
     for _i in (0..edit_distance+1) {
-      mismatch_to_whitelist_map.push(HashMap::new());
+      mismatch_to_whitelist_map.push(BTreeMap::new());
     }
 
     /*
     ** Set the zero mismatch sequence maps where the key and
     ** value are the same.
     */
-    mismatch_to_whitelist_map[0] = whitelist_upper.iter().map(|s| (s.to_owned(), s.to_owned())).collect::<HashMap<String, String>>();
+    mismatch_to_whitelist_map[0] = whitelist_upper.iter().map(|s| (s.to_owned(), s.to_owned())).collect::<BTreeMap<String, String>>();
 
 
     /*
@@ -231,11 +231,11 @@ pub mod barcode_utils {
   ///
   /// A map list using Vec<u8> for sequences.
   /// 
-  pub fn mismatch_to_whitelist_map_as_u8(whitelist_map_string: Vec<HashMap<String, String>>) -> Result<Vec<HashMap<Vec<u8>, Vec<u8>>>, Box<dyn Error>> {
+  pub fn mismatch_to_whitelist_map_as_u8(whitelist_map_string: Vec<BTreeMap<String, String>>) -> Result<Vec<BTreeMap<Vec<u8>, Vec<u8>>>, Box<dyn Error>> {
     let vec_len: usize = whitelist_map_string.len();
-    let mut whitelist_map_u8: Vec<HashMap<Vec<u8>, Vec<u8>>> = Vec::with_capacity(vec_len);
+    let mut whitelist_map_u8: Vec<BTreeMap<Vec<u8>, Vec<u8>>> = Vec::with_capacity(vec_len);
     for i in 0..vec_len {
-      whitelist_map_u8.push(HashMap::new());
+      whitelist_map_u8.push(BTreeMap::new());
       for key in whitelist_map_string[i].keys() {
         whitelist_map_u8[i].insert(key.as_bytes().to_vec(), whitelist_map_string[i][key].as_bytes().to_vec());
       }
