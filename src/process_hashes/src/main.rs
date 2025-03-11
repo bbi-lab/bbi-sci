@@ -190,15 +190,10 @@ fn make_sparse_matrix(cells: &BTreeSet<String>, hash_lookup: &BTreeMap<String, S
     row_names.push(hash_lookup[hash_barcode].clone());
   }
 
-  println!("num hash: {}", num_hash);
-  for (i, hash) in hash_seqs.iter().enumerate() {
-    println!("{} {} {}", i, hash, row_names[i]);
-  }
-
   /*
   ** Cell names.
   */
-  let mut col_names: Vec<String> = Vec::with_capacity(num_hash);
+  let mut col_names: Vec<String> = Vec::with_capacity(num_cell);
   for col_name in cells {
     col_names.push(col_name.to_string());
   }
