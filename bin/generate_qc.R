@@ -183,34 +183,6 @@ well_check <- function(sample_name, cds) {
   # UMAP of all data to use as background cluster
   bg_data <- data.frame(colData(cds))[,c('UMAP1', 'UMAP2')]
 
-  # # Violin plot of percent mitochondrial umis by RT barcode with threshold line at 10% 
-  # mito_rt_plot <- ggplot(meta, aes(x=RT_barcode, y=perc_mitochondrial_umis)) +
-  #   geom_violin(aes(fill="aquamarine")) +
-  #   geom_boxplot(notch=T, fill="white", width=0.25, alpha=0.3, outlier.shape=NA) +
-  #   theme_light() +
-  #   theme(axis.text.x=element_blank(),
-  #         text=element_text(size=14)) +
-  #   geom_hline(yintercept = 10, linetype="dotted", ) +
-  #   scale_y_continuous(limits=c(0,max(cds$perc_mitochondrial_umis) + 5)) +
-  #   xlab("") +
-  #   ylab("% Mito UMIs") +
-  #   stat_summary(fun.data = n_fun, geom = "text", hjust = 0.5, vjust = -0.3) +
-  #   theme(legend.position="none")
-
-
-  # # Num of UMIs by RT barcode 
-  # umi_rt_plot <- ggplot(meta, aes(x=RT_barcode, y=n.umi)) +
-  # # facet_wrap(~sample, nrow=1, drop=FALSE, scales="free_x") +
-  #   geom_violin(aes(fill="salmon")) +
-  #   geom_boxplot(notch=T, fill="white", width=0.25, alpha=0.3, outlier.shape=NA) +
-  #   # theme_bbi() +
-  #   theme_light() +
-  #   theme(axis.text.x=element_blank(),
-  #       text=element_text(size=14)) +
-  #   scale_y_log10() + 
-  #   xlab("") +
-  #   ylab("UMIs") +
-  #   theme(legend.position="none")
 
   # Percent cluster of total sample 
   perc_clust_plot <- ggplot(clusterCounts, aes(x=RT_barcode, y=perSamp, fill=clusters)) +
@@ -234,15 +206,6 @@ well_check <- function(sample_name, cds) {
     xlab("RT Wells") +
     ylab("% of RT Well") +
     theme(legend.position="bottom")
-
-  # all 3 well check plots combined 
-  # well_check_combined <- plot_grid(mito_rt_plot, umi_rt_plot, 
-  #                        perc_clust_plot, perc_clust_rt, 
-  #                        nrow=4, align='hv',
-  #                        rel_heights = c(1,1,1,2))
-
-
-  # ggsave(paste0(sample_name, "_wellcheck.png"), well_check_combined, width=15, height = 30)
 
   plot_list <- list(perc_clust_plot, perc_clust_rt, colpal)
 
