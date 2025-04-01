@@ -165,14 +165,7 @@ fn make_sparse_matrix(cells: &HashSet<String>, hash_lookup: &HashMap<String, Str
   }
 
   /*
-  ** Rows are hash reads.
-  ** Columns are cells.
-  */
-  let mut data: sprs::TriMatBase<Vec<usize>, Vec<usize>> = sprs::TriMat::with_capacity((num_hash, num_cell), 100);
-
-  /*
   ** Hash read names.
-  */
   let mut hash_seqs: Vec<String> = Vec::with_capacity(num_hash);
   let mut row_names: Vec<String> = Vec::with_capacity(num_hash);
   for hash_seq in map.keys() {
@@ -180,6 +173,21 @@ fn make_sparse_matrix(cells: &HashSet<String>, hash_lookup: &HashMap<String, Str
       hash_seqs.push(hash_seq.to_string());
       row_names.push(hash_lookup.get(hash_seq).unwrap().to_string());
     }
+  }
+  */
+
+  /*
+  ** Hash read names for all entries in hash file.
+  ** Sort them.
+  */
+  let mut num_hash: usize = hash_lookup.keys().len();
+
+  let mut hash_seqs: Vec<String> = Vec::with_capacity(num_hash);
+  let mut row_names: Vec<String> = Vec::with_capacity(num_hash);
+  let mut hash_barcode_keys = hash_lookup.keys().sorted();
+  for hash_barcode in hash_barcode_keys {
+    hash_seqs.push(hash_barcode.to_string());
+    row_names.push(hash_lookup[hash_barcode].clone());
   }
 
   /*
@@ -189,6 +197,12 @@ fn make_sparse_matrix(cells: &HashSet<String>, hash_lookup: &HashMap<String, Str
   for col_name in cells {
     col_names.push(col_name.to_string());
   }
+
+  /*
+  ** Rows are hash reads.
+  ** Columns are cells.
+  */
+  let mut data: sprs::TriMatBase<Vec<usize>, Vec<usize>> = sprs::TriMat::with_capacity((num_hash, num_cell), 100);
 
   /*
   ** Load triplet matrix.
