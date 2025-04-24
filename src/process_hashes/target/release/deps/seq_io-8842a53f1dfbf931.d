@@ -1,0 +1,11 @@
+/net/bbi/vol1/home/athuyvo/git/bbi-sci/src/process_hashes/target/release/deps/libseq_io-8842a53f1dfbf931.rmeta: /net/bbi/vol1/home/athuyvo/.cargo/registry/src/github.com-1ecc6299db9ec823/seq_io-0.3.2/src/lib.rs /net/bbi/vol1/home/athuyvo/.cargo/registry/src/github.com-1ecc6299db9ec823/seq_io-0.3.2/src/fasta.rs /net/bbi/vol1/home/athuyvo/.cargo/registry/src/github.com-1ecc6299db9ec823/seq_io-0.3.2/src/fastq.rs /net/bbi/vol1/home/athuyvo/.cargo/registry/src/github.com-1ecc6299db9ec823/seq_io-0.3.2/src/parallel.rs /net/bbi/vol1/home/athuyvo/.cargo/registry/src/github.com-1ecc6299db9ec823/seq_io-0.3.2/src/policy.rs
+
+/net/bbi/vol1/home/athuyvo/git/bbi-sci/src/process_hashes/target/release/deps/libseq_io-8842a53f1dfbf931.rlib: /net/bbi/vol1/home/athuyvo/.cargo/registry/src/github.com-1ecc6299db9ec823/seq_io-0.3.2/src/lib.rs /net/bbi/vol1/home/athuyvo/.cargo/registry/src/github.com-1ecc6299db9ec823/seq_io-0.3.2/src/fasta.rs /net/bbi/vol1/home/athuyvo/.cargo/registry/src/github.com-1ecc6299db9ec823/seq_io-0.3.2/src/fastq.rs /net/bbi/vol1/home/athuyvo/.cargo/registry/src/github.com-1ecc6299db9ec823/seq_io-0.3.2/src/parallel.rs /net/bbi/vol1/home/athuyvo/.cargo/registry/src/github.com-1ecc6299db9ec823/seq_io-0.3.2/src/policy.rs
+
+/net/bbi/vol1/home/athuyvo/git/bbi-sci/src/process_hashes/target/release/deps/seq_io-8842a53f1dfbf931.d: /net/bbi/vol1/home/athuyvo/.cargo/registry/src/github.com-1ecc6299db9ec823/seq_io-0.3.2/src/lib.rs /net/bbi/vol1/home/athuyvo/.cargo/registry/src/github.com-1ecc6299db9ec823/seq_io-0.3.2/src/fasta.rs /net/bbi/vol1/home/athuyvo/.cargo/registry/src/github.com-1ecc6299db9ec823/seq_io-0.3.2/src/fastq.rs /net/bbi/vol1/home/athuyvo/.cargo/registry/src/github.com-1ecc6299db9ec823/seq_io-0.3.2/src/parallel.rs /net/bbi/vol1/home/athuyvo/.cargo/registry/src/github.com-1ecc6299db9ec823/seq_io-0.3.2/src/policy.rs
+
+/net/bbi/vol1/home/athuyvo/.cargo/registry/src/github.com-1ecc6299db9ec823/seq_io-0.3.2/src/lib.rs:
+/net/bbi/vol1/home/athuyvo/.cargo/registry/src/github.com-1ecc6299db9ec823/seq_io-0.3.2/src/fasta.rs:
+/net/bbi/vol1/home/athuyvo/.cargo/registry/src/github.com-1ecc6299db9ec823/seq_io-0.3.2/src/fastq.rs:
+/net/bbi/vol1/home/athuyvo/.cargo/registry/src/github.com-1ecc6299db9ec823/seq_io-0.3.2/src/parallel.rs:
+/net/bbi/vol1/home/athuyvo/.cargo/registry/src/github.com-1ecc6299db9ec823/seq_io-0.3.2/src/policy.rs:

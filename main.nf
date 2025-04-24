@@ -36,6 +36,7 @@ params.run_emptyDrops = true
 params.hash_umi_cutoff = 5
 params.hash_ratio = false
 params.hash_dup = false // Default is false. Other options are "p5" or "pcr_plate". params.hash_list must also be true.
+params.hash_rt_split = false // Default is false. If true, will process on hash samples demuxed by RT barcodes.
 
 
 //print usage
@@ -308,6 +309,7 @@ process gather_info {
         set val(key), val(name), env(star_path), env(star_mem), file(trimmed_fastq), file(logfile), file(log_piece2) into align_prepped
         set val(key), env(gtf_path) into gtf_info
         set val(key), env(gtf_path) into gtf_info2
+        file good_sample_sheet into sample_sheet_for_rt_split
 
     """
     # bash watch for errors
@@ -405,12 +407,29 @@ process process_hashes {
     when:
         params.hash_list != false
 
+    script:
+        def sample_name = key.split(/\.P[0-9]\.[A-H][0-9]{2}/)[0]
+
     """
     # bash watch for errors
     set -ueo pipefail
-    
-    process_hashes --hash_sheet $params.hash_list \
+
+    input_key="${key}"
+
+    if [ ${params.hash_rt_split} == true ]; then
+        input_key="${sample_name}"
+    fi
+
+   echo "Input key: \$input_key"
+
+    awk 'NF < 4 {print "ERROR: Hash sample sheet contains rows with fewer than 4 columns"; exit 1}' $params.hash_list
+
+    process_hashes --hash_sheet <(awk -v search="\$input_key" '\$1 ~ search {print \$2 "\t" \$3}' $params.hash_list) \
         --fastq $input_fastq --key $key --sample_name $key
+
+
+#    process_hashes --hash_sheet $params.hash_list \
+#        --fastq $input_fastq --key $key --sample_name $key
 
 #    LL_ALL=C sort ${key}_hash_combined -S 50G -T /tmp/ -k2,2 -k4,4 -k3,3 --parallel=8 > ${key}_sorted_hash_combined
 #    pigz -p 8 "${key}_sorted_hash_combined"
@@ -418,6 +437,60 @@ process process_hashes {
     """
 }
 
+
+
+hash_mats.into{hash_mats_for_cat; hash_mats_for_assign_hash}
+
+concat_hash_in = hash_mats_for_cat
+    .map { sample, mtx, cells, hashes ->
+        def sample_name = sample.split(/\.P[0-9]\.[A-H][0-9]{2}/)[0] // "GENE3"
+        tuple(sample_name, mtx, cells, hashes)
+    }
+    .groupTuple()
+
+// Concatenate all rt split hash files (matrices, )
+
+
+process concat_hash_matrices {
+    cache 'lenient'
+
+    input:
+        tuple val(sample_name), path(mtx), path(cells), path(hashes) from concat_hash_in
+
+    output:
+        set val(sample_name), file("temp_fold/*hashumis.mtx"), file("temp_fold/*hashumis_hashes.txt"), file("temp_fold/*hashumis_cells.txt") into concat_hash_out
+
+    publishDir (
+        path: "${params.output_dir}",
+        mode: 'copy',
+        saveAs: { fileName -> 
+            // Remove the temporary folder prefix and publish into a folder named after the sample
+            def baseName = fileName.replaceFirst('^temp_fold/', '') 
+            def sampleDir = baseName.replaceFirst('_hashumis.*', '') 
+            return "${sample_name}/${baseName}"
+        }
+    )
+
+    when:
+        params.hash_rt_split != false 
+
+    script:
+
+    """
+    # bash watch for errors
+    set -ueo pipefail
+    
+    mkdir temp_fold
+    
+    cat_sparse_matrix.py \
+        -i $mtx \
+        -o temp_fold/$sample_name \
+        -c .hashumis_cells.txt \
+        -m .hashumis.mtx \
+        -f .hashumis_hashes.txt
+
+    """
+}
 
 /*************
 
@@ -1535,6 +1608,7 @@ process reformat_qc {
 
     output:
         set key, file("temp_fold/*.RDS"), file("temp_fold/*.csv") into rscrub_out
+        file("temp_fold/*.RDS") into for_combine_cds
         file("*sample_stats.csv") into sample_stats
         // file("*collision.txt") into collision
         set key, file("temp_fold") into temp_dir
@@ -1567,7 +1641,7 @@ process reformat_qc {
     #!/usr/bin/env Rscript
 
     library(monocle3)
-
+    print("test")
     dir.create("temp_fold")
     cds <- readRDS("$cds_object")
     cell_qc <- read.csv("$cell_qc")
@@ -1635,7 +1709,7 @@ Process: generate_qc_metrics
     wellcheck_png - png of RT barcode qc 
 
  Notes:
-    Temp dir is used in "assign_hash" and "publish_cds_and_cell_qc" process block.
+    Temp dir is used in "assign_hash",  "publish_cds_and_cell_qc", and "combine_cds" process block.
     It's copied here because these two blocks are conditional and temp dir is required 
     to publish cds object and cell qc. 
 
@@ -1643,8 +1717,6 @@ Process: generate_qc_metrics
 
 // See notes above for info on temp_dir
 temp_dir.into{temp_dir_copy01; temp_dir_copy02}
-
-
 
 for_gen_qc = rscrub_out.join(umis_per_cell).join(for_gen_qc_emptyDrops)
 save_knee = {params.output_dir + "/" + it - ~/_knee_plot.png/ + "/" + it}
@@ -1786,6 +1858,94 @@ process calc_cell_totals {
 
 }
 
+// collect all cds objects
+// find sample name by splitting the cds object file name 
+// set name as key to group the cds objects ; split by sample_rt 
+
+/*************
+
+Process: combine_cds
+
+ Inputs:
+    for_combine_cds - temp directory containing rt split cds objects
+
+ Outputs:
+    combined_cds_input - combined rt split cds objects by sample
+
+ Pass through:
+
+ Summary:
+    Collect all rt split cds objects. Find sample name by splitting the cds object 
+    file name. Set name as key to group cds objects by sample name. Then combine 
+    all cds objects for assign_hash process. 
+
+ Downstream:
+    
+ Published:
+
+ Notes:
+    runs only when params.hash_rt_split = true
+    
+*************/
+
+combine_cds_input = for_combine_cds
+    .map { file ->
+        def fname = file.getName() // e.g. "GENE3.P1.A02_cds.RDS"
+        def base = fname.replaceFirst(/_cds\.RDS$/, '') // "GENE3.P1.A02"
+        def sample_name = base.split(/\.P[0-9]\.[A-H][0-9]{2}/)[0] // "GENE3"
+        tuple(sample_name, file)
+    }
+    .groupTuple()
+    // .view()
+                        
+process combine_cds {
+    cache 'lenient'
+
+    input:
+        // set key, file(input_cds) from rscrub_out_for_combine_cds.collect()
+        tuple val(sample_name), path(cds_list) from combine_cds_input
+
+
+    output:
+        set val(sample_name), file("*combined_cds.RDS") into combined_cds_out 
+
+    when: 
+        params.hash_rt_split != false
+    
+    script: 
+
+    """
+    #!/usr/bin/env Rscript
+
+    suppressPackageStartupMessages({
+        library(monocle3)
+        library(data.table)
+    })
+
+    new_cds_list = strsplit("$cds_list", " ")[[1]]
+
+    if (length(new_cds_list) < 2) {
+        file.copy(new_cds_list[1], paste0("$sample_name", "_combined_cds.RDS"))
+        quit(save="no", status=0)
+    }
+
+    temp_cds_list <- list()
+
+    for(cds in new_cds_list) {
+        temp_cds <- readRDS(cds) 
+        temp_cds_list[[cds]] <- temp_cds
+    }
+
+    cds <- combine_cds(temp_cds_list) 
+    cds\$sample <- "$sample_name"
+    rownames(colData(cds)) <- cds\$cell
+    
+    saveRDS(cds, paste0("$sample_name", "_combined_cds.RDS"))
+
+    """
+}
+
+
 /*************
 
 Process: assign_hash
@@ -1819,26 +1979,27 @@ Process: assign_hash
     
 *************/
 
-make_hash_cds = temp_dir_copy01.join(hash_mats).join(for_assign_hash_umis)
+for_assign_hash_umis.into{for_assign_hash_umis_copy01; for_assign_hash_umis_copy02}
+make_hash_cds = temp_dir_copy01.join(hash_mats_for_assign_hash).join(for_assign_hash_umis_copy01)
 
-save_hash_cds = {params.output_dir + "/" + it - ~/_hash_cds.RDS/ + "/" + it}
+save_hash_cds = {params.output_dir + "/" + it - ~/_cds.RDS/ + "/" + it}
 // save_cell_qc = {params.output_dir + "/" + it - ~/_cell_qc.csv/ + "/" + it}
 save_hash_table = {params.output_dir + "/" + it - ~/_hash_table.csv/ + "/" + it}
 
 process assign_hash {
     cache 'lenient'
-    publishDir path: "${params.output_dir}/", saveAs: save_hash_cds, pattern: "*_hash_cds.RDS", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_hash_cds, pattern: "*_cds.RDS", mode: 'copy'
     publishDir path: "${params.output_dir}/", saveAs: save_hash_table, pattern: "*_hash_table.csv", mode: 'copy'
 
     input:
         set key, file(cds_dir), file(hash_mtx), file(hash_cell), file(hash_hash), file(umis_per_cell) from make_hash_cds
 
     output:
-        file("*hash_cds.RDS") into hash_cds
+        file("*cds.RDS") into hash_cds
         file("*hash_table.csv") into hash_table
 
     when: 
-        params.hash_list != false 
+        params.hash_list != false && params.hash_rt_split == false
 
     """
     # bash watch for errors
@@ -1852,6 +2013,117 @@ process assign_hash {
         $hash_cell \
         $hash_hash \
         ${cds_dir}/*cds.RDS \
+        $umis_per_cell \
+        $params.hash_umi_cutoff \
+        $params.hash_ratio
+
+    """
+}
+
+
+// concat all rt split umi per cell barcode text files for input into assign_hash_rt_split
+
+concat_umi_in = for_assign_hash_umis_copy02
+    .map { sample, umi_per_cell ->
+        def sample_name = sample.split(/\.P[0-9]\.[A-H][0-9]{2}/)[0] // "GENE3"
+        tuple(sample_name, umi_per_cell)
+    }
+    .groupTuple()
+
+
+save_combined_umi = {params.output_dir + "/" + it - ~/.UMIs.per.cell.barcode.txt/  - ~/temp_fold/  + "/umis_per_cell_barcode.txt"}
+
+process concat_umi_per_cell {
+    cache 'lenient'
+    publishDir path: "${params.output_dir}/", saveAs: save_combined_umi, pattern: "temp_fold/*UMIs.per.cell.barcode.txt", mode: 'copy'
+
+    input: 
+        tuple(sample_name), path(umi_per_cell) from concat_umi_in
+    
+    output: 
+        set val(sample_name), file("temp_fold/*txt") into concat_umi_out
+
+    when:
+        params.hash_rt_split != false
+    
+    script:
+
+    """
+    # bash watch for errors
+    set -ueo pipefail
+
+    mkdir temp_fold
+    cat ${umi_per_cell.join(' ')} > "temp_fold/${sample_name}.UMIs.per.cell.barcode.txt"
+
+    """
+
+}
+
+
+/*************
+
+Process: assign_hash_rt_split
+
+ Inputs:
+    cds_dir - temp directory containing cds object and cell qc csv
+    hash_cell - text file with list of cell names with hash umis 
+    hash_list - text file with list of hash names 
+    hash_mtx - sparse matrix with hash umi counts for each cell 
+    umis_per_cell - txt file with number of umis per cell barcode
+
+ Outputs:
+    corrected_hash_table - csv file with data frame of cells and hash stats 
+    hash_cds - cds object with hash info
+    cell_qc - csv of cell quality control information
+
+ Pass through:
+
+ Summary:
+    Assign hash to cells and find top hash oligo for each cell 
+
+ Downstream:
+    
+ Published:
+    hash_table - csv file with data frame of cells and hash stats 
+    cds - cds object with hash info in RDS format
+    cell_qc - csv of cell quality control information
+
+ Notes:
+    runs only when params.hash_list = true
+    
+*************/
+
+// need to combine hash matrices, hash cell barcodes, hash names and umis per-cell 
+
+
+assign_hash_rt_in = combined_cds_out.join(concat_hash_out).join(concat_umi_out)
+save_combined_hash_cds = {params.output_dir + "/" + it - ~/_cds.RDS/ + "/" + it}
+save_combined_hash_table = {params.output_dir + "/" + it - ~/_hash_table.csv/ + "/" + it}
+
+process assign_hash_rt_split {
+    cache 'lenient'
+    publishDir path: "${params.output_dir}/", saveAs: save_combined_hash_cds, pattern: "*_cds.RDS", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_combined_hash_table, pattern: "*_hash_table.csv", mode: 'copy'
+
+    input:
+        set key, file(cds), file(hash_mtx), file(hash_hash), file(hash_cell), file(umis_per_cell) from assign_hash_rt_in
+    output:
+        file("*_cds.RDS") into combined_hash_cds
+        file("*hash_table.csv") into combined_hash_table
+
+    when: 
+        params.hash_rt_split != false 
+
+    """
+    # bash watch for errors
+    set -ueo pipefail
+
+    assign_hash.R \
+        $key \
+        $hash_mtx \
+        $hash_cell \
+        $hash_hash \
+        $cds \
         $umis_per_cell \
         $params.hash_umi_cutoff \
         $params.hash_ratio
@@ -1947,15 +2219,16 @@ Process: calc_tot_hash_dup
 *************/
 
 
-save_total_hash_dup = {params.output_dir + "/" + it - ~/_total_hash_dup_rate.csv/ + "/" + it}
+for_hash_calc.into{ for_hash_calc_copy01;for_hash_calc_copy02}
 
+save_total_hash_dup = {params.output_dir + "/" + it - ~/_total_hash_dup_rate.csv/ + "/" + it}
 
 process calc_tot_hash_dup {
     cache 'lenient'
     publishDir path: "${params.output_dir}/", saveAs: save_total_hash_dup, pattern: "*_total_hash_dup_rate.csv", mode: 'copy'
 
     input:
-        set key, file(hash_dup) from for_hash_calc
+        set key, file(hash_dup) from for_hash_calc_copy01
 
     output:
         file("*.csv") into total_hash_dup
@@ -2000,6 +2273,73 @@ process calc_tot_hash_dup {
     """
 }
 
+// calculate total hash duplication rate for combined RT split sample
+
+calc_hash_in = for_hash_calc_copy02
+    .map { sample, hash_dup ->
+        def sample_name = sample.split(/\.P[0-9]\.[A-H][0-9]{2}/)[0] // "GENE3"
+        tuple(sample_name, hash_dup)
+    }
+    .groupTuple()
+
+save_combined_hash_dup = {params.output_dir + "/" + it - ~/_total_hash_dup_rate.csv/ + "/" + it}
+
+process calc_tot_hash_dup_combined {
+    cache 'lenient'
+    publishDir path: "${params.output_dir}/", saveAs: save_combined_hash_dup, pattern: "*_total_hash_dup_rate.csv", mode: 'copy'
+
+    input:
+        tuple(sample_name), path(hash_dup) from calc_hash_in
+
+    output:
+        file("*.csv") into combined_total_hash_dup
+
+    when: 
+        params.hash_rt_split != false && params.hash_dup != false
+    
+    
+    script:
+
+    """
+    #!/usr/bin/env Rscript
+
+    library(data.table)
+    library(tidyverse)
+
+    hash_files = strsplit("$hash_dup", " ")[[1]]
+
+    dup = data.frame()
+
+    for (f in hash_files) {
+        temp_dup = fread(f, header = FALSE,
+                data.table = F,
+                col.names = c("Expt", "Cell", "V4", "V5", "V6"))
+        dup = rbind(dup, temp_dup)
+    }
+
+    dup_rate = NULL
+    
+    if (dim(dup)[1] != 0) {
+        dup = dup %>%
+            separate(Cell, into = c("p5", "p7", "rt_plate_well", "lig_well"), sep = "_") %>%
+            mutate(pcr_plate = paste(str_sub(p7, start = 1, end = 1), str_sub(p5, start = 2, end = 3), sep = ""))
+
+        if ("$params.hash_dup" == 'pcr_plate') {
+            dup = dup %>% group_by(pcr_plate) 
+        } else if("$params.hash_dup" == 'p5') {
+            dup = dup %>% group_by(p5) 
+        } else {
+            stop("params.hash_dup must be either 'pcr_plate' or 'p5'.")     
+        }
+
+        dup_rate = dup %>% summarize(dup_rate = 1-(sum(V4)/sum(V5))) %>% data.frame()
+    }
+
+    out <- file(paste0("$sample_name", "_total_hash_dup_rate.csv"))
+    write.csv(dup_rate, file = out, row.names = FALSE, quote = FALSE)
+
+    """
+}
 
 /*************
 
@@ -2054,7 +2394,7 @@ process publish_cds_and_cell_qc {
     """
     # bash watch for errors
     set -ueo pipefail
-    echo "test"
+ 
     cp $cds_dir/*.RDS . 
     cp $cds_dir/*.csv . 
 

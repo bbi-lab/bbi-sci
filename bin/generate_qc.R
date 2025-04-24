@@ -56,9 +56,10 @@ extractBarcode <- function(cds) {
 n_fun <- function(y){return(data.frame(y=max(y), label = paste0(length(y))))}
 
 
-# Extract RT barcode and plate information from cell name and 
-# returns with a cds with the extracted information 
+# Extract RT barcode and plate information from cell name
 # Write csv for UMI and mitochondrial UMI summary stats by RT barcode
+# Create mito and UMI plot for each RT barcode
+# returns a list with a cds with the extracted information, mito and umi plots 
 rt_stats <- function(sample_name, cds) {
   temp_cds <- extractBarcode(cds)
 
@@ -87,11 +88,47 @@ rt_stats <- function(sample_name, cds) {
     data.frame()
 
   write.csv(mito_rt_stats, file=paste0(sample_name, "_mito_rt_stats.csv"), quote=FALSE, row.names=FALSE)
+   
+  mito_rt_plot <- ggplot(data.frame(colData(temp_cds)), aes(x=RT_barcode, y=perc_mitochondrial_umis)) +
+    geom_violin(aes(fill="aquamarine")) +
+    geom_boxplot(notch=T, fill="white", width=0.25, alpha=0.3, outlier.shape=NA) +
+    theme_light() +
+    theme(axis.text.x=element_blank(),
+          text=element_text(size=14)) +
+    geom_hline(yintercept = 10, linetype="dotted", ) +
+    scale_y_continuous(limits=c(0,max(cds$perc_mitochondrial_umis) + 5)) +
+    xlab("") +
+    ylab("% Mito UMIs") +
+    stat_summary(fun.data = n_fun, geom = "text", hjust = 0.5, vjust = -0.3) +
+    theme(legend.position="none")
 
-  return (temp_cds)
+
+  # Num of UMIs by RT barcode 
+  umi_rt_plot <- ggplot(data.frame(colData(temp_cds)), aes(x=RT_barcode, y=n.umi)) +
+  # facet_wrap(~sample, nrow=1, drop=FALSE, scales="free_x") +
+    geom_violin(aes(fill="salmon")) +
+    geom_boxplot(notch=T, fill="white", width=0.25, alpha=0.3, outlier.shape=NA) +
+    # theme_bbi() +
+    theme_light() +
+    theme(axis.text.x=element_blank(),
+        text=element_text(size=14)) +
+    scale_y_log10() + 
+    xlab("") +
+    ylab("UMIs") +
+    theme(legend.position="none")
+  
+  data_list <- list(temp_cds, mito_rt_plot, umi_rt_plot)
+  return (data_list)
     
 }
 
+
+# 
+recovery_plots <- function(cds) {
+    # Violin plot of percent mitochondrial umis by RT barcode with threshold line at 10% 
+
+
+}
 
 
 # Perform well check for each RT well 
@@ -146,34 +183,6 @@ well_check <- function(sample_name, cds) {
   # UMAP of all data to use as background cluster
   bg_data <- data.frame(colData(cds))[,c('UMAP1', 'UMAP2')]
 
-  # Violin plot of percent mitochondrial umis by RT barcode with threshold line at 10% 
-  mito_rt_plot <- ggplot(meta, aes(x=RT_barcode, y=perc_mitochondrial_umis)) +
-    geom_violin(aes(fill="aquamarine")) +
-    geom_boxplot(notch=T, fill="white", width=0.25, alpha=0.3, outlier.shape=NA) +
-    theme_light() +
-    theme(axis.text.x=element_blank(),
-          text=element_text(size=14)) +
-    geom_hline(yintercept = 10, linetype="dotted", ) +
-    scale_y_continuous(limits=c(0,max(cds$perc_mitochondrial_umis) + 5)) +
-    xlab("") +
-    ylab("% Mito UMIs") +
-    stat_summary(fun.data = n_fun, geom = "text", hjust = 0.5, vjust = -0.3) +
-    theme(legend.position="none")
-
-
-  # Num of UMIs by RT barcode 
-  umi_rt_plot <- ggplot(meta, aes(x=RT_barcode, y=n.umi)) +
-  # facet_wrap(~sample, nrow=1, drop=FALSE, scales="free_x") +
-    geom_violin(aes(fill="salmon")) +
-    geom_boxplot(notch=T, fill="white", width=0.25, alpha=0.3, outlier.shape=NA) +
-    # theme_bbi() +
-    theme_light() +
-    theme(axis.text.x=element_blank(),
-        text=element_text(size=14)) +
-    scale_y_log10() + 
-    xlab("") +
-    ylab("UMIs") +
-    theme(legend.position="none")
 
   # Percent cluster of total sample 
   perc_clust_plot <- ggplot(clusterCounts, aes(x=RT_barcode, y=perSamp, fill=clusters)) +
@@ -198,15 +207,9 @@ well_check <- function(sample_name, cds) {
     ylab("% of RT Well") +
     theme(legend.position="bottom")
 
-  # all 3 well check plots combined 
-  well_check_combined <- plot_grid(mito_rt_plot, umi_rt_plot, 
-                         perc_clust_plot, perc_clust_rt, 
-                         nrow=4, align='hv',
-                         rel_heights = c(1,1,1,2))
+  plot_list <- list(perc_clust_plot, perc_clust_rt, colpal)
 
-  ggsave(paste0(sample_name, "_wellcheck.png"), well_check_combined, width=15, height = 30)
-  
-  return (colpal) # return colors used for clusters
+  return (plot_list) # return colors used for clusters and list of well check plots
 }
 
 
@@ -437,47 +440,97 @@ plot_cells_simp <- function(cds,
 
 
 gen_plots <- function(sample_name, sample_path) {
+  
   samp_cds <- readRDS(sample_path)
 
   garnett_mods <- names(colData(samp_cds))[grepl("garnett_type", names(colData(samp_cds)))]  
 
   samp_cds <- tryCatch({
-    
+
     # If Empty drops was ran, then filter out cds object for Empty Drops FDR < 0.01
     if(is(emptydrops_data, 'DFrame')) {
       keep_na <- samp_cds[,is.na(colData(samp_cds)$emptyDrops_FDR)]
       keep_cells <- samp_cds[,!is.na(colData(samp_cds)$emptyDrops_FDR) & colData(samp_cds)$emptyDrops_FDR <= 0.01]
       samp_cds <- combine_cds(list(keep_na, keep_cells), sample_col_name="og_cds")
     }
-    
-    samp_cds <- preprocess_cds(samp_cds)
-    samp_cds <- reduce_dimension(samp_cds)
-    samp_cds <- cluster_cells(samp_cds, k=ceiling(sqrt(dim(samp_cds)[2])*0.25))
 
-    # Reduce number of clusters if clusters are > 12 
-    if (dim(table(clusters(samp_cds))) > 12 ) {
-      samp_cds <- cluster_cells(samp_cds, k=ceiling(sqrt(dim(samp_cds)[2])*0.75))
-    }  
-
-    # Increase number of clusters if clusters are < 5
-    if (dim(table(clusters(samp_cds))) < 5 ) {
-      samp_cds <- cluster_cells(samp_cds, k=ceiling(sqrt(dim(samp_cds)[2])*0.1))
-    }  
-
-
-   
     # Generate UMI and mitochondrial stats by rt barcode 
-    samp_cds <- rt_stats(sample_name, samp_cds)
-    colpal = well_check(sample_name, samp_cds)
+    cds_rt_data <- rt_stats(sample_name, samp_cds) # Returns a list of data with cds and list of plots 
+    samp_cds <- cds_rt_data[[1]]
+    # ggsave("umi_plot", rt_plots[[3]])
 
+
+    # Subsample cells from cds object if > 300,000 cells for preprocessing and clustering
+    # Original cds will be used for RT umi and mitochondrial stats
+
+    sub_cds <- NULL 
+    wellcheck_data <- NULL 
+
+    if(nrow(colData(samp_cds)) >300000) {
+
+      sub_cds <- samp_cds[, samp_cds$cell %in% sample(samp_cds$cell, 300000)]
+      sub_cds <- preprocess_cds(sub_cds)
+      sub_cds <- reduce_dimension(sub_cds)
+      sub_cds <- cluster_cells(sub_cds, k=ceiling(sqrt(dim(sub_cds)[2])*0.25))
+
+      # Reduce number of clusters if clusters are > 12 
+      if (dim(table(clusters(sub_cds))) > 12 ) {
+        sub_cds <- cluster_cells(sub_cds, k=ceiling(sqrt(dim(sub_cds)[2])*0.75))
+      }  
+
+      # Increase number of clusters if clusters are < 5
+      if (dim(table(clusters(sub_cds))) < 5 ) {
+        sub_cds <- cluster_cells(sub_cds, k=ceiling(sqrt(dim(sub_cds)[2])*0.1))
+      }  
+
+      wellcheck_data = well_check(sample_name, sub_cds)
+      colpal = wellcheck_data[[3]]
+
+      # Plot umap 
+      file_name <- paste0(sample_name, "_UMAP.png")
+      ggp_obj <- suppressMessages(plot_cells_simp(sub_cds, colpal) + theme(text = element_text(size = 8)))
+      ggsave(filename=file_name, ggp_obj, device='png', width=5, height=5, dpi=600, units='in')
+
+    } else {
+
+      samp_cds <- preprocess_cds(samp_cds)
+      samp_cds <- reduce_dimension(samp_cds)
+      samp_cds <- cluster_cells(samp_cds, k=ceiling(sqrt(dim(samp_cds)[2])*0.25))
+
+      # Reduce number of clusters if clusters are > 12 
+      if (dim(table(clusters(samp_cds))) > 12 ) {
+        samp_cds <- cluster_cells(samp_cds, k=ceiling(sqrt(dim(samp_cds)[2])*0.75))
+      }  
+
+      # Increase number of clusters if clusters are < 5
+      if (dim(table(clusters(samp_cds))) < 5 ) {
+        samp_cds <- cluster_cells(samp_cds, k=ceiling(sqrt(dim(sub_cds)[2])*0.1))
+      }  
+
+      wellcheck_data = well_check(sample_name, samp_cds)
+      colpal = wellcheck_data[[3]]
+      
 #    file_name <- paste0(sample_name, "_UMAP.png")
 #    png(file_name, width = 5, height = 5, res = 600, units = "in")
 #    print(suppressMessages(plot_cells_simp(samp_cds, colpal) + theme(text = element_text(size = 8))))
 #    dev.off()
 
-    file_name <- paste0(sample_name, "_UMAP.png")
-    ggp_obj <- suppressMessages(plot_cells_simp(samp_cds, colpal) + theme(text = element_text(size = 8)))
-    ggsave(filename=file_name, ggp_obj, device='png', width=5, height=5, dpi=600, units='in')
+      # Plot umap
+      file_name <- paste0(sample_name, "_UMAP.png")
+      
+      ggp_obj <- suppressMessages(plot_cells_simp(samp_cds, colpal) + theme(text = element_text(size = 8)))
+      ggsave(filename=file_name, ggp_obj, device='png', width=5, height=5, dpi=600, units='in')
+      
+    }
+
+    # Combine mito, umi, and rt well check plots 
+    well_check_combined <- plot_grid(cds_rt_data[[2]], cds_rt_data[[3]], # mito and umi rt barcode plots 
+                    wellcheck_data[[1]], wellcheck_data[[2]], # perc cluster plots from rt well check
+                    nrow=4, align='hv',
+                    rel_heights = c(1,1,1,2))
+
+
+    ggsave(paste0(sample_name, "_wellcheck.png"), well_check_combined, width=15, height = 30)
 
 
     for (mod in garnett_mods) {
@@ -669,4 +722,3 @@ if (sample_name == "Barnyard") {
     writeLines(paste0(args$sample_name, "\t", "NA"), fileConn)
     close(fileConn)
 }
-

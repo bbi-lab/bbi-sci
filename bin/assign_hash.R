@@ -108,6 +108,12 @@ for (m in meta_types) {
 # Extract RT plate number
 cds$RT_plate <- sapply(strsplit(as.character(meta$RT_barcode), "-"), `[`, 1)
 
+if ((file.info(args$cell_list)$size==0)) {
+  saveRDS(cds,file=paste0(args$key, "_cds.RDS"))
+  file.create(paste0(args$key, "_hash_table.csv"))
+  quit(save = "no", status = 0)
+}
+
 # Read txt file of cell names with hash umis 
 cell_list <- fread(args$cell_list,
                   header = FALSE,
@@ -117,7 +123,6 @@ cell_list <- fread(args$cell_list,
 hash_list = fread(args$hash_list, 
                   header = FALSE, 
                   data.table = F)[,1]
-
 
 # Hash sparse matrix with hash umi counts for each cell 
 # Add hash names to rows and cell names with hashes to column 
@@ -157,26 +162,33 @@ fwrite(corrected_hash_table, file=paste0(sample_name, "_hash_table.csv"), sep = 
 # merge hash table with cds to assign to cells
 # If hash table is empty, put NA for each hash column 
 if (dim(corrected_hash_table)[1] != 0) {
-  merged = as.data.table(merge(x=corrected_hash_table, y=colData(cds), by = "cell",all.x=FALSE, all.y=TRUE))
-  merged <- merged %>% mutate_at(vars("hash_umis"), ~replace_na(., 0)) # add 0 if a cell has no hash
+  # merged = as.data.table(merge(x=corrected_hash_table, y=colData(cds), by = "cell",all.x=FALSE, all.y=TRUE))
+  # merged <- merged %>% mutate_at(vars("hash_umis"), ~replace_na(., 0)) # add 0 if a cell has no hash
 
   # suppressMessages(merged <- splitstackshape::cSplit(merged, "top_oligo", "."))
 
-  colData(cds)$hash_umis = merged$hash_umis
-  colData(cds)$pval = merged$pval
-  colData(cds)$qval = merged$qval
-  colData(cds)$top_to_second_best_ratio = merged$top_to_second_best_ratio
-  colData(cds)$top_oligo = merged$top_oligo
-  colData(cds)$best_hash_umi = merged$best_hash_umi
-  colData(cds)$second_best_hash_umi = merged$second_best_hash_umi
+  # hash_df <- merged %>% 
+  #   select("cell", "hash_umis", "pval", "qval", "top_to_second_best_ratio", 
+  #          "top_oligo", "best_hash_umi", "second_best_hash_umi")
+  # 
+  # to_merge <- data.frame(colData(cds)) %>% left_join(hash_df, by = "cell")
+  # colData(cds) <- as(to_merge, "DataFrame")
 
-  # Drop any cells with less than hash umi cutoff and top to second best hash ratio
-  # cds <- cds[,colData(cds)$hash_umis >= args$hash_umi_cutoff]
+  
+  corrected_hash_table <- corrected_hash_table[,c('cell', 'hash_umis', 'pval', 'qval',
+                                                  'top_to_second_best_ratio', 'top_oligo', 
+                                                  'best_hash_umi', 'second_best_hash_umi')]
+  
+  # Bind the hash table columns to the colData(cds) keeping the colData(cds) dimension and row order.
+  col_data_merged = as.data.frame(left_join(x=as.data.frame(colData(cds)), y=corrected_hash_table, by = "cell", keep=FALSE))
+  # Add 0 if a cell has no hash
+  col_data_merged <- col_data_merged %>% mutate_at(vars("hash_umis"), ~replace_na(., 0)) 
+  colData(cds) <- as(col_data_merged, "DataFrame")
 
   # Drop any cells with less than top to second best hash ratio cutoff if args$hash_ratio is not false 
-  if (args$hash_ratio != "false") {
-    cds  <- cds[,!is.na(colData(cds)$top_to_second_best_ratio) & colData(cds)$top_to_second_best_ratio >= args$hash_ratio ]
+  if ("false" != "false") {
+    cds  <- cds[,!is.na(colData(cds)$top_to_second_best_ratio) & colData(cds)$top_to_second_best_ratio >= 5 ]
   } 
 }
 
-saveRDS(cds,file=paste0(sample_name, "_hash_cds.RDS"))
+saveRDS(cds,file=paste0(sample_name, "_cds.RDS"))
