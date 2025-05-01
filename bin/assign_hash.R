@@ -13,7 +13,7 @@ parser$add_argument('key', help='Sample name')
 parser$add_argument('hash_matrix', help='File of hash umi count matrix')
 parser$add_argument('cell_list', help='File with list of cell names with hash umis')
 parser$add_argument('hash_list', help='File with list of hash names')
-parser$add_argument('cds', help='cds object in RDS format')
+parser$add_argument('cds', help='cds object in .mobs format')
 parser$add_argument('umis_per_cell', help='File with list of umis per cell barcode')
 parser$add_argument('hash_umi_cutoff', type='integer', help='min number of hash umis to determine top to second best ratio')
 parser$add_argument('hash_ratio', help='min top to second best hash ratio. Default is false and not filtered')
@@ -93,7 +93,12 @@ assign_hash_labels <-
                                second_best_hash_umi = second_best_hash_umi)
   }
 
-cds <- readRDS(args$cds)
+cds <- NULL
+if (file.size(paste0(args$cds,"/bpcells_matrix_dir/col_names")) != 0) {
+  cds <- load_monocle_objects(args$cds)
+} else {
+  cds <- readRDS(paste0(args$cds,"/cds_object.rds"))
+}
 
 # Extract meta info from cell name 
 df <- as.data.frame(colData(cds))
@@ -109,7 +114,8 @@ for (m in meta_types) {
 cds$RT_plate <- sapply(strsplit(as.character(meta$RT_barcode), "-"), `[`, 1)
 
 if ((file.info(args$cell_list)$size==0)) {
-  saveRDS(cds,file=paste0(args$key, "_cds.RDS"))
+  # saveRDS(cds,file=paste0(args$key, "_cds.RDS"))
+  save_monocle_objects(cds,directory_path=paste0(args$key, "_cds.mobs"), archive_control=list(archive_type='none', archive_compression='none'))
   file.create(paste0(args$key, "_hash_table.csv"))
   quit(save = "no", status = 0)
 }
@@ -191,4 +197,5 @@ if (dim(corrected_hash_table)[1] != 0) {
   } 
 }
 
-saveRDS(cds,file=paste0(sample_name, "_cds.RDS"))
+# saveRDS(cds,file=paste0(sample_name, "_cds.RDS"))
+save_monocle_objects(cds,directory_path=paste0(sample_name, "_cds.mobs"), archive_control=list(archive_type='none', archive_compression='none'))

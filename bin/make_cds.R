@@ -21,7 +21,9 @@ sample_name <- args$key
 
 cds <- load_mm_data(mat_path = args$matrix, feature_anno_path = args$gene_data, 
                     cell_anno_path = args$cell_data, umi_cutoff=as.numeric(args$umi_cutoff),
-                    feature_metadata_column_names=c('gene_short_name'), sep="")
+                    feature_metadata_column_names=c('gene_short_name'), sep="",
+                    matrix_control=list(matrix_class='BPCells'))
+
 gene_bed <- read.table(args$gene_bed)
 row.names(gene_bed) <- gene_bed$V4
 names(gene_bed) <- c("chromosome", "bp1", "bp2", "id", "x", "strand")
@@ -66,6 +68,12 @@ pData(cds)[['intron_fraction']] <- intron_fraction[pData(cds)[,'cell'],]$V2
 
 write.csv(ed, file=paste0(sample_name, "_cell_emptyDrops.csv"), quote=FALSE, row.names = FALSE) 
 
-writeMM(exprs(cds), paste0(sample_name, "_for_scrub.mtx"))
 
-saveRDS(cds, file=paste0(sample_name, "_cds.RDS"))
+# writeMM(exprs(cds), paste0(sample_name, "_for_scrub.mtx"))
+
+
+
+# saveRDS(cds, file=paste0(sample_name, "_cds.RDS"))
+
+writeMM(as(as.matrix(exprs(cds)), "dgCMatrix"), paste0(sample_name, "_for_scrub.mtx"))
+save_monocle_objects(cds, directory_path=paste0(sample_name, '_cds.mobs'), archive_control=list(archive_type='none', archive_compression='none'))

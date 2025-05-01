@@ -481,7 +481,7 @@ process concat_hash_matrices {
     set -ueo pipefail
     
     mkdir temp_fold
-    
+
     cat_sparse_matrix.py \
         -i $mtx \
         -o temp_fold/$sample_name \
@@ -1401,7 +1401,7 @@ process make_cds {
       set key, file(cell_data), file(umi_matrix), file(gene_data), file(emptyDrops), val(gtf_path), file(logfile), file(fraction_intron_barcode) from emptyDrops_fraction_intronic
 
     output:
-        set key, file("*for_scrub.mtx"), file("*_cds.RDS"), file("*cell_qc.csv"), file("make_cds.log") into cds_out
+        set key, file("*for_scrub.mtx"), file("*_cds.mobs"), file("*cell_qc.csv"), file("make_cds.log") into cds_out
         file("*cell_emptyDrops.csv") into cell_eds
 
     """
@@ -1446,7 +1446,7 @@ process apply_garnett {
         set key, file(scrub_matrix), file(cds_object), file(cell_qc), file(logfile) from cds_out
 
     output:
-        set key, file(scrub_matrix), file("new_cds/*.RDS"), file(cell_qc), file("apply_garnett.log") into for_scrub
+        set key, file(scrub_matrix), file("new_cds/*.mobs"), file(cell_qc), file("apply_garnett.log") into for_scrub
 
 """
     # bash watch for errors
@@ -1458,7 +1458,7 @@ process apply_garnett {
     echo "No Garnett classifier provided for this sample" > garnett_error.txt
     if [ $params.garnett_file == 'false' ]
     then
-        cp $cds_object new_cds/
+        cp -r $cds_object new_cds/
     else
         apply_garnett.R $cds_object $params.garnett_file $key
     fi
@@ -1593,13 +1593,13 @@ Process: reformat_qc
 
 scrublet_out.join(duplication_rate_out).set{reformat_qc_in}
 
-save_cds = {params.output_dir + "/" + it - ~/_cds.RDS/ - ~/temp_fold/ + "/" + it - ~/temp_fold/}
+save_cds = {params.output_dir + "/" + it - ~/_cds.mobs/ - ~/temp_fold/ + "/" + it - ~/temp_fold/}
 save_cell_qc = {params.output_dir + "/" + it - ~/_cell_qc.csv/ - ~/temp_fold/ + "/" + it - ~/temp_fold/}
 save_samp_stats = {params.output_dir + "/" + it - ~/_sample_stats.csv/ + "/" + it}
 
 process reformat_qc {
     cache 'lenient'
-    publishDir path: "${params.output_dir}/", saveAs: save_cds, pattern: "temp_fold/*cds.RDS", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_cds, pattern: "temp_fold/*cds.mobs", mode: 'copy'
     publishDir path: "${params.output_dir}/", saveAs: save_cell_qc, pattern: "temp_fold/*cell_qc.csv", mode: 'copy'
     publishDir path: "${params.output_dir}/", saveAs: save_samp_stats, pattern: "*sample_stats.csv", mode: 'copy'
 
@@ -1607,8 +1607,8 @@ process reformat_qc {
         set key, file(scrub_csv), file(cds_object), file(cell_qc), file(dup_stats) from reformat_qc_in
 
     output:
-        set key, file("temp_fold/*.RDS"), file("temp_fold/*.csv") into rscrub_out
-        file("temp_fold/*.RDS") into for_combine_cds
+        set key, file("temp_fold/*.mobs"), file("temp_fold/*.csv") into rscrub_out
+        file("temp_fold/*.mobs") into for_combine_cds
         file("*sample_stats.csv") into sample_stats
         // file("*collision.txt") into collision
         set key, file("temp_fold") into temp_dir
@@ -1640,10 +1640,29 @@ process reformat_qc {
     """
     #!/usr/bin/env Rscript
 
-    library(monocle3)
-    print("test")
+    suppressPackageStartupMessages({
+        library(monocle3)
+        library(BPCells)
+    })
+
     dir.create("temp_fold")
-    cds <- readRDS("$cds_object")
+    cell_qc <- read.csv("$cell_qc")
+    dup_stats <- read.table(paste0("$key", ".duplication_rate_stats.txt"))
+
+    if (file.size("$cds_object/bpcells_matrix_dir/col_names") == 0) {
+        file.copy("$cds_object", "temp_fold/", recursive=TRUE)
+        file.copy("$cell_qc", "temp_fold/")
+
+        df <- data.frame(sample="$key", n.reads = dup_stats\$V2, n.umi = dup_stats\$V3,
+                    median_umis = "NA",
+                    median_perc_mito_umis = "NA",
+                    duplication_rate = dup_stats\$V4)
+
+        write.csv(df, file=paste0("$key", "_sample_stats.csv"), quote=FALSE, row.names=FALSE)
+        quit(save="no", status=0)
+    } 
+
+    cds <- load_monocle_objects("$cds_object")
     cell_qc <- read.csv("$cell_qc")
     dup_stats <- read.table(paste0("$key", ".duplication_rate_stats.txt"))
 
@@ -1669,7 +1688,10 @@ process reformat_qc {
 
     write.csv(cell_qc, quote=FALSE, file="temp_fold/$cell_qc")
     write.csv(df, file=paste0("$key", "_sample_stats.csv"), quote=FALSE, row.names=FALSE)
-    saveRDS(cds, file="temp_fold/$cds_object")
+
+    suppressMessages(
+    save_monocle_objects(cds, directory_path="temp_fold/$cds_object", archive_control=list(archive_type='none', archive_compression='none'))
+    )
 
     """
 }
@@ -1891,7 +1913,7 @@ Process: combine_cds
 combine_cds_input = for_combine_cds
     .map { file ->
         def fname = file.getName() // e.g. "GENE3.P1.A02_cds.RDS"
-        def base = fname.replaceFirst(/_cds\.RDS$/, '') // "GENE3.P1.A02"
+        def base = fname.replaceFirst(/_cds\.mobs$/, '') // "GENE3.P1.A02"
         def sample_name = base.split(/\.P[0-9]\.[A-H][0-9]{2}/)[0] // "GENE3"
         tuple(sample_name, file)
     }
@@ -1907,7 +1929,7 @@ process combine_cds {
 
 
     output:
-        set val(sample_name), file("*combined_cds.RDS") into combined_cds_out 
+        set val(sample_name), file("*combined_cds.mobs") into combined_cds_out 
 
     when: 
         params.hash_rt_split != false
@@ -1925,14 +1947,17 @@ process combine_cds {
     new_cds_list = strsplit("$cds_list", " ")[[1]]
 
     if (length(new_cds_list) < 2) {
-        file.copy(new_cds_list[1], paste0("$sample_name", "_combined_cds.RDS"))
+        dir.create(paste0("$sample_name", "_combined_cds.mobs"))
+        file.copy(from = list.files(new_cds_list[1], full.names = TRUE),
+          to = paste0("$sample_name", "_combined_cds.mobs"),
+          recursive = TRUE)
         quit(save="no", status=0)
     }
 
     temp_cds_list <- list()
 
     for(cds in new_cds_list) {
-        temp_cds <- readRDS(cds) 
+        temp_cds <- load_monocle_objects(cds) 
         temp_cds_list[[cds]] <- temp_cds
     }
 
@@ -1940,7 +1965,9 @@ process combine_cds {
     cds\$sample <- "$sample_name"
     rownames(colData(cds)) <- cds\$cell
     
-    saveRDS(cds, paste0("$sample_name", "_combined_cds.RDS"))
+   # saveRDS(cds, paste0("$sample_name", "_combined_cds.RDS"))
+    save_monocle_objects(cds,directory_path=paste0("$sample_name", '_combined_cds.mobs'), archive_control=list(archive_type='none', archive_compression='none'))
+    
 
     """
 }
@@ -2097,18 +2124,18 @@ Process: assign_hash_rt_split
 
 
 assign_hash_rt_in = combined_cds_out.join(concat_hash_out).join(concat_umi_out)
-save_combined_hash_cds = {params.output_dir + "/" + it - ~/_cds.RDS/ + "/" + it}
+save_combined_hash_cds = {params.output_dir + "/" + it - ~/_cds.mobs/ + "/" + it}
 save_combined_hash_table = {params.output_dir + "/" + it - ~/_hash_table.csv/ + "/" + it}
 
 process assign_hash_rt_split {
     cache 'lenient'
-    publishDir path: "${params.output_dir}/", saveAs: save_combined_hash_cds, pattern: "*_cds.RDS", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_combined_hash_cds, pattern: "*_cds.mobs", mode: 'copy'
     publishDir path: "${params.output_dir}/", saveAs: save_combined_hash_table, pattern: "*_hash_table.csv", mode: 'copy'
 
     input:
         set key, file(cds), file(hash_mtx), file(hash_hash), file(hash_cell), file(umis_per_cell) from assign_hash_rt_in
     output:
-        file("*_cds.RDS") into combined_hash_cds
+        file("*_cds.mobs") into combined_hash_cds
         file("*hash_table.csv") into combined_hash_table
 
     when: 

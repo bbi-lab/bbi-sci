@@ -441,7 +441,12 @@ plot_cells_simp <- function(cds,
 
 gen_plots <- function(sample_name, sample_path) {
   
-  samp_cds <- readRDS(sample_path)
+  samp_cds <- NULL
+  if (file.size(paste0(sample_path,"/bpcells_matrix_dir/col_names")) != 0) {
+    samp_cds <- load_monocle_objects(sample_path)
+  } else {
+    samp_cds <- readRDS(paste0(sample_path,"/cds_object.rds"))
+  }
 
   garnett_mods <- names(colData(samp_cds))[grepl("garnett_type", names(colData(samp_cds)))]  
 

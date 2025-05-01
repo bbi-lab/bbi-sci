@@ -27,10 +27,11 @@ if (args$sample_id %in% garnett_file$orig) {
 
 fileConn<-file("garnett_error.txt")
 if (classifier_path == "NONE") {
-    file.copy(args$cds_path, "new_cds/")
+    file.copy(args$cds_path, "new_cds/", recursive=TRUE)
 } else {
     tryCatch({
-    cds <- readRDS(args$cds_path)
+    # cds <- readRDS(args$cds_path)
+    cds <- load_monocle_objects(args$cds_path)
     if (nrow(pData(cds)) == 0) {
         stop("No cells in cds")
     }
@@ -47,10 +48,11 @@ if (classifier_path == "NONE") {
         
         names(colData(cds))[names(colData(cds)) == "cell_type"] <- paste0("garnett_type_", classifier_name)
     }
-    saveRDS(cds, file=paste0("new_cds/", args$sample_id, "_cds.RDS"))
+    # saveRDS(cds, file=paste0("new_cds/", args$sample_id, "_cds.RDS"))
+    save_monocle_objects(cds,directory_path=paste0("new_cds/", args$sample_id, '_cds.mobs'), archive_control=list(archive_type='none', archive_compression='none'))
     writeLines("ok", fileConn)
     }, error = function(e) {
-        file.copy(args$cds_path, "new_cds/")
+        file.copy(args$cds_path, "new_cds/", recursive=TRUE)
         writeLines(as.character(e), fileConn)
     })
  close(fileConn)
