@@ -1302,6 +1302,7 @@ process make_matrix {
  
     output:
         set key, file("*cell_annotations.txt"), file("*umi_counts.mtx"), file("*gene_annotations.txt"), val(gtf_path), file("make_matrix.log") into mat_output
+        set key, file("*cell_annotations.txt"), file("*umi_counts.mtx"), file("*gene_annotations.txt") into for_rt_cell_by_gene
 
     """
     # bash watch for errors
@@ -2125,40 +2126,94 @@ process assign_hash {
 
 // concat all rt split umi per cell barcode text files for input into assign_hash_rt_split
 
-concat_umi_in = for_assign_hash_umis_copy02
-    .map { sample, umi_per_cell ->
+// concat_umi_in = for_assign_hash_umis_copy02
+//     .map { sample, umi_per_cell ->
+//         def sample_name = sample.split(/\.P[0-9]\.[A-H][0-9]{2}/)[0] // "GENE3"
+//         tuple(sample_name, umi_per_cell)
+//     }
+//     .groupTuple()
+
+
+// save_combined_umi = {params.output_dir + "/" + it - ~/.UMIs.per.cell.barcode.txt/  - ~/temp_fold/  + "/umis_per_cell_barcode.txt"}
+
+// process concat_umi_per_cell {
+//     cache 'lenient'
+//     publishDir path: "${params.output_dir}/", saveAs: save_combined_umi, pattern: "temp_fold/*UMIs.per.cell.barcode.txt", mode: 'copy'
+
+//     input: 
+//         tuple(sample_name), path(umi_per_cell) from concat_umi_in
+    
+//     output: 
+//         set val(sample_name), file("temp_fold/*txt") into concat_umi_out
+
+//     when:
+//         params.hash_rt_split != false
+    
+//     script:
+
+//     """
+//     # bash watch for errors
+//     set -ueo pipefail
+
+//     mkdir temp_fold
+//     cat ${umi_per_cell.join(' ')} > "temp_fold/${sample_name}.UMIs.per.cell.barcode.txt"
+
+//     """
+
+// }
+
+
+
+// concat all rt split cell by gene files 
+
+
+concat_cell_by_gene = for_rt_cell_by_gene.join(for_assign_hash_umis_copy02)
+    .map {sample, cell_anno, umi_mtx, gene_anno, umi_per_cell ->
         def sample_name = sample.split(/\.P[0-9]\.[A-H][0-9]{2}/)[0] // "GENE3"
-        tuple(sample_name, umi_per_cell)
+        tuple(sample_name, cell_anno, umi_mtx, gene_anno, umi_per_cell)
     }
     .groupTuple()
 
+save_merged_umi = {params.output_dir + "/" + it - ~/UMIs.per.cell.barcode.txt/  - ~/temp_fold/  + "/umis_per_cell_barcode.txt"}
+save_merged_features = {params.output_dir + "/" + it - ~/gene_annotations.txt/  - ~/temp_fold/  + "/gene_annotations.txt"}
+save_merged_counts = {params.output_dir + "/" + it - ~/umi_counts.mtx/  - ~/temp_fold/  + "/umi_counts.mtx"}
+save_merged_cells = {params.output_dir + "/" + it - ~/cell_annotations.txt/  - ~/temp_fold/  + "/cell_annotations.txt"}
 
-save_combined_umi = {params.output_dir + "/" + it - ~/.UMIs.per.cell.barcode.txt/  - ~/temp_fold/  + "/umis_per_cell_barcode.txt"}
 
-process concat_umi_per_cell {
+process merge_rt_cell_by_gene {
     cache 'lenient'
-    publishDir path: "${params.output_dir}/", saveAs: save_combined_umi, pattern: "temp_fold/*UMIs.per.cell.barcode.txt", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_merged_umi, pattern: "temp_fold/*/*UMIs.per.cell.barcode.txt", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_merged_features, pattern: "temp_fold/*/*gene_annotations.txt", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_merged_counts, pattern: "temp_fold/*/*umi_counts.mtx", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_merged_cells, pattern: "temp_fold/*/*cell_annotations.txt", mode: 'copy'
 
-    input: 
-        tuple(sample_name), path(umi_per_cell) from concat_umi_in
-    
-    output: 
-        set val(sample_name), file("temp_fold/*txt") into concat_umi_out
+    input:
+        tuple val(sample_name), path(cell_anno), path(umi_mtx), path(gene_anno), path(umi_per_cell) from concat_cell_by_gene
+
+    output:
+        set val(sample_name), file("temp_fold/*/*UMIs.per.cell.barcode.txt") into concat_umi_out
+        set val(sample_name), file("temp_fold/*/*.mtx"), file("temp_fold/*/*.txt") into merge_rt_umis_out
 
     when:
-        params.hash_rt_split != false
-    
+        params.hash_rt_split != false && params.hash_list != false
+
     script:
 
     """
     # bash watch for errors
     set -ueo pipefail
+    
+    mkdir -p temp_fold/${sample_name}
 
-    mkdir temp_fold
-    cat ${umi_per_cell.join(' ')} > "temp_fold/${sample_name}.UMIs.per.cell.barcode.txt"
+    cat_sparse_matrix.py \
+        -i ${umi_mtx} \
+        -o temp_fold/${sample_name}/ \
+        -c UMIs.per.cell.barcode.txt \
+        -m umi_counts.mtx \
+        -f gene_annotations.txt \
+        -a cell_annotations.txt
 
     """
-
 }
 
 

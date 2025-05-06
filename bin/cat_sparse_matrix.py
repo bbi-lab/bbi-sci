@@ -50,14 +50,14 @@ def check_rownames(file_name_list):
   md5_list = []
   num_file = 0
   for file_names in file_name_list:
-    print(f'file names {file_names}')
+    # print(f'file names {file_names}')
     num_file += 1
     file_name = file_names[1]
     md5_file = calculate_md5(file_name)
     md5_list.append(md5_file)
   md5_1 = md5_list[0]
   result = md5_list and all(md5_list[0] == elem for elem in md5_list)
-  print(md5_list)
+  # print(md5_list)
   if(result == False):
     print('Error: features files differ.')
     sys.exit(-1)
@@ -111,7 +111,8 @@ def gather_matrix_dimensions(file_name_list):
 # feature name file.
 #
 def matrix_concatenation(file_name_list, matrix_dimension_list, out_rootname):
-  out_matrix_name = '%s.hashumis.mtx' % (out_rootname)
+  # out_matrix_name = '%s.hashumis.mtx' % (out_rootname)
+  out_matrix_name = '%s%s' % (out_rootname, args.matrix_root)
   try:
     ofh = open(out_matrix_name, 'w')
   except:
@@ -151,7 +152,19 @@ def matrix_concatenation(file_name_list, matrix_dimension_list, out_rootname):
   #
   # Copy cell names to a file.
   #
-  out_barcodes_name = '%s.hashumis_cells.txt' % (out_rootname)
+  # out_barcodes_name = '%s.hashumis_cells.txt' % (out_rootname)
+  
+  if args.cell_anno: 
+    out_cell_anno = '%s%s' % (out_rootname, args.cell_anno)
+    try:
+      fcell = open(out_cell_anno, 'w')
+    except:
+      print('Error: unable to open output file \'%s\'' % (out_cell_anno), sys.stderr)
+      sys.exit(-1)
+  else:
+    fcell = None
+
+  out_barcodes_name = '%s%s' % (out_rootname, args.cell_root)
   try:
     ofh = open(out_barcodes_name, 'w')
   except:
@@ -165,10 +178,13 @@ def matrix_concatenation(file_name_list, matrix_dimension_list, out_rootname):
       for line in ifh:
         num_lines += 1
         print('%s' % (line.strip()), file=ofh)
+        if fcell: 
+          print('%s' % (line.strip().split("\t")[0]), file=fcell)
     if(num_lines != matrix_dimension_list[ifile][1]):
       print('Error: inconsistent cell name count in file \'%s\' (%d != %d)' % (in_barcodes_name, num_lines, matrix_dimension_list[ifile][1]), file=sys.stderr)
       sys.exit(-1)
-
+  if fcell:
+    fcell.close()
   ofh.close()
 
   #
@@ -186,7 +202,8 @@ def matrix_concatenation(file_name_list, matrix_dimension_list, out_rootname):
   #
   # Copy features to a file.
   #
-  out_features_name = '%s.hashumis_hashes.txt' % (out_rootname)
+  # out_features_name = '%s.hashumis_hashes.txt' % (out_rootname)
+  out_features_name = '%s%s' % (out_rootname, args.feature_root)
   try:
     ofh = open(out_features_name, 'w')
   except:
@@ -216,6 +233,7 @@ if __name__ == '__main__':
   parser.add_argument('-m', '--matrix_root', required=True, default=None, help='Matrix file root name (required string).')
   parser.add_argument('-f', '--feature_root', required=True, default=None, help='Features root name (required string).')
   parser.add_argument('-c', '--cell_root', required=True, default=None, help='Cells root name (required string).')
+  parser.add_argument('-a', '--cell_anno', required=False, default=None, help="Cell annotation name (optional string).")
   parser.add_argument('-v', '--version', required=False, default=None, help='Write version string to stdout.')
   args = parser.parse_args()
 
@@ -235,9 +253,12 @@ if __name__ == '__main__':
 
       out_rootname = args.output_root
 
-      shutil.copyfile(matrix_file, f'{out_rootname}.hashumis.mtx')
-      shutil.copyfile(features_file, f'{out_rootname}.hashumis_hashes.txt')
-      shutil.copyfile(cells_file, f'{out_rootname}.hashumis_cells.txt')
+      shutil.copyfile(matrix_file, f'{out_rootname}{args.matrix_root}')
+      shutil.copyfile(features_file, f'{out_rootname}{args.feature_root}')
+      shutil.copyfile(cells_file, f'{out_rootname}{args.cell_root}')
+      
+      if args.cell_anno:
+        shutil.copyfile(cells_file, f'{out_rootname}cell_annotations.txt')
 
       sys.exit(0)
   ### atv end
@@ -258,7 +279,7 @@ if __name__ == '__main__':
     cells_name = '%s%s' % (path_name, cell_file_root)
 
     file_name_list.append([matrix_name, features_name, cells_name])
-    print('matrix_name: %s' % (matrix_name))
+    # print('matrix_name: %s' % (matrix_name))
 
   check_rownames(file_name_list)
   matrix_dimension_list = gather_matrix_dimensions(file_name_list)
