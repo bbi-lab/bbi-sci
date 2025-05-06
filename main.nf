@@ -772,6 +772,7 @@ process merge_bams {
 
     output:
         set key, file("*.bam"), file("merge_bams.log") into sample_bams
+        set key, file("*.bam") into rt_bams
         set key, file("*.read_count.txt") into read_count
 
     """
@@ -795,6 +796,80 @@ process merge_bams {
     """
 }
 
+rt_bams_in = rt_bams
+    .map { sample, bam ->
+        def sample_name = sample.split(/\.P[0-9]\.[A-H][0-9]{2}/)[0] 
+        tuple(sample_name, bam)
+    }
+    .groupTuple()
+
+// save_rt_bam = {params.output_dir + "/" + it - ~/.bam/ - ~/temp_fold/ + "/" + it - ~/temp_fold/}
+// save_rt_bai = {params.output_dir + "/" + it - ~/.bai/ - ~/temp_fold/ + "/" + it - ~/temp_fold/}
+// save_bam_count = {params.output_dir + "/" + it - ~/count.txt/ - ~/temp_fold/ + "/" + it - ~/temp_fold/}
+
+process merge_rt_bams {
+    cache 'lenient'
+    // publishDir path: "${params.output_dir}/", saveAs: save_rt_bam, pattern: "temp_fold/*.bam", mode: 'copy' 
+    // publishDir path: "${params.output_dir}/", saveAs: save_rt_bam, pattern: "temp_fold/*.bai", mode: 'copy' 
+    // publishDir path: "${params.output_dir}/", saveAs: save_bam_count, pattern: "temp_fold/*count.txt", mode: 'copy'   
+    publishDir (
+        path: "${params.output_dir}",
+        mode: 'copy',
+        saveAs: { fileName -> 
+            // Remove the temporary folder prefix and publish into a folder named after the sample
+            def baseName = fileName.replaceFirst('^temp_fold/', '') 
+            return "${sample_name}/${baseName}"
+        }
+    )
+
+    input:
+        tuple val (sample_name), path(bam) from rt_bams_in
+
+    output: 
+        set val(sample_name), file("temp_fold/*") into rt_bams_out
+
+    when: 
+        params.hash_rt_split != false && params.hash_list != false
+
+    """        
+    # bash watch for errors
+    set -ueo pipefail
+    
+    mkdir -p temp_fold
+
+    bam_list=(${bam})
+    if [ \${#bam_list[@]} -gt 1 ]
+    then
+        sambamba merge -t 8 "temp_fold/${sample_name}.bam" ${bam}
+        sum=0
+        for f in ${bam}
+        do  
+            # echo "bam: \${bam}"
+            count=\$(sambamba view \${f} | wc -l)
+            sum=\$((\$sum+\$count))
+            # echo "count: \${count}"
+            # echo "sum: \${sum}"
+        done
+        
+        echo "${sample_name}_total: \${sum}" > "temp_fold/merged_bam_count.txt"
+
+        # echo "${sample_name}_total: \${sum}"
+
+        og=\$(sambamba view "temp_fold/${sample_name}.bam" | wc -l)
+
+        echo "${sample_name}_merged: \${og}" >> "temp_fold/merged_bam_count.txt" 
+        # echo "${sample_name}_merged: \${og}" 
+
+    else
+        cp ${bam} temp_fold
+        echo "No additional bams to merge" > "temp_fold/merged_bam_count.txt"
+        
+    fi
+
+    """
+
+
+}
 
 /*************
 
