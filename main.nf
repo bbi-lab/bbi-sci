@@ -36,8 +36,7 @@ params.run_emptyDrops = true
 params.hash_umi_cutoff = 5
 params.hash_ratio = false
 params.hash_dup = false // Default is false. Other options are "p5" or "pcr_plate". params.hash_list must also be true.
-params.hash_rt_split = false // Default is false. If true, will process on hash samples demuxed by RT barcodes.
-
+params.hash_rt_split = false // Default is false. If true, will process on hash samples demuxed by RT barcodes. 
 
 //print usage
 if (params.help) {
@@ -76,6 +75,7 @@ if (params.help) {
     log.info '    params.hash_umi_cutoff = 5                 The hash umi cutoff to determine hash vs background in top to second best hash oligo. Default is 5'
     log.info '    params.hash_ratio = false                  The min hash umi ratio for top to second best. Default is false and not filtered'
     log.info '    params.hash_dup = false                    Whether to run hash PCR duplication rate per plate and what indicates a plate. Options are "p5" and "pcr_plate". params.hash_list also needs to be set to true. Default is false.'
+    log.info '    params.hash_rt_split = false               Process on hash samples demultiplexed by RT barcodes. Default is false.'
     log.info 'Issues? Contact hpliner@uw.edu'
     exit 1
 }
@@ -408,7 +408,7 @@ process process_hashes {
         params.hash_list != false
 
     script:
-        def sample_name = key.split(/\.P[0-9]\.[A-H][0-9]{2}/)[0]
+        def sample_name = key.split(/\.P[0-9]{1,2}\.[A-H][0-9]{1,2}/)[0]
 
     """
     # bash watch for errors
@@ -419,8 +419,6 @@ process process_hashes {
     if [ ${params.hash_rt_split} == true ]; then
         input_key="${sample_name}"
     fi
-
-   echo "Input key: \$input_key"
 
     awk 'NF < 4 {print "ERROR: Hash sample sheet contains rows with fewer than 4 columns"; exit 1}' $params.hash_list
 
@@ -438,17 +436,43 @@ process process_hashes {
 }
 
 
+/*************
+
+Process: concat_hash_matrices
+
+ Inputs:
+    sample_name - rt-level id 
+    mtx - rt-level hash matrices
+
+ Outputs:
+
+ Pass through:
+
+ Summary:
+    Collect all rt-level hash matrices, hash features, and hash umis per cell files
+    and combines at the sample level. 
+ Downstream:
+
+ Published:
+    hashumis.mtx - sample-level hash umis matrix
+    hashumis_hashes.txt - sample hash features 
+    hashumis_cells.txt - sample level hash umi counts per cell
+
+ Notes:
+    Only when params.hash_rt_split = true.
+    Gene features must be identical and cells must be unique across rt-files 
+
+*************/
+
 
 hash_mats.into{hash_mats_for_cat; hash_mats_for_assign_hash}
 
 concat_hash_in = hash_mats_for_cat
     .map { sample, mtx, cells, hashes ->
-        def sample_name = sample.split(/\.P[0-9]\.[A-H][0-9]{2}/)[0] // "GENE3"
+        def sample_name = sample.split(/\.P[0-9]{1,2}\.[A-H][0-9]{1,2}/)[0] // "GENE3"
         tuple(sample_name, mtx, cells, hashes)
     }
     .groupTuple()
-
-// Concatenate all rt split hash files (matrices, )
 
 
 process concat_hash_matrices {
@@ -796,22 +820,34 @@ process merge_bams {
     """
 }
 
+/*************
+
+Process: merge_bams
+    Inputs: 
+        sample - rt-sample name
+        bam - rt-split bam file
+
+    Outputs:
+        sample_name - sample-level name
+        rt_bams_out - combined bams at sample-level
+
+    Summary: 
+        Collect all rt-level bam files and group by sample level then merge
+
+
+*************/
+
 rt_bams_in = rt_bams
     .map { sample, bam ->
-        def sample_name = sample.split(/\.P[0-9]\.[A-H][0-9]{2}/)[0] 
+        def sample_name = sample.split(/\.P[0-9]{1,2}\.[A-H][0-9]{1,2}/)[0] 
         tuple(sample_name, bam)
     }
     .groupTuple()
 
-// save_rt_bam = {params.output_dir + "/" + it - ~/.bam/ - ~/temp_fold/ + "/" + it - ~/temp_fold/}
-// save_rt_bai = {params.output_dir + "/" + it - ~/.bai/ - ~/temp_fold/ + "/" + it - ~/temp_fold/}
-// save_bam_count = {params.output_dir + "/" + it - ~/count.txt/ - ~/temp_fold/ + "/" + it - ~/temp_fold/}
 
 process merge_rt_bams {
     cache 'lenient'
-    // publishDir path: "${params.output_dir}/", saveAs: save_rt_bam, pattern: "temp_fold/*.bam", mode: 'copy' 
-    // publishDir path: "${params.output_dir}/", saveAs: save_rt_bam, pattern: "temp_fold/*.bai", mode: 'copy' 
-    // publishDir path: "${params.output_dir}/", saveAs: save_bam_count, pattern: "temp_fold/*count.txt", mode: 'copy'   
+ 
     publishDir (
         path: "${params.output_dir}",
         mode: 'copy',
@@ -834,6 +870,8 @@ process merge_rt_bams {
     """        
     # bash watch for errors
     set -ueo pipefail
+
+    module load sambamba/0.6.8
     
     mkdir -p temp_fold
 
@@ -1990,7 +2028,7 @@ combine_cds_input = for_combine_cds
     .map { file ->
         def fname = file.getName() // e.g. "GENE3.P1.A02_cds.RDS"
         def base = fname.replaceFirst(/_cds\.mobs$/, '') // "GENE3.P1.A02"
-        def sample_name = base.split(/\.P[0-9]\.[A-H][0-9]{2}/)[0] // "GENE3"
+        def sample_name = base.split(/\.P[0-9]{1,2}\.[A-H][0-9]{1,2}/)[0] // "GENE3"
         tuple(sample_name, file)
     }
     .groupTuple()
@@ -2022,7 +2060,7 @@ process combine_cds {
 
     new_cds_list = strsplit("$cds_list", " ")[[1]]
 
-    if (length(new_cds_list) < 2) {
+    copy_object <- function() {
         dir.create(paste0("$sample_name", "_combined_cds.mobs"))
         file.copy(from = list.files(new_cds_list[1], full.names = TRUE),
           to = paste0("$sample_name", "_combined_cds.mobs"),
@@ -2030,11 +2068,22 @@ process combine_cds {
         quit(save="no", status=0)
     }
 
+    if (length(new_cds_list) < 2) {
+        copy_object()
+    }
+
     temp_cds_list <- list()
 
     for(cds in new_cds_list) {
+        if(file.size(paste0(cds, "/bpcells_matrix_dir/col_names")) ==0) {
+            next
+        }
         temp_cds <- load_monocle_objects(cds) 
         temp_cds_list[[cds]] <- temp_cds
+    }
+
+    if (length(temp_cds_list) == 0) {
+        copy_object()
     }
 
     cds <- combine_cds(temp_cds_list) 
@@ -2124,52 +2173,11 @@ process assign_hash {
 }
 
 
-// concat all rt split umi per cell barcode text files for input into assign_hash_rt_split
-
-// concat_umi_in = for_assign_hash_umis_copy02
-//     .map { sample, umi_per_cell ->
-//         def sample_name = sample.split(/\.P[0-9]\.[A-H][0-9]{2}/)[0] // "GENE3"
-//         tuple(sample_name, umi_per_cell)
-//     }
-//     .groupTuple()
-
-
-// save_combined_umi = {params.output_dir + "/" + it - ~/.UMIs.per.cell.barcode.txt/  - ~/temp_fold/  + "/umis_per_cell_barcode.txt"}
-
-// process concat_umi_per_cell {
-//     cache 'lenient'
-//     publishDir path: "${params.output_dir}/", saveAs: save_combined_umi, pattern: "temp_fold/*UMIs.per.cell.barcode.txt", mode: 'copy'
-
-//     input: 
-//         tuple(sample_name), path(umi_per_cell) from concat_umi_in
-    
-//     output: 
-//         set val(sample_name), file("temp_fold/*txt") into concat_umi_out
-
-//     when:
-//         params.hash_rt_split != false
-    
-//     script:
-
-//     """
-//     # bash watch for errors
-//     set -ueo pipefail
-
-//     mkdir temp_fold
-//     cat ${umi_per_cell.join(' ')} > "temp_fold/${sample_name}.UMIs.per.cell.barcode.txt"
-
-//     """
-
-// }
-
-
-
-// concat all rt split cell by gene files 
-
+// concat all rt-level cell by gene files 
 
 concat_cell_by_gene = for_rt_cell_by_gene.join(for_assign_hash_umis_copy02)
     .map {sample, cell_anno, umi_mtx, gene_anno, umi_per_cell ->
-        def sample_name = sample.split(/\.P[0-9]\.[A-H][0-9]{2}/)[0] // "GENE3"
+        def sample_name = sample.split(/\.P[0-9]{1,2}\.[A-H][0-9]{1,2}/)[0] // "GENE3"
         tuple(sample_name, cell_anno, umi_mtx, gene_anno, umi_per_cell)
     }
     .groupTuple()
@@ -2430,11 +2438,39 @@ process calc_tot_hash_dup {
     """
 }
 
-// calculate total hash duplication rate for combined RT split sample
+
+/*************
+
+Process: calc_tot_hash_dup_combined
+
+ Inputs:
+    hash_dup - rt-level hash duplication rate per cell  
+
+ Outputs:
+    total_hash_dup - sample-level total hash duplication rate per sample by pcr plate
+
+ Pass through:
+
+ Summary:
+    Collect all rt-level hash duplication rate per cell and combine at sample level
+    for input. Calculates total sample-level hash duplication rate for each rt-level PCR plate. 
+
+ Downstream:
+    
+ Published:
+    combined_total_hash_dup - total hash duplication rate per sample by pcr plate
+
+ Notes:
+    runs only when params.hash_rt_split != false and params.hash_dup!= false
+
+*************/
+
+
+
 
 calc_hash_in = for_hash_calc_copy02
     .map { sample, hash_dup ->
-        def sample_name = sample.split(/\.P[0-9]\.[A-H][0-9]{2}/)[0] // "GENE3"
+        def sample_name = sample.split(/\.P[0-9]{1,2}\.[A-H][0-9]{1,2}/)[0] // "GENE3"
         tuple(sample_name, hash_dup)
     }
     .groupTuple()
@@ -2746,6 +2782,9 @@ process finish_log {
     printf "    params.max_wells_per_sample:  $params.max_wells_per_sample\n\n" >> ${key}_full.log
     printf "    params.garnett_file:          $params.garnett_file\n\n" >> ${key}_full.log
     printf "    params.skip_doublet_detect:   $params.skip_doublet_detect\n\n" >> ${key}_full.log
+    printf "    params.hash_ratio:            $params.hash_ratio\n\" >> ${key}_full.log
+    printf "    params.hash_dup:              $params.hash_dup\n\n" >> ${key}_full.log
+    printf "    params.hash_rt_split:         $params.hash_rt_split\n\n" >> ${key}_full.log
 
     tail -n +2 ${logfile} >> ${key}_full.log
     printf "\n** End processes generate qc metrics and dashboard at: \$(date)\n\n" >> ${key}_full.log
