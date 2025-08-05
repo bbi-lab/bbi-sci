@@ -774,6 +774,7 @@ process merge_bams {
         set key, file("*.bam"), file("merge_bams.log") into sample_bams
         set key, file("*.bam") into rt_bams
         set key, file("*.read_count.txt") into read_count
+        set key, file("*.reads_per_cell.txt") into reads_per_cell
 
     """
     # bash watch for errors
@@ -791,6 +792,14 @@ process merge_bams {
 
 
     printf "${key}\t\$(samtools view -c ${key}.bam)" > ${key}.read_count.txt
+
+    # Get reads per cell
+    samtools view ${key}.bam | awk '{
+    n = split(\$1, a, "|");
+    cell = a[3] "_" a[4] "_" a[5];
+    print cell
+    }' | sort | uniq -c | awk '{print \$2"\t"\$1}' > ${key}.reads_per_cell.txt
+
 
     printf "** End process 'merge_bams' at: \$(date)\n\n" >> merge_bams.log
     """
@@ -834,6 +843,8 @@ process merge_rt_bams {
     """        
     # bash watch for errors
     set -ueo pipefail
+
+    module load sambamba/0.6.8
     
     mkdir -p temp_fold
 
@@ -867,6 +878,7 @@ process merge_rt_bams {
     fi
 
     """
+
 
 
 }
@@ -1382,6 +1394,8 @@ process run_emptyDrops {
     # bash watch for errors
     set -ueo pipefail
 
+    echo "test 2342324234"
+
     output_file="${key}_emptyDrops.RDS"
 
     cat ${logfile} > run_emptyDrops.log
@@ -1467,6 +1481,8 @@ emptyDrops_fraction_intronic_tmp.view()
 // save_cds = {params.output_dir + "/" + it - ~/_cds.RDS/ + "/" + it}
 // save_cell_qc = {params.output_dir + "/" + it - ~/_cell_qc.csv/ + "/" + it}
 
+
+make_cds_in = emptyDrops_fraction_intronic.join(reads_per_cell)
 process make_cds {
     cache 'lenient'
     // publishDir path: "${params.output_dir}/", saveAs: save_cds, pattern: "*cds.RDS", mode: 'copy'
@@ -1474,11 +1490,12 @@ process make_cds {
 
 
     input:
-      set key, file(cell_data), file(umi_matrix), file(gene_data), file(emptyDrops), val(gtf_path), file(logfile), file(fraction_intron_barcode) from emptyDrops_fraction_intronic
+      set key, file(cell_data), file(umi_matrix), file(gene_data), file(emptyDrops), val(gtf_path), file(logfile), file(fraction_intron_barcode), file(reads_per_cell) from make_cds_in
 
     output:
         set key, file("*for_scrub.mtx"), file("*_cds.mobs"), file("*cell_qc.csv"), file("make_cds.log") into cds_out
         file("*cell_emptyDrops.csv") into cell_eds
+        file("*cell_emptyDrops.csv") into for_combine_cell_eds
 
     """
     # bash watch for errors
@@ -1498,7 +1515,8 @@ process make_cds {
             "$emptyDrops"
             "$fraction_intron_barcode"
             "$key"
-            "$params.umi_cutoff"\n' >> make_cds.log
+            "$params.umi_cutoff"
+            "$reads_per_cell"\n' >> make_cds.log
 
     make_cds.R \
         "$umi_matrix"\
@@ -1508,7 +1526,8 @@ process make_cds {
         "$emptyDrops"\
         "$fraction_intron_barcode"\
         "$key"\
-        "$params.umi_cutoff"
+        "$params.umi_cutoff"\
+        "$reads_per_cell"
 
     printf "** End process 'make_cds' at: \$(date)\n\n" >> make_cds.log
     """
@@ -1689,7 +1708,6 @@ process reformat_qc {
         // file("*collision.txt") into collision
         set key, file("temp_fold") into temp_dir
 
-
     
     // if ("$key" == "Barnyard") {
     //     fData(cds)\$mouse <- grepl("ENSMUSG", fData(cds)\$id)
@@ -1816,7 +1834,26 @@ Process: generate_qc_metrics
 // See notes above for info on temp_dir
 temp_dir.into{temp_dir_copy01; temp_dir_copy02}
 
+
+
+
+// for_gen_qc = null 
+
+// if { params.hash_rt_split != false } {
+//     rscrub_out_combined = rscrub_out.collect()
+//     .map { sample, bam ->
+//         def sample_name = sample.split(/\.P[0-9]\.[A-H][0-9]{2}/)[0] 
+//         tuple(sample_name, bam)
+//     }
+//     .groupTuple()
+
+// } else {
+//     for_gen_qc = rscrub_out.join(umis_per_cell).join(for_gen_qc_emptyDrops)
+// }
+
+
 for_gen_qc = rscrub_out.join(umis_per_cell).join(for_gen_qc_emptyDrops)
+
 save_knee = {params.output_dir + "/" + it - ~/_knee_plot.png/ + "/" + it}
 save_umap = {params.output_dir + "/" + it - ~/_UMAP.png/ + "/" + it}
 save_cellqc = {params.output_dir + "/" + it - ~/_cell_qc.png/ + "/" + it}
@@ -1883,12 +1920,51 @@ Process: zip_up_sample_stats
 
 *************/
 
+sample_stats_in = sample_stats.flatten()
+    .map { stats ->
+        def fname = stats.getName()
+        // def sample_name = sample.split(/\.P[0-9]{1,2}\.[A-H][0-9]{1,2}/)[0] 
+        def sample_name = fname.split(/\.P[0-9]{1,2}\.[A-H][0-9]{1,2}/)[0] 
+        tuple(sample_name, stats)
+    }
+    .groupTuple()
+
+process collect_stats {
+    cache 'lenient' 
+
+    input: 
+        tuple val (sample_name), path(stats) from sample_stats_in 
+
+    output: 
+        file ("*_sample_stats.csv") into combined_sample_stats
+
+    when:
+        params.hash_rt_split != false
+    
+    """
+    # bash watch for errors
+    set -ueo pipefail
+    
+    for file in ${stats}; do
+        echo "sample,n.reads,n.umi,median_umis,median_perc_mito_umis,duplication_rate" > "${sample_name}_sample_stats.csv"
+         awk -F"," 'BEGIN {OFS=","}  NR>1 {sum_reads+=\$2; sum_umis +=\$3} END {print ${sample_name}, sum_reads, sum_umis, \$4, \$5, \$6}' "\$file" 
+    done >> "${sample_name}_sample_stats.csv"
+    
+    """
+}
+
+    // for file in "${stats}"; do
+    //     echo "sample,n.reads,n.umi" > "${sample_name}_sample_stats.csv"
+    //     awk 'NR>1 {sum_reads+=\$2; sum_umis +=\$3} END {print sum_reads "," sum_umis }' "\$file" 
+    // done >> "${sample_name}_sample_stats.csv"
+
 process zip_up_sample_stats {
     cache 'lenient'
     publishDir path: "${params.output_dir}/", pattern: "all_sample_stats.csv", mode: 'copy'
 
     input:
-        file files from sample_stats.collect()
+        // file files from sample_stats.collect()
+        file files from combined_sample_stats.collect()
 
     output:
         file "*ll_sample_stats.csv" into all_sample_stats
@@ -1902,6 +1978,67 @@ process zip_up_sample_stats {
     """
 }
 
+
+
+/*************
+
+Process: combine_cell_counts
+
+ Inputs:
+    for_combine_cell_counts - text file containing emptyDrops cell counts at rt-level
+
+ Outputs:
+    combined_cell_counts - combined emptyDrops cell counts at sample-level
+
+ Pass through:
+    
+
+ Summary:
+    Collect all rt split emptyDrops cell counts. Find sample name by splitting cell counts
+    file name. Set name as key to group cell counts by sample name. Then combine 
+    all cell counts at the sample-level for generate_dashboard
+
+ Downstream:
+    generate_dashboard
+
+ Published:
+
+ Notes:
+    runs only when params.hash_rt_split = true
+    
+*************/
+
+combine_cell_counts_in = for_combine_cell_eds.flatten()
+    .map { counts ->
+        def fname = counts.getName()
+        // def sample_name = sample.split(/\.P[0-9]{1,2}\.[A-H][0-9]{1,2}/)[0] 
+        def sample_name = fname.split(/\.P[0-9]{1,2}\.[A-H][0-9]{1,2}/)[0] 
+        tuple(sample_name, counts)
+    }
+    .groupTuple()
+
+
+process combine_cell_counts {
+    cache 'lenient'
+    
+    input: 
+        tuple val (sample_name), path(counts) from combine_cell_counts_in
+
+    output:
+        file("*.csv") into combined_cell_eds
+        
+    when: 
+        params.hash_rt_split != false
+
+    """
+    # bash watch for errors
+    set -ueo pipefail
+
+    cat ${counts} >> "${sample_name}_cell_emptyDrops.csv"
+
+    """
+    
+}
 
 /*************
 
@@ -1927,12 +2064,20 @@ Process: calc_cell_totals
 
 *************/
 
+calc_cell_total_in = cell_eds.collect()
+
+if (params.hash_rt_split) {
+    calc_cell_total_in = combined_cell_eds.collect()
+}
+
+
 process calc_cell_totals {
     cache 'lenient'
     publishDir path: "${params.output_dir}/", pattern: "cell_counts.txt", mode: 'copy'
 
     input:
-        file(cell_ed) from cell_eds.collect()
+        // file(cell_ed) from cell_eds.collect()
+        file(cell_ed) from calc_cell_total_in
 
     output:
         file "*.txt" into cell_counts
@@ -1940,7 +2085,7 @@ process calc_cell_totals {
     """
     # bash watch for errors
     set -ueo pipefail
-
+    
     rm -f cell_counts.txt
     for f in $cell_ed
     do
@@ -1955,6 +2100,10 @@ process calc_cell_totals {
     """
 
 }
+
+
+    // awk '\$2 == 100 { sum += \$3 } END { print "${sample_name}_cell_emptyDrops.csv 100", sum }' "\$file" >> "combined_cell_counts.txt"
+    // awk '\$2 == 500 { sum += \$3 } END { print "${sample_name}_cell_emptyDrops.csv 500", sum }' "\$file" >> "combined_cell_counts.txt"
 
 // collect all cds objects
 // find sample name by splitting the cds object file name 
@@ -2639,6 +2788,15 @@ Process: generate_dashboard
 
 *************/
 
+
+// include a condition to use emptyDrops original cell counts file or rt-level mod cell counts
+
+// cell_counts_in = cell_counts
+// if (params.hash_rt_split) {
+//     cell_counts_in = combined_cell_counts
+// }
+
+
 process generate_dashboard {
     cache 'lenient'
     publishDir path: "${params.output_dir}/", pattern: "exp_dash", mode: 'copy'
@@ -2646,6 +2804,7 @@ process generate_dashboard {
     input:
         file all_sample_stats
         file cell_counts
+        // file cell_counts_in
         file all_collision
         file plots from qc_plots.collect()
         file scrublet_png from scrub_pngs.collect()
