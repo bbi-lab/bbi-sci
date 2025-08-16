@@ -102,6 +102,8 @@ if("Barnyard" %in% sample_list) {
   barn_collision <- barn_collision[barn_collision$V1 == "Barnyard", "V2"]
 }
 
+print(all_dups)
+
 if(!( length(unique(all_dups$Cells_FDR_p01)) == 1 && unique(all_dups$Cells_FDR_p01)[1] == '-')) {
   sum_Cells_FDR_p01 <- sum(as.numeric(all_dups$Cells_FDR_p01))
 } else {

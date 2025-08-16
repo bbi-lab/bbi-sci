@@ -86,45 +86,61 @@ function Sample(props) {
             "aria-selected": "true" },
           "Knee plot"
         ),
+
         React.createElement(
           "a",
           {
             className: "nav-item nav-link",
-            id: "nav" + safe_name + "-scrub-tab",
-            "data-toggle": "tab", href: "#nav" + safe_name + "-scrub",
-            role: "tab", "aria-controls": "nav" + safe_name + "-scrub",
+            id: "nav" + safe_name + "-umis-tab",
+            "data-toggle": "tab", href: "#nav" + safe_name + "-umis",
+            role: "tab", "aria-controls": "nav" + safe_name + "-umis",
             "aria-selected": "false" },
-          "Scrublet"
+          "UMI Plots"
         ),
+
         React.createElement(
           "a",
           {
             className: "nav-item nav-link",
-            id: "nav" + safe_name + "-cellqc-tab",
-            "data-toggle": "tab", href: "#nav" + safe_name + "-cellqc",
-            role: "tab", "aria-controls": "nav" + safe_name + "-cellqc",
+            id: "nav" + safe_name + "-genes-tab",
+            "data-toggle": "tab", href: "#nav" + safe_name + "-genes",
+            role: "tab", "aria-controls": "nav" + safe_name + "-genes",
             "aria-selected": "false" },
-          "Cell QC"
+          "Genes By UMIs"
         ),
+
         React.createElement(
           "a",
           {
             className: "nav-item nav-link",
-            id: "nav" + safe_name + "-umap-tab",
-            "data-toggle": "tab", href: "#nav" + safe_name + "-umap",
-            role: "tab", "aria-controls": "nav" + safe_name + "-umap",
+            id: "nav" + safe_name + "-pseudobulk-tab",
+            "data-toggle": "tab", href: "#nav" + safe_name + "-pseudobulk",
+            role: "tab", "aria-controls": "nav" + safe_name + "-pseudobulk",
             "aria-selected": "false" },
-          "UMAP"
+          "Barcode Correlations Heatmap"
         ),
+
         React.createElement(
           "a",
           {
             className: "nav-item nav-link",
-            id: "nav" + safe_name + "-wellcheck-tab",
-            "data-toggle": "tab", href: "#nav" + safe_name + "-wellcheck",
-            role: "tab", "aria-controls": "nav" + safe_name + "-wellcheck",
+            id: "nav" + safe_name + "-pseudobulk-hist-tab",
+            "data-toggle": "tab", href: "#nav" + safe_name + "-pseudobulk-hist",
+            role: "tab", "aria-controls": "nav" + safe_name + "-pseudobulk-hist",
             "aria-selected": "false" },
-          "Well Check"
+          "Barcode Correlations Histogram"
+        ),
+
+
+        React.createElement(
+          "a",
+          {
+            className: "nav-item nav-link",
+            id: "nav" + safe_name + "-hash-tab",
+            "data-toggle": "tab", href: "#nav" + safe_name + "-hash",
+            role: "tab", "aria-controls": "nav" + safe_name + "-hash",
+            "aria-selected": "false" },
+          "Hash Plots"
         ),
         props.garnett_model != null && React.createElement(
           "a",
@@ -173,14 +189,15 @@ function Sample(props) {
       { className: "tab-content", id: "nav-tabContent" },
       props.sample_id == "Barnyard" && React.createElement(BarnyardPane, { sample_id: props.sample_id, className: "tab-pane fade show active" }),
       props.sample_id == "Barnyard" ? React.createElement(KneePane, { sample_id: props.sample_id, className: "tab-pane fade" }) : React.createElement(KneePane, { sample_id: props.sample_id, className: "tab-pane fade show active" }),
-      React.createElement(ScrubPane, { sample_id: props.sample_id, sample_stats: run_data.sample_stats }),
-      React.createElement(QCPane, { sample_id: props.sample_id }),
-      React.createElement(UMAPPane, { sample_id: props.sample_id }),
       props.garnett_model != null && React.createElement(GarnettPane, { sample_id: props.sample_id, garnett_model: props.garnett_model }),
       React.createElement(StatsPane, { sample_id: props.sample_id, sample_stats: run_data.sample_stats }),
+      React.createElement(UMIPane, { sample_id: props.sample_id }),
+      React.createElement(GeneByUMIPane, { sample_id: props.sample_id }),
+      React.createElement(PseudobulkPane, { sample_id: props.sample_id }),
+      React.createElement(PseudobulkHistPane, { sample_id: props.sample_id }),
+      React.createElement(HashPane, { sample_id: props.sample_id }),
       React.createElement(ReadMetricsPane, { sample_id: props.sample_id, log: log_data[props.sample_id] }),
       React.createElement(FullLogPane, { sample_id: props.sample_id, log: full_log_data[props.sample_id] }),
-      React.createElement(WellCheckPane, { sample_id: props.sample_id })
     )
   );
 }
@@ -313,28 +330,28 @@ function BarnyardPane(props) {
     plot: "img/Barnyard_plot.png"
   });
 }
-function QCPane(props) {
-  var safe_name = "hp" + props.sample_id.replace(/[.]/g, "");
-  return React.createElement(Pane, {
-    className: "tab-pane fade",
-    id: "nav" + safe_name + "-cellqc",
-    tag: "nav" + safe_name + "-cellqc-tab",
-    text: [''],
-    plot: "img/" + props.sample_id + "_cell_qc.png"
-  });
-}
-function ScrubPane(props) {
-  var sample_stat = props.sample_stats[props.sample_id];
-  var safe_name = "hp" + props.sample_id.replace(/[.]/g, "");
-  return React.createElement(Pane, {
-    className: "tab-pane fade",
-    id: "nav" + safe_name + "-scrub",
-    tag: "nav" + safe_name + "-scrub-tab",
-    // text: ['Doublet count: ' + sample_stat.Doublet_Number + "\n\nDoublet rate: " + sample_stat.Doublet_Percent],
-    text: [],
-    plot: "img/" + props.sample_id + "_scrublet_hist.png"
-  });
-}
+// function QCPane(props) {
+//   var safe_name = "hp" + props.sample_id.replace(/[.]/g, "");
+//   return React.createElement(Pane, {
+//     className: "tab-pane fade",
+//     id: "nav" + safe_name + "-cellqc",
+//     tag: "nav" + safe_name + "-cellqc-tab",
+//     text: [''],
+//     plot: "img/" + props.sample_id + "_cell_qc.png"
+//   });
+// }
+// function ScrubPane(props) {
+//   var sample_stat = props.sample_stats[props.sample_id];
+//   var safe_name = "hp" + props.sample_id.replace(/[.]/g, "");
+//   return React.createElement(Pane, {
+//     className: "tab-pane fade",
+//     id: "nav" + safe_name + "-scrub",
+//     tag: "nav" + safe_name + "-scrub-tab",
+//     // text: ['Doublet count: ' + sample_stat.Doublet_Number + "\n\nDoublet rate: " + sample_stat.Doublet_Percent],
+//     text: [],
+//     plot: "img/" + props.sample_id + "_scrublet_hist.png"
+//   });
+// }
 function KneePane(props) {
   var safe_name = "hp" + props.sample_id.replace(/[.]/g, "");
   return React.createElement(Pane, {
@@ -345,16 +362,17 @@ function KneePane(props) {
     plot: "img/" + props.sample_id + "_knee_plot.png"
   });
 }
-function UMAPPane(props) {
-  var safe_name = "hp" + props.sample_id.replace(/[.]/g, "");
-  return React.createElement(Pane, {
-    className: "tab-pane fade",
-    id: "nav" + safe_name + "-umap",
-    tag: "nav" + safe_name + "-umap-tab",
-    text: [''],
-    plot: "img/" + props.sample_id + "_UMAP.png"
-  });
-}
+
+// function UMAPPane(props) {
+//   var safe_name = "hp" + props.sample_id.replace(/[.]/g, "");
+//   return React.createElement(Pane, {
+//     className: "tab-pane fade",
+//     id: "nav" + safe_name + "-umap",
+//     tag: "nav" + safe_name + "-umap-tab",
+//     text: [''],
+//     plot: "img/" + props.sample_id + "_UMAP.png"
+//   });
+// }
 
 
 function GarnettPane(props) {
@@ -389,25 +407,104 @@ function GarnettPane(props) {
     )
   );
 }
-
-
-
-function WellCheckPane(props) {
+function UMIPane(props) {
   var safe_name = "hp" + props.sample_id.replace(/[.]/g, "");
-
   return React.createElement("div", { 
     className: "tab-pane fade",
-    id: "nav" + safe_name + "-wellcheck",
-    role: "tabpanel", "aria-labelledby": "nav" + safe_name + "-wellcheck-tab" },
+    id: "nav" + safe_name + "-umis",
+    role: "tabpanel", "aria-labelledby": "nav" + safe_name + "-umis-tab" },
 
     React.createElement("img", { 
-      src: "img/" + props.sample_id + "_wellcheck.png", 
+      src: "img/" + props.sample_id + "_umi.png", 
       className: "rounded mx-auto d-block", 
       alt: "...",
       style: { maxHeight: "100vh", width: "auto" } 
     }),
   );
 }
+function GeneByUMIPane(props) {
+  var safe_name = "hp" + props.sample_id.replace(/[.]/g, "");
+  return React.createElement("div", { 
+    className: "tab-pane fade",
+    id: "nav" + safe_name + "-genes",
+    role: "tabpanel", "aria-labelledby": "nav" + safe_name + "-genes-tab" },
+
+    React.createElement("img", { 
+      src: "img/" + props.sample_id + "_genes_by_umi.png", 
+      className: "rounded mx-auto d-block", 
+      alt: "...",
+      style: { maxHeight: "100vh", width: "auto" } 
+    }),
+  );
+}
+
+function PseudobulkPane(props) {
+  var safe_name = "hp" + props.sample_id.replace(/[.]/g, "");
+
+  return React.createElement("div", { 
+    className: "tab-pane fade",
+    id: "nav" + safe_name + "-pseudobulk",
+    role: "tabpanel", "aria-labelledby": "nav" + safe_name + "-pseudobulk-tab" },
+
+    React.createElement("img", { 
+      src: "img/" + props.sample_id + "_pseudobulk_heatmap.png", 
+      className: "rounded mx-auto d-block", 
+      alt: "...",
+      style: { maxHeight: "200vh", width: "auto" } 
+    }),
+  );
+}
+
+function PseudobulkHistPane(props) {
+  var safe_name = "hp" + props.sample_id.replace(/[.]/g, "");
+
+  return React.createElement("div", { 
+    className: "tab-pane fade",
+    id: "nav" + safe_name + "-pseudobulk-hist",
+    role: "tabpanel", "aria-labelledby": "nav" + safe_name + "-pseudobulk-hist-tab" },
+
+    React.createElement("img", { 
+      src: "img/" + props.sample_id + "_pseudobulk_histogram.png", 
+      className: "rounded mx-auto d-block", 
+      alt: "...",
+      style: { maxHeight: "120vh", width: "auto" } 
+    }),
+  );
+}
+
+function HashPane(props) {
+  var safe_name = "hp" + props.sample_id.replace(/[.]/g, "");
+  return React.createElement("div", { 
+    className: "tab-pane fade",
+    id: "nav" + safe_name + "-hash",
+    role: "tabpanel", "aria-labelledby": "nav" + safe_name + "-hash-tab" },
+
+    React.createElement("img", { 
+      src: "img/" + props.sample_id + "_hash_plots.png", 
+      className: "rounded mx-auto d-block", 
+      alt: "...",
+      style: { maxHeight: "100vh", width: "auto" } 
+    }),
+  );
+}
+
+
+// function WellCheckPane(props) {
+//   var safe_name = "hp" + props.sample_id.replace(/[.]/g, "");
+
+//   return React.createElement("div", { 
+//     className: "tab-pane fade",
+//     id: "nav" + safe_name + "-wellcheck",
+//     role: "tabpanel", "aria-labelledby": "nav" + safe_name + "-wellcheck-tab" },
+
+//     React.createElement("img", { 
+//       src: "img/" + props.sample_id + "_wellcheck.png", 
+//       className: "rounded mx-auto d-block", 
+//       alt: "...",
+//       style: { maxHeight: "100vh", width: "auto" } 
+//     }),
+//   );
+// }
 
 
 

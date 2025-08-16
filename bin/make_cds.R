@@ -4,6 +4,7 @@ suppressPackageStartupMessages({
     library(argparse)
     library(Matrix)
     library(monocle3)
+    library(dplyr)
 })
 
 parser = argparse::ArgumentParser(description='Script to make final cds per sample.')
@@ -15,6 +16,7 @@ parser$add_argument('empty_drops', help='RDS file from emptyDrops.')
 parser$add_argument('intron_fraction_file', help='Intron fraction of barcode UMIs file.')
 parser$add_argument('key', help='The sample name prefix.')
 parser$add_argument('umi_cutoff', help='UMI cutoff to count as a cell.')
+parser$add_argument("read_count", help='File of cell total read counts')
 args = parser$parse_args()
 
 sample_name <- args$key
@@ -76,4 +78,13 @@ write.csv(ed, file=paste0(sample_name, "_cell_emptyDrops.csv"), quote=FALSE, row
 # saveRDS(cds, file=paste0(sample_name, "_cds.RDS"))
 
 writeMM(as(as.matrix(exprs(cds)), "dgCMatrix"), paste0(sample_name, "_for_scrub.mtx"))
+
+# Add total read counts to cds 
+read_counts <- read.table(args$read_count)
+colnames(read_counts) <- c("cell", "total_reads")
+
+col_data_merged = as.data.frame(left_join(x=as.data.frame(colData(cds)), y=read_counts, by = "cell", keep=FALSE))
+colData(cds) <- as(col_data_merged, "DataFrame")
+
+
 save_monocle_objects(cds, directory_path=paste0(sample_name, '_cds.mobs'), archive_control=list(archive_type='none', archive_compression='none'))

@@ -1389,6 +1389,7 @@ process run_emptyDrops {
     output:
         set key, file(cell_data), file(umi_matrix), file(gene_data), file("*_emptyDrops.RDS"), val(gtf_path), file("run_emptyDrops.log") into emptyDrops_output
         set key, file("*_emptyDrops.RDS") into for_gen_qc_emptyDrops
+        file("*_emptyDrops.RDS") into for_combine_eds
 
 """
     # bash watch for errors
@@ -1495,11 +1496,13 @@ process make_cds {
     output:
         set key, file("*for_scrub.mtx"), file("*_cds.mobs"), file("*cell_qc.csv"), file("make_cds.log") into cds_out
         file("*cell_emptyDrops.csv") into cell_eds
-        file("*cell_emptyDrops.csv") into for_combine_cell_eds
+        file("*cell_emptyDrops.csv") into for_combine_cell_counts
 
     """
     # bash watch for errors
     set -ueo pipefail
+
+    echo "testing"
 
     cat ${logfile} > make_cds.log
     printf "** Start process 'make_cds' at: \$(date)\n\n" >> make_cds.log
@@ -1702,34 +1705,12 @@ process reformat_qc {
         set key, file(scrub_csv), file(cds_object), file(cell_qc), file(dup_stats) from reformat_qc_in
 
     output:
-        set key, file("temp_fold/*.mobs"), file("temp_fold/*.csv") into rscrub_out
+        // set key, file("temp_fold/*.mobs"), file("temp_fold/*.csv") into rscrub_out
+        set key, file("temp_fold/*.mobs") into rscrub_out
         file("temp_fold/*.mobs") into for_combine_cds
         file("*sample_stats.csv") into sample_stats
         // file("*collision.txt") into collision
         set key, file("temp_fold") into temp_dir
-
-    
-    // if ("$key" == "Barnyard") {
-    //     fData(cds)\$mouse <- grepl("ENSMUSG", fData(cds)\$id)
-    //     fData(cds)\$human <- grepl("ENSG", fData(cds)\$id)
-
-    //     pData(cds)\$mouse_reads <- Matrix::colSums(exprs(cds)[fData(cds)\$mouse,])
-    //     pData(cds)\$human_reads <- Matrix::colSums(exprs(cds)[fData(cds)\$human,])
-    //     pData(cds)\$total_reads <- pData(cds)\$mouse_reads + pData(cds)\$human_reads
-    //     pData(cds)\$human_perc <- pData(cds)\$human_reads/pData(cds)\$total_reads
-    //     pData(cds)\$mouse_perc <- pData(cds)\$mouse_reads/pData(cds)\$total_reads
-    //     pData(cds)\$collision <- ifelse(pData(cds)\$human_perc >= .9 | pData(cds)\$mouse_perc >= .9, FALSE, TRUE)
-
-    //     collision_rate <- round(sum(pData(cds)\$collision/nrow(pData(cds))) * 200, 1)
-    //     fileConn<-file("Barn_collision.txt")
-    //     writeLines(paste0("$key", "\t", collision_rate, "%"), fileConn)
-    //     close(fileConn)
-    // } else {
-    //     fileConn<-file("${key}_no_collision.txt")
-    //     writeLines(paste0("$key", "\t", "NA"), fileConn)
-    //     close(fileConn)
-    // }
-
 
     """
     #!/usr/bin/env Rscript
@@ -1790,131 +1771,127 @@ process reformat_qc {
     """
 }
 
+// Temp dir is used in "assign_hash",  "publish_cds_and_cell_qc", and "combine_cds" process block.
+// It's copied here because these blocks are conditional and temp dir is required 
+// to publish cds object and cell qc. 
+
+temp_dir.into{temp_dir_copy01; temp_dir_copy02}
+
+
+// collect all cds objects
+// find sample name by splitting the cds object file name 
+// set name as key to group the cds objects ; split by sample_rt 
 
 /*************
 
-Process: generate_qc_metrics
+Process: combine_cds
 
  Inputs:
-    key - sample id
-    params.umi_cutoff
-    cds_object - cds object in RDS format
-    cell_qc - csv of cell quality control information
-    umis_per_cell - count of umis per cell
+    for_combine_cds - temp directory containing rt split cds objects
 
  Outputs:
-    cutoff - not currently used
-    umap_png - png sample UMAP
-    knee_png - png sample knee plot
-    qc_png - png of cell qc stats
-    wellcheck_png - png of RT barcode qc 
-    rt_stats - csv of RT barcode stats
+    combined_cds_input - combined rt split cds objects by sample
 
  Pass through:
 
  Summary:
-    Generate a bunch of qc metrics and plots - generate_qc.R
+    Collect all rt split cds objects. Find sample name by splitting the cds object 
+    file name. Set name as key to group cds objects by sample name. Then combine 
+    all cds objects for assign_hash process. 
 
  Downstream:
-    generate_dashboard
-
+    
  Published:
-    umap_png - png sample UMAP
-    knee_png - png sample knee plot
-    qc_png - png of cell qc stats
-    wellcheck_png - png of RT barcode qc 
 
  Notes:
-    Temp dir is used in "assign_hash",  "publish_cds_and_cell_qc", and "combine_cds" process block.
-    It's copied here because these two blocks are conditional and temp dir is required 
-    to publish cds object and cell qc. 
-
+    runs only when params.hash_rt_split = true
+    
 *************/
 
-// See notes above for info on temp_dir
-temp_dir.into{temp_dir_copy01; temp_dir_copy02}
-
-
-
-
-// for_gen_qc = null 
-
-// if { params.hash_rt_split != false } {
-//     rscrub_out_combined = rscrub_out.collect()
-//     .map { sample, bam ->
-//         def sample_name = sample.split(/\.P[0-9]\.[A-H][0-9]{2}/)[0] 
-//         tuple(sample_name, bam)
-//     }
-//     .groupTuple()
-
-// } else {
-//     for_gen_qc = rscrub_out.join(umis_per_cell).join(for_gen_qc_emptyDrops)
-// }
-
-
-for_gen_qc = rscrub_out.join(umis_per_cell).join(for_gen_qc_emptyDrops)
-
-save_knee = {params.output_dir + "/" + it - ~/_knee_plot.png/ + "/" + it}
-save_umap = {params.output_dir + "/" + it - ~/_UMAP.png/ + "/" + it}
-save_cellqc = {params.output_dir + "/" + it - ~/_cell_qc.png/ + "/" + it}
-save_garnett = {params.output_dir + "/" + it.split("_")[0] + "/" + it}
-save_umi_rt_stats = {params.output_dir + "/" + it - ~/_umi_rt_stats.csv/ + "/" + it}
-save_mito_rt_stats = {params.output_dir + "/" + it - ~/_mito_rt_stats.csv/ + "/" + it}
-save_wellcheck_combo = {params.output_dir + "/" + it - ~/_wellcheck.png/ + "/" + it}
-// save_empty_hash_plot = {params.output_dir + "/" + it - ~/_hash_knee_plot.png/ + "/" + it}
-
-process generate_qc_metrics {
+combine_cds_input = for_combine_cds
+    .map { file ->
+        def fname = file.getName() // e.g. "GENE3.P1.A02_cds.RDS"
+        def base = fname.replaceFirst(/_cds\.mobs$/, '') // "GENE3.P1.A02"
+        def sample_name = base.split(/\.P[0-9]\.[A-H][0-9]{2}/)[0] // "GENE3"
+        tuple(sample_name, file)
+    }
+    .groupTuple()
+    // .view()
+                        
+process combine_cds {
     cache 'lenient'
-    publishDir path: "${params.output_dir}/", saveAs: save_umap, pattern: "*UMAP.png", mode: 'copy'
-    publishDir path: "${params.output_dir}/", saveAs: save_knee, pattern: "*knee_plot.png", mode: 'copy'
-    publishDir path: "${params.output_dir}/", saveAs: save_cellqc, pattern: "*cell_qc.png", mode: 'copy'
-    publishDir path: "${params.output_dir}/", saveAs: save_garnett, pattern: "*Garnett.png", mode: 'copy'
-    publishDir path: "${params.output_dir}/", saveAs: save_umi_rt_stats, pattern: "*_umi_rt_stats.csv", mode: 'copy'
-    publishDir path: "${params.output_dir}/", saveAs: save_mito_rt_stats, pattern: "*_mito_rt_stats.csv", mode: 'copy'
-    publishDir path: "${params.output_dir}/", saveAs: save_wellcheck_combo, pattern: "*_wellcheck.png", mode: 'copy'
-    // publishDir path: "${params.output_dir}/", saveAs: save_empty_hash_plot pattern: "*_hash_knee_plot.png", mode: 'copy'
 
     input:
-        set key, file(cds_object), file(cell_qc), file(umis_per_cell), file(emptydrops) from for_gen_qc
-         
-    output:
-        file("*.png") into qc_plots
-        file("*.txt") into cutoff
-        file("*.csv") into rt_stats
-        file("*collision.txt") into collision
+        // set key, file(input_cds) from rscrub_out_for_combine_cds.collect()
+        tuple val(sample_name), path(cds_list) from combine_cds_input
 
+
+    output:
+        set val(sample_name), file("*combined_cds.mobs") into combined_cds_out 
+        set val(sample_name), file("*combined_cds.mobs") into for_gen_qc_cds 
+
+    when: 
+        params.hash_rt_split != false
+    
+    script: 
 
     """
-    # bash watch for errors
-    set -ueo pipefail
+    #!/usr/bin/env Rscript
 
-    generate_qc.R\
-        $cds_object $umis_per_cell $key $emptydrops \
-        --specify_cutoff $params.umi_cutoff
+    suppressPackageStartupMessages({
+        library(monocle3)
+        library(data.table)
+    })
+
+    new_cds_list = strsplit("$cds_list", " ")[[1]]
+
+    if (length(new_cds_list) < 2) {
+        dir.create(paste0("$sample_name", "_combined_cds.mobs"))
+        file.copy(from = list.files(new_cds_list[1], full.names = TRUE),
+          to = paste0("$sample_name", "_combined_cds.mobs"),
+          recursive = TRUE)
+        quit(save="no", status=0)
+    }
+
+    temp_cds_list <- list()
+
+    for(cds in new_cds_list) {
+        temp_cds <- load_monocle_objects(cds) 
+        temp_cds_list[[cds]] <- temp_cds
+    }
+
+    cds <- combine_cds(temp_cds_list) 
+    cds\$sample <- "$sample_name"
+    rownames(colData(cds)) <- cds\$cell
+    
+   # saveRDS(cds, paste0("$sample_name", "_combined_cds.RDS"))
+    save_monocle_objects(cds,directory_path=paste0("$sample_name", '_combined_cds.mobs'), archive_control=list(archive_type='none', archive_compression='none'))
+    
 
     """
 }
 
+
 /*************
 
-Process: zip_up_sample_stats
+Process: collect_stats
 
  Inputs:
-    sample_stats - csv with sample-wise statistics - collected
+    sample_stat - csv with rt-level statistics - flattened
 
  Outputs:
-    all_sample_stats - concatenated table of sample stats from all samples
+    combined_sample_stats - sample-level statistics
 
  Pass through:
 
  Summary:
-    Concatenate duplication information into one table
+    Sum up rt-level stats into sample-level stats 
 
  Downstream:
+    zip_up_sample_stats
     generate_dashboard
 
  Published:
-    all_sample_stats - concatenated table of sample stats from all samples
 
  Notes:
 
@@ -1945,6 +1922,8 @@ process collect_stats {
     # bash watch for errors
     set -ueo pipefail
     
+    echo "test"
+
     for file in ${stats}; do
         echo "sample,n.reads,n.umi,median_umis,median_perc_mito_umis,duplication_rate" > "${sample_name}_sample_stats.csv"
          awk -F"," 'BEGIN {OFS=","}  NR>1 {sum_reads+=\$2; sum_umis +=\$3} END {print ${sample_name}, sum_reads, sum_umis, \$4, \$5, \$6}' "\$file" 
@@ -1953,10 +1932,40 @@ process collect_stats {
     """
 }
 
-    // for file in "${stats}"; do
-    //     echo "sample,n.reads,n.umi" > "${sample_name}_sample_stats.csv"
-    //     awk 'NR>1 {sum_reads+=\$2; sum_umis +=\$3} END {print sum_reads "," sum_umis }' "\$file" 
-    // done >> "${sample_name}_sample_stats.csv"
+
+/*************
+
+Process: zip_up_sample_stats
+
+ Inputs:
+    sample_stats - csv with sample-wise statistics - collected
+
+ Outputs:
+    all_sample_stats - concatenated table of sample stats from all samples
+
+ Pass through:
+
+ Summary:
+    Concatenate duplication information into one table
+
+ Downstream:
+    generate_dashboard
+
+ Published:
+    all_sample_stats - concatenated table of sample stats from all samples
+
+ Notes:
+
+*************/
+
+
+zip_up_sample_stats_in = null
+
+if (params.hash_rt_split != false) {
+   zip_up_sample_stats_in = combined_sample_stats.collect()
+} else {
+   zip_up_sample_stats_in =  sample_stats.collect()
+}
 
 process zip_up_sample_stats {
     cache 'lenient'
@@ -1964,7 +1973,8 @@ process zip_up_sample_stats {
 
     input:
         // file files from sample_stats.collect()
-        file files from combined_sample_stats.collect()
+        // file files from combined_sample_stats.collect()
+        file files from zip_up_sample_stats_in
 
     output:
         file "*ll_sample_stats.csv" into all_sample_stats
@@ -1972,6 +1982,8 @@ process zip_up_sample_stats {
     """
     # bash watch for errors
     set -ueo pipefail
+
+    echo "testingasdkjf"
 
     sed -s 1d $files > all_sample_stats.csv
 
@@ -2008,7 +2020,7 @@ Process: combine_cell_counts
     
 *************/
 
-combine_cell_counts_in = for_combine_cell_eds.flatten()
+combine_cell_counts_in = for_combine_cell_counts.flatten()
     .map { counts ->
         def fname = counts.getName()
         // def sample_name = sample.split(/\.P[0-9]{1,2}\.[A-H][0-9]{1,2}/)[0] 
@@ -2101,100 +2113,54 @@ process calc_cell_totals {
 
 }
 
-
-    // awk '\$2 == 100 { sum += \$3 } END { print "${sample_name}_cell_emptyDrops.csv 100", sum }' "\$file" >> "combined_cell_counts.txt"
-    // awk '\$2 == 500 { sum += \$3 } END { print "${sample_name}_cell_emptyDrops.csv 500", sum }' "\$file" >> "combined_cell_counts.txt"
-
-// collect all cds objects
-// find sample name by splitting the cds object file name 
-// set name as key to group the cds objects ; split by sample_rt 
-
 /*************
 
-Process: combine_cds
+Process: combine_eds
 
- Inputs:
-    for_combine_cds - temp directory containing rt split cds objects
 
- Outputs:
-    combined_cds_input - combined rt split cds objects by sample
 
- Pass through:
-
- Summary:
-    Collect all rt split cds objects. Find sample name by splitting the cds object 
-    file name. Set name as key to group cds objects by sample name. Then combine 
-    all cds objects for assign_hash process. 
-
- Downstream:
-    
- Published:
-
- Notes:
-    runs only when params.hash_rt_split = true
-    
 *************/
 
-combine_cds_input = for_combine_cds
+
+combine_eds_input = for_combine_eds
     .map { file ->
-        def fname = file.getName() // e.g. "GENE3.P1.A02_cds.RDS"
-        def base = fname.replaceFirst(/_cds\.mobs$/, '') // "GENE3.P1.A02"
+        def fname = file.getName() // e.g. "GENE3.P1.A02_emptyDrops.RDS"
+        def base = fname.replaceFirst(/_emptyDrops\.RDS$/, '') // "GENE3.P1.A02"
         def sample_name = base.split(/\.P[0-9]\.[A-H][0-9]{2}/)[0] // "GENE3"
         tuple(sample_name, file)
     }
     .groupTuple()
-    // .view()
-                        
-process combine_cds {
+
+
+save_combined_eds = {params.output_dir + "/" + it - ~/_emptyDrops.RDS/ + "/" + it}
+    
+
+process combine_eds {
     cache 'lenient'
+    publishDir path: "${params.output_dir}/", saveAs: save_combined_eds, pattern: "*_emptyDrops.RDS", mode: 'copy'
 
     input:
-        // set key, file(input_cds) from rscrub_out_for_combine_cds.collect()
-        tuple val(sample_name), path(cds_list) from combine_cds_input
+        tuple val(sample_name), path(eds_list) from combine_eds_input
 
 
     output:
-        set val(sample_name), file("*combined_cds.mobs") into combined_cds_out 
+        set val(sample_name), file("*.RDS") into combined_eds_out 
 
     when: 
         params.hash_rt_split != false
     
     script: 
 
-    """
+     """
     #!/usr/bin/env Rscript
 
-    suppressPackageStartupMessages({
-        library(monocle3)
-        library(data.table)
-    })
+    new_eds_list = strsplit("$eds_list", " ")[[1]]
+    new_eds_list <- lapply(new_eds_list, readRDS)
+    combined_df <- do.call(rbind, new_eds_list)
 
-    new_cds_list = strsplit("$cds_list", " ")[[1]]
-
-    if (length(new_cds_list) < 2) {
-        dir.create(paste0("$sample_name", "_combined_cds.mobs"))
-        file.copy(from = list.files(new_cds_list[1], full.names = TRUE),
-          to = paste0("$sample_name", "_combined_cds.mobs"),
-          recursive = TRUE)
-        quit(save="no", status=0)
-    }
-
-    temp_cds_list <- list()
-
-    for(cds in new_cds_list) {
-        temp_cds <- load_monocle_objects(cds) 
-        temp_cds_list[[cds]] <- temp_cds
-    }
-
-    cds <- combine_cds(temp_cds_list) 
-    cds\$sample <- "$sample_name"
-    rownames(colData(cds)) <- cds\$cell
-    
-   # saveRDS(cds, paste0("$sample_name", "_combined_cds.RDS"))
-    save_monocle_objects(cds,directory_path=paste0("$sample_name", '_combined_cds.mobs'), archive_control=list(archive_type='none', archive_compression='none'))
-    
-
+    saveRDS(combined_df, "${sample_name}_emptyDrops.RDS")
     """
+
 }
 
 
@@ -2273,46 +2239,6 @@ process assign_hash {
 }
 
 
-// concat all rt split umi per cell barcode text files for input into assign_hash_rt_split
-
-// concat_umi_in = for_assign_hash_umis_copy02
-//     .map { sample, umi_per_cell ->
-//         def sample_name = sample.split(/\.P[0-9]\.[A-H][0-9]{2}/)[0] // "GENE3"
-//         tuple(sample_name, umi_per_cell)
-//     }
-//     .groupTuple()
-
-
-// save_combined_umi = {params.output_dir + "/" + it - ~/.UMIs.per.cell.barcode.txt/  - ~/temp_fold/  + "/umis_per_cell_barcode.txt"}
-
-// process concat_umi_per_cell {
-//     cache 'lenient'
-//     publishDir path: "${params.output_dir}/", saveAs: save_combined_umi, pattern: "temp_fold/*UMIs.per.cell.barcode.txt", mode: 'copy'
-
-//     input: 
-//         tuple(sample_name), path(umi_per_cell) from concat_umi_in
-    
-//     output: 
-//         set val(sample_name), file("temp_fold/*txt") into concat_umi_out
-
-//     when:
-//         params.hash_rt_split != false
-    
-//     script:
-
-//     """
-//     # bash watch for errors
-//     set -ueo pipefail
-
-//     mkdir temp_fold
-//     cat ${umi_per_cell.join(' ')} > "temp_fold/${sample_name}.UMIs.per.cell.barcode.txt"
-
-//     """
-
-// }
-
-
-
 // concat all rt split cell by gene files 
 
 
@@ -2341,6 +2267,7 @@ process merge_rt_cell_by_gene {
 
     output:
         set val(sample_name), file("temp_fold/*/*UMIs.per.cell.barcode.txt") into concat_umi_out
+        set val(sample_name), file("temp_fold/*/*UMIs.per.cell.barcode.txt") into for_gen_qc_umi
         set val(sample_name), file("temp_fold/*/*.mtx"), file("temp_fold/*/*.txt") into merge_rt_umis_out
 
     when:
@@ -2364,7 +2291,6 @@ process merge_rt_cell_by_gene {
 
     """
 }
-
 
 /*************
 
@@ -2416,6 +2342,7 @@ process assign_hash_rt_split {
     output:
         file("*_cds.mobs") into combined_hash_cds
         file("*hash_table.csv") into combined_hash_table
+        set key, file("*_cds.mobs") into combined_hash_cds_for_qc
 
     when: 
         params.hash_rt_split != false 
@@ -2436,6 +2363,94 @@ process assign_hash_rt_split {
 
     """
 }
+
+
+
+/*************
+
+Process: generate_qc_metrics
+
+ Inputs:
+    key - sample id
+    params.umi_cutoff
+    cds_object - cds object in RDS format
+    cell_qc - csv of cell quality control information
+    umis_per_cell - count of umis per cell
+
+ Outputs:
+    cutoff - not currently used
+    umap_png - png sample UMAP
+    knee_png - png sample knee plot
+    qc_png - png of cell qc stats
+    wellcheck_png - png of RT barcode qc 
+    rt_stats - csv of RT barcode stats
+
+ Pass through:
+
+ Summary:
+    Generate a bunch of qc metrics and plots - generate_qc.R
+
+ Downstream:
+    generate_dashboard
+
+ Published:
+    umap_png - png sample UMAP
+    knee_png - png sample knee plot
+    qc_png - png of cell qc stats
+    wellcheck_png - png of RT barcode qc 
+
+ Notes:
+
+*************/
+
+
+if (params.hash_rt_split != false) {
+    for_gen_qc = combined_hash_cds_for_qc.join(for_gen_qc_umi).join(combined_eds_out)
+} else {
+    for_gen_qc = rscrub_out.join(umis_per_cell).join(for_gen_qc_emptyDrops)
+}
+
+save_knee = {params.output_dir + "/" + it - ~/_knee_plot.png/ + "/" + it}
+save_umap = {params.output_dir + "/" + it - ~/_UMAP.png/ + "/" + it}
+save_cellqc = {params.output_dir + "/" + it - ~/_cell_qc.png/ + "/" + it}
+save_garnett = {params.output_dir + "/" + it.split("_")[0] + "/" + it}
+save_umi_rt_stats = {params.output_dir + "/" + it - ~/_umi_rt_stats.csv/ + "/" + it}
+save_mito_rt_stats = {params.output_dir + "/" + it - ~/_mito_rt_stats.csv/ + "/" + it}
+save_wellcheck_combo = {params.output_dir + "/" + it - ~/_wellcheck.png/ + "/" + it}
+// save_empty_hash_plot = {params.output_dir + "/" + it - ~/_hash_knee_plot.png/ + "/" + it}
+
+process generate_qc_metrics {
+    cache 'lenient'
+    publishDir path: "${params.output_dir}/", saveAs: save_umap, pattern: "*UMAP.png", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_knee, pattern: "*knee_plot.png", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_cellqc, pattern: "*cell_qc.png", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_garnett, pattern: "*Garnett.png", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_umi_rt_stats, pattern: "*_umi_rt_stats.csv", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_mito_rt_stats, pattern: "*_mito_rt_stats.csv", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_wellcheck_combo, pattern: "*_wellcheck.png", mode: 'copy'
+    // publishDir path: "${params.output_dir}/", saveAs: save_empty_hash_plot pattern: "*_hash_knee_plot.png", mode: 'copy'
+
+    input:
+        set key, file(cds_object), file(umis_per_cell), file(emptydrops) from for_gen_qc
+         
+    output:
+        file("*.png") into qc_plots
+        file("*.txt") into cutoff
+        file("*collision.txt") into collision
+
+
+    """
+    # bash watch for errors
+    set -ueo pipefail
+
+    echo "test123"
+    generate_qc.R\
+        $cds_object $umis_per_cell $key $emptydrops $params.hash_list \
+        --specify_cutoff $params.umi_cutoff
+
+    """
+}
+
 
 
 /*************

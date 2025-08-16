@@ -9,6 +9,9 @@ suppressPackageStartupMessages({
   library(tidyverse)
   library(cowplot)
   library(randomcoloR)
+  library(scales)
+  library(reshape2)
+  library(viridis)
 })
 
 parser = argparse::ArgumentParser(description='Script to generate qc plots.')
@@ -16,6 +19,7 @@ parser$add_argument('cds_path', help='File with cds.')
 parser$add_argument('umis_file', help='File with umis_per_barcode.')
 parser$add_argument('sample_name', help='Sample name.')
 parser$add_argument('empty_drops', help='RDS file from emptyDrops.')
+parser$add_argument('hash', help='hash run or not.')
 parser$add_argument('--specify_cutoff', type='integer', help='Optional. Specifies a cutoff rather than choosing a UMI cutoff automatically.')
 args = parser$parse_args()
 
@@ -26,8 +30,8 @@ emptydrops_data <- readRDS(args$empty_drops)
 
 
 #################################################
-##   Functions for manuipulating cds objects   ##
-##          performing well checks             ##
+##   FUNCTIONS FOR EXTRACTING BARCODES AND     ##
+##          PERFORMING QC CHECKS               ##
 #################################################
 
 
@@ -47,7 +51,22 @@ extractBarcode <- function(cds) {
     }
 
     # Extract plate number
-    cds$plate <- sapply(strsplit(as.character(meta$RT_barcode), "-"), `[`, 1)
+    cds$RT_plate <- sapply(strsplit(as.character(meta$RT_barcode), "-"), `[`, 1)
+
+    lig_info <- list(P01=1:96,
+                 P02=97:192,
+                 P03=193:288,
+                 P04=289:384)
+
+    # Convert barcode to numeric
+    lig_nums <- as.integer(gsub("LIG", "", cds$Ligation_barcode))
+
+    # Map each ligation barcode to its plate
+    cds$Ligation_plate <- vapply(lig_nums, function(n) {
+      name <- names(lig_info)[sapply(lig_info, function(x) n %in% x)]
+      if (length(name) == 0) return(NA_character_) else return(name)
+    }, character(1))
+
     return (cds)
 }
 
@@ -55,544 +74,401 @@ extractBarcode <- function(cds) {
 # Returns labels for ymax data (here, it is max number of cells)
 n_fun <- function(y){return(data.frame(y=max(y), label = paste0(length(y))))}
 
+##############################
+####   UMI Violin plots   ####
+##############################
 
-# Extract RT barcode and plate information from cell name
-# Write csv for UMI and mitochondrial UMI summary stats by RT barcode
-# Create mito and UMI plot for each RT barcode
-# returns a list with a cds with the extracted information, mito and umi plots 
-rt_stats <- function(sample_name, cds) {
-  temp_cds <- extractBarcode(cds)
+# Generate and returns a combined violin plot for umis by plates and p5 
 
+generate_umi_plots <- function(cds) {
+  n_fun <- function(y){return(data.frame(y=max(y), label = paste0(length(y))))}
 
-  umi_rt_stats <- data.frame(colData(temp_cds)) %>% 
-                group_by(RT_barcode) %>%
-                dplyr::summarise(min=min(n.umi),
-                                 q1=quantile(n.umi, probs=c(0.25)),
-                                 med=median(n.umi),
-                                 mean=mean(n.umi),
-                                 q3=quantile(n.umi, probs=c(0.75)),
-                                 max=max(n.umi)) %>%
-                data.frame()
+  barcode_list <- list("RT_plate", "Ligation_plate", "P5_barcode")
+  umi_plot_list <- list()
 
-  write.csv(umi_rt_stats, file=paste0(sample_name, "_umi_rt_stats.csv"), quote=FALSE, row.names=FALSE)
+  plot_list <- lapply(barcode_list, function(barcode) {
 
+    barcode_name <- gsub("_", " ", barcode)
 
-  mito_rt_stats <- data.frame(colData(temp_cds)) %>% 
-    group_by(RT_barcode) %>%
-    summarise(min=min(perc_mitochondrial_umis),
-              q1=quantile(perc_mitochondrial_umis, probs=c(0.25)),
-              med=median(perc_mitochondrial_umis),
-              mean=mean(perc_mitochondrial_umis),
-              q3=quantile(perc_mitochondrial_umis, probs=c(0.75)),
-              max=max(perc_mitochondrial_umis)) %>%
-    data.frame()
+    # Plot UMIs by RT, Ligation and P5 plates 
+    umi_plot <- ggplot(data.frame(colData(cds)), aes(x=.data[[barcode]], y=n.umi)) +
+      geom_violin(fill="salmon")+
+      geom_boxplot(notch=T, fill="white", width=0.25, alpha=0.3, outlier.shape=NA) +
+      theme_light(base_size=10) +
+      scale_y_log10(labels=trans_format("log10", math_format(10^.x)),
+                    limits=c(100, max(cds$n.umi) *30 )) +
+      xlab(barcode_name) +
+      ylab("UMIs") +
+      stat_summary(fun.data = n_fun, geom = "text", angle=90, hjust = -0.1, size=3) +
+      theme(legend.position="none") +
+      theme(axis.text.x = element_text(angle=90, hjust=1),
+            axis.title.x = element_text(margin=margin(t=10)),
+            axis.title.y= element_text(margin=margin(r=10))) 
 
-  write.csv(mito_rt_stats, file=paste0(sample_name, "_mito_rt_stats.csv"), quote=FALSE, row.names=FALSE)
-   
-  mito_rt_plot <- ggplot(data.frame(colData(temp_cds)), aes(x=RT_barcode, y=perc_mitochondrial_umis)) +
-    geom_violin(aes(fill="aquamarine")) +
-    geom_boxplot(notch=T, fill="white", width=0.25, alpha=0.3, outlier.shape=NA) +
-    theme_light() +
-    theme(axis.text.x=element_blank(),
-          text=element_text(size=14)) +
-    geom_hline(yintercept = 10, linetype="dotted", ) +
-    scale_y_continuous(limits=c(0,max(cds$perc_mitochondrial_umis) + 5)) +
-    xlab("") +
-    ylab("% Mito UMIs") +
-    stat_summary(fun.data = n_fun, geom = "text", hjust = 0.5, vjust = -0.3) +
-    theme(legend.position="none")
+      umi_plot_list[[barcode]] <- umi_plot
 
+    return(umi_plot_list)
+    })
 
-  # Num of UMIs by RT barcode 
-  umi_rt_plot <- ggplot(data.frame(colData(temp_cds)), aes(x=RT_barcode, y=n.umi)) +
-  # facet_wrap(~sample, nrow=1, drop=FALSE, scales="free_x") +
-    geom_violin(aes(fill="salmon")) +
-    geom_boxplot(notch=T, fill="white", width=0.25, alpha=0.3, outlier.shape=NA) +
-    # theme_bbi() +
-    theme_light() +
-    theme(axis.text.x=element_blank(),
-        text=element_text(size=14)) +
-    scale_y_log10() + 
-    xlab("") +
-    ylab("UMIs") +
-    theme(legend.position="none")
-  
-  data_list <- list(temp_cds, mito_rt_plot, umi_rt_plot)
-  return (data_list)
-    
+  flat_plot_list <- unlist(plot_list, recursive=FALSE)
+
+  # Add spacing between combined ggplots
+  plot_spacer <- function() ggplot() + theme_void()
+  combined_umi <- plot_grid(flat_plot_list$RT_plate,
+                            plot_spacer(),
+                            flat_plot_list$Ligation_plate,
+                            plot_spacer(), 
+                            flat_plot_list$P5_barcode,
+                            align="hv", 
+                            ncol=1,
+                            rel_heights = c(1, 0.25, 1, 0.25, 1))
+
+  return(combined_umi) 
 }
 
 
-# 
-recovery_plots <- function(cds) {
-    # Violin plot of percent mitochondrial umis by RT barcode with threshold line at 10% 
+##############################
+####   Pseudobulk plots   ####
+##############################
 
+# Calculate pseudobulk gene expression correlations for each sample 
+# by barcodes and plates
+# Outputs a combined correlation heatmap, combined distribution histogram, 
+# and writes out tables for each barcode/plate correlations
 
-}
-
-
-# Perform well check for each RT well 
-# Looks at number of UMIs, percent mitochondrial UMIs and 
-# percent of a UMAP cluster in a well 
-well_check <- function(sample_name, cds) {
-
-  # Add UMAP coordinates to the colData for easy plotting outside of monocle3 
-  cds$UMAP1 <- reducedDim(cds, "UMAP")[,1]
-  cds$UMAP2 <- reducedDim(cds, "UMAP")[,2]
-
-  # Extract the meta info into a data frame 
-  meta <- data.frame(colData(cds))
- 
-  # Add cluster information to colData for each cell 
-  colData(cds)$clusters = clusters(cds)
-
-  # Generate random colors for easy viewing in well checks and umaps 
-  nColor <- length(levels(cds$clusters))
-  colpal <- randomcoloR::distinctColorPalette(k = nColor)
-  # pie(rep(1, nColor), col = colpal)
-
-
-  # Calculate percentages of each cluster 
-  meta <- data.frame(colData(cds))
-  clusterCounts <- meta %>% 
-    dplyr::group_by(RT_barcode) %>%
-    dplyr::count(clusters) %>%
-    data.frame()
-
- # Number of cells for each RT barcode and cluster
-  rt_key <- data.frame(table(meta$RT_barcode))
-  cluster_key <- data.frame(table(meta$clusters))
-
-  # Total number of cells for each RT barcode 
-  clusterCounts$RTtot <- rt_key[match(clusterCounts$RT_barcode, rt_key$Var1), 'Freq']
-
-  # Total number of cells per cluster / total RT barcode cells
-  clusterCounts$perRT <- clusterCounts$n/clusterCounts$RTtot * 100
-
-  # Total number of cells per cluster / total number of cells in sample
-  clusterCounts$perSamp <- clusterCounts$n/nrow(colData(cds)) * 100
-
-  # Find overall percent of each cell in each cluster by RT barcode 
-  clusterCounts$clustTot <- cluster_key[match(clusterCounts$clusters, cluster_key$Var1), 'Freq']
-  clusterCounts$perClust <- clusterCounts$n/clusterCounts$clustTot * 100
-
-  clusterCounts$plate <- substr(clusterCounts$RT_barcode, 1, 3)
-  meta$plate <- substr(meta$RT_barcode, 1, 3)
-
-
-  # UMAP of all data to use as background cluster
-  bg_data <- data.frame(colData(cds))[,c('UMAP1', 'UMAP2')]
-
-
-  # Percent cluster of total sample 
-  perc_clust_plot <- ggplot(clusterCounts, aes(x=RT_barcode, y=perSamp, fill=clusters)) +
-    geom_bar(stat="identity") +
-    theme_light() +
-    scale_fill_manual(values=colpal) +
-    theme(axis.text.x=element_blank(),
-          text=element_text(size=14)) +
-    xlab("") +
-    ylab("% Total Sample") +
-    theme(legend.position="none")
-
-
-  # Percent cluster of RT well 
-  perc_clust_rt <- ggplot(clusterCounts, aes(x=RT_barcode, y=perRT, fill=clusters)) +
-    geom_bar(stat="identity") +
-    theme_light() +
-    scale_fill_manual(values=colpal) +
-    theme(axis.text.x=element_text(angle=45, hjust=1),
-          text=element_text(size=14)) +
-    xlab("RT Wells") +
-    ylab("% of RT Well") +
-    theme(legend.position="bottom")
-
-  plot_list <- list(perc_clust_plot, perc_clust_rt, colpal)
-
-  return (plot_list) # return colors used for clusters and list of well check plots
-}
-
-
-#################################################
-##         Function to generate UMAPs          ##
-#################################################
-
-plot_cells_simp <- function(cds,
-                            colpal,
-                            x=1,
-                            y=2,
-                            reduction_method = c("UMAP", "tSNE", "PCA", "LSI", "Aligned"),
-                            color_cells_by="cluster",
-                            group_cells_by=c("cluster", "partition"),
-                            trajectory_graph_color="grey28",
-                            trajectory_graph_segment_size=0.75,
-                            norm_method = c("log", "size_only"),
-                            label_cell_groups = TRUE,
-                            label_groups_by_cluster=TRUE,
-                            group_label_size=2,
-                            labels_per_group=1,
-                            graph_label_size=2,
-                            cell_size=0.35,
-                            cell_stroke= I(cell_size / 2),
-                            alpha = 1,
-                            min_expr=0.1,
-                            rasterize=FALSE) {
-  reduction_method <- match.arg(reduction_method)
-  assertthat::assert_that(methods::is(cds, "cell_data_set"))
-  assertthat::assert_that(!is.null(reducedDims(cds)[[reduction_method]]),
-                          msg = paste("No dimensionality reduction for",
-                                      reduction_method, "calculated.",
-                                      "Please run reduce_dimensions with",
-                                      "reduction_method =", reduction_method,
-                                      "before attempting to plot."))
-  low_dim_coords <- reducedDims(cds)[[reduction_method]]
-  assertthat::assert_that(ncol(low_dim_coords) >=max(x,y),
-                          msg = paste("x and/or y is too large. x and y must",
-                                      "be dimensions in reduced dimension",
-                                      "space."))
-  if(!is.null(color_cells_by)) {
-    assertthat::assert_that(color_cells_by %in% c("cluster", "partition",
-                                                  "pseudotime") |
-                              color_cells_by %in% names(colData(cds)),
-                            msg = paste("color_cells_by must one of",
-                                        "'cluster', 'partition', 'pseudotime,",
-                                        "or a column in the colData table."))
+calc_pseudobulk <- function(cds, sample_name) {
+  
+  barcode_list <- list("RT_barcode", "Ligation_plate", "P5_barcode")
+  
+  norm_counts <- normalized_counts(cds)   
+  plot_list = list()
+  
+  plot_list <- lapply(barcode_list, function(barcode) {
+    print(barcode)
     
-    if(color_cells_by == "pseudotime") {
-      tryCatch({pseudotime(cds, reduction_method = reduction_method)},
-               error = function(x) {
-                 stop(paste("No pseudotime for", reduction_method,
-                            "calculated. Please run order_cells with",
-                            "reduction_method =", reduction_method,
-                            "before attempting to color by pseudotime."))})
-      
-    }
-  }
-  assertthat::assert_that(!is.null(color_cells_by) || !is.null(markers),
-                          msg = paste("Either color_cells_by or markers must",
-                                      "be NULL, cannot color by both!"))
-  
-  norm_method = match.arg(norm_method)
-  group_cells_by=match.arg(group_cells_by)
-  assertthat::assert_that(!is.null(color_cells_by) || !is.null(genes),
-                          msg = paste("Either color_cells_by or genes must be",
-                                      "NULL, cannot color by both!"))
-  gene_short_name <- NA
-  sample_name <- NA
-  data_dim_1 <- NA
-  data_dim_2 <- NA
-  
-  if (rasterize){
-    plotting_func <- ggrastr::geom_point_rast
-  }else{
-    plotting_func <- ggplot2::geom_point
-  }
-  
-  S_matrix <- reducedDims(cds)[[reduction_method]]
-  data_df <- data.frame(S_matrix[,c(x,y)])
-  
-  colnames(data_df) <- c("data_dim_1", "data_dim_2")
-  data_df$sample_name <- row.names(data_df)
-  
-  data_df <- as.data.frame(cbind(data_df, colData(cds)))
-  if (group_cells_by == "cluster"){
-    data_df$cell_group <-
-      tryCatch({clusters(cds,
-                         reduction_method = reduction_method)[
-                           data_df$sample_name]},
-               error = function(e) {NULL})
-  } else if (group_cells_by == "partition") {
-    data_df$cell_group <-
-      tryCatch({partitions(cds,
-                           reduction_method = reduction_method)[
-                             data_df$sample_name]},
-               error = function(e) {NULL})
-  } else{
-    stop("Error: unrecognized way of grouping cells.")
-  }
-  
-  if (color_cells_by == "cluster"){
-    data_df$cell_color <-
-      tryCatch({clusters(cds,
-                         reduction_method = reduction_method)[
-                           data_df$sample_name]},
-               error = function(e) {NULL})
-  } else if (color_cells_by == "partition") {
-    data_df$cell_color <-
-      tryCatch({partitions(cds,
-                           reduction_method = reduction_method)[
-                             data_df$sample_name]},
-               error = function(e) {NULL})
-  } else if (color_cells_by == "pseudotime") {
-    data_df$cell_color <-
-      tryCatch({pseudotime(cds,
-                           reduction_method = reduction_method)[
-                             data_df$sample_name]}, error = function(e) {NULL})
-  } else{
-    data_df$cell_color <- colData(cds)[data_df$sample_name,color_cells_by]
-  }
-  
-  
-  
-  if (label_cell_groups && is.null(color_cells_by) == FALSE){
-    if (is.null(data_df$cell_color)){
-      if (is.null(genes)){
-        message(paste(color_cells_by, "not found in colData(cds), cells will",
-                      "not be colored"))
-      }
-      text_df = NULL
-      label_cell_groups = FALSE
-    }else{
-      if(is.character(data_df$cell_color) || is.factor(data_df$cell_color)) {
-        
-        if (label_groups_by_cluster && is.null(data_df$cell_group) == FALSE){
-          text_df = data_df %>%
-            dplyr::group_by(cell_group) %>%
-            dplyr::mutate(cells_in_cluster= dplyr::n()) %>%
-            dplyr::group_by(cell_color, .add=TRUE) %>%
-            dplyr::mutate(per=dplyr::n()/cells_in_cluster)
-          median_coord_df = text_df %>%
-            dplyr::summarize(fraction_of_group = dplyr::n(),
-                             text_x = stats::median(x = data_dim_1),
-                             text_y = stats::median(x = data_dim_2))
-          text_df = suppressMessages(text_df %>% dplyr::select(per) %>%
-                                       dplyr::distinct())
-          text_df = suppressMessages(dplyr::inner_join(text_df,
-                                                       median_coord_df))
-          text_df = text_df %>% dplyr::group_by(cell_group) %>%
-            dplyr::top_n(labels_per_group, per)
-        } else {
-          text_df = data_df %>% dplyr::group_by(cell_color) %>%
-            dplyr::mutate(per=1)
-          median_coord_df = text_df %>%
-            dplyr::summarize(fraction_of_group = dplyr::n(),
-                             text_x = stats::median(x = data_dim_1),
-                             text_y = stats::median(x = data_dim_2))
-          text_df = suppressMessages(text_df %>% dplyr::select(per) %>%
-                                       dplyr::distinct())
-          text_df = suppressMessages(dplyr::inner_join(text_df,
-                                                       median_coord_df))
-          text_df = text_df %>% dplyr::group_by(cell_color) %>%
-            dplyr::top_n(labels_per_group, per)
-        }
-        
-        text_df$label = as.character(text_df %>% dplyr::pull(cell_color))
-      } else {
-        message(paste("Cells aren't colored in a way that allows them to",
-                      "be grouped."))
-        text_df = NULL
-        label_cell_groups = FALSE
-      }
-    }
-  }
-  
-    g <- ggplot(data=data_df, aes(x=data_dim_1, y=data_dim_2))
+    psb_list <- list()
     
-    if(color_cells_by %in% c("cluster", "partition")){
-      if (is.null(data_df$cell_color)){
-        g <- g + geom_point(color=I("gray"), size=I(cell_size),
-                            stroke = I(cell_stroke), na.rm = TRUE,
-                            alpha = I(alpha))
-        message(paste("cluster_cells() has not been called yet, can't",
-                      "color cells by cluster"))
-      } else{
-        g <- g + geom_point(aes(color = cell_color), size=I(cell_size),
-                            stroke = I(cell_stroke), na.rm = TRUE,
-                            alpha = alpha)
-      }
-      g <- g + guides(color = guide_legend(title = color_cells_by,
-                                           override.aes = list(size = 4)))
-    } else if (class(data_df$cell_color) == "numeric"){
-      g <- g + geom_point(aes(color = cell_color), size=I(cell_size),
-                          stroke = I(cell_stroke), na.rm = TRUE, alpha = alpha)
-      g <- g + viridis::scale_color_viridis(name = color_cells_by, option="C")
+    # Precompute barcode groupings
+    barcode_vec <- as.character(cds[[barcode]])
+    well_groups <- split(seq_along(barcode_vec), barcode_vec)
+    
+    # Restrict to first 10 wells only
+    wells_to_use <- names(well_groups)
+    
+    # Use lapply with Matrix-aware rowMeans
+    psb_list <- lapply(wells_to_use, function(well) {
+      cols <- well_groups[[well]]
+      Matrix::rowMeans(norm_counts[, cols, drop = FALSE])
+    })
+    
+    names(psb_list) <- wells_to_use
+    
+    pseudo_bulkDF <- data.frame(psb_list)
+    rownames(pseudo_bulkDF) <- paste(rowData(cds)$gene_short_name, rowData(cds)$id, sep="_") ## Set gene names as rownames
+    
+    ## R correlation using Pearson correlation and R^2
+    cor_DF <- cor(pseudo_bulkDF)^2
+
+    psb <- melt(cor_DF, id.vars=c(rownames(cor_DF)))
+
+    barcode_name <- gsub("_", " ", barcode)
+    colnames(psb) <- c(paste0(barcode_name," 1"), paste0(barcode_name, " 2"), "pearson correlation")
+
+    ### Create heatmap for all samples
+    
+    heatmap_theme <- NULL 
+    
+    if (barcode=="Ligation_plate") {
+      heatmap_theme <- theme(axis.text.x = element_blank(), 
+                             axis.text.y = element_blank(),
+                             legend.text = element_text(size = 6),   
+                             legend.title = element_text(size = 6)) 
     } else {
-      g <- g + geom_point(aes(color = cell_color), size=I(cell_size),
-                          stroke = I(cell_stroke), na.rm = TRUE, alpha = alpha)
-      g <- g + guides(color = guide_legend(title = color_cells_by,
-                                           override.aes = list(size = 4)))
+      heatmap_theme <- theme(axis.ticks = element_line(linewidth = 0.2),
+                              axis.ticks.length = unit(0.1, "cm"),
+                              axis.title.x = element_text(size = 8, 
+                                                          margin=margin(t=6)),
+                              axis.title.y = element_text(size = 8,
+                                                          margin=margin(r=10)),
+                              axis.text.x = element_text(size=6, angle=90),
+                              axis.text.y = element_text(size=6), 
+                              legend.text = element_text(size = 6),   
+                              legend.title = element_text(size = 6)) 
     }
+    heatmap <- ggplot(psb, aes(x=psb[,1], y=psb[,2], fill=.data[["pearson correlation"]])) +
+      geom_tile() +
+      coord_fixed() +
+      scale_fill_viridis(direction=-1, limits=c(0,1.000)) +
+      theme_minimal(base_size=8) +
+      xlab(colnames(psb)[1]) + 
+      ylab(colnames(psb)[2]) +
+      heatmap_theme 
+  
+    plot_list[[paste0("heatmap_",barcode)]] <- heatmap
     
+    
+    ### Create distribution of barcode correlations
+    hist_plot <- ggplot(psb, aes(x = .data[["pearson correlation"]])) +
+      geom_histogram(binwidth = .003, fill = "grey", color = "black") +
+      theme_bw(base_size=12) +
+      # coord_cartesian(xlim = c(min(psb$value), 1)) +
+      coord_cartesian(xlim = c(.60, 1)) +
+      geom_vline(xintercept = 0.90, color = "red", linetype = "dashed", linewidth = 0.5) + 
+      ggtitle(barcode_name)
+    
+    
+    plot_list[[paste0("hist_",barcode)]] <- hist_plot
 
+    write.table(psb, paste0(sample_name, "_", barcode, "_pseudobulk_correlations.txt"), sep="\t", quote=FALSE, row.names = FALSE)
+    
+    return(plot_list)
+    
+  })
   
-#  if(label_cell_groups) {
-#    g <- g + ggrepel::geom_text_repel(data = text_df,
-#                                      mapping = aes_string(x = "text_x",
-#                                                           y = "text_y",
-#                                                           label = "label"),
-#                                      size=I(group_label_size))
-#      g <- g + theme(legend.position="none")
-#  }
   
-  g <- g +
-    monocle3:::monocle_theme_opts() +
-    xlab(paste(reduction_method, x)) +
-    ylab(paste(reduction_method, y)) +
-    theme(legend.key = element_blank()) +
-    theme(panel.background = element_rect(fill='white')) + 
-    scale_color_manual(values=colpal) 
-  g
+  # Flatten one level so you get a named list of ggplot objects
+
+  flat_plot_list <- unlist(plot_list, recursive = FALSE)
+  flat_plot_list
+  
+  plot_spacer <- function() ggplot() + theme_void()
+  
+  combined_heatmap <- plot_grid(flat_plot_list$heatmap_RT_barcode, 
+                              plot_spacer(),
+                              flat_plot_list$heatmap_Ligation_plate,
+                              plot_spacer(),
+                              flat_plot_list$heatmap_P5_barcode,
+                              ncol=1, 
+                              rel_heights = c(1, 0.25, 1, 0.25, 1),
+                              align="hv")
+  
+  
+  combined_hist <- plot_grid(flat_plot_list$hist_RT_barcode, 
+                                 plot_spacer(),
+                                 flat_plot_list$hist_Ligation_plate,
+                                 plot_spacer(), 
+                                 flat_plot_list$hist_P5_barcode,
+                                 ncol=1, 
+                                 rel_heights = c(1, 0.25, 1, 0.25, 1),
+                                 align="hv")
+  
+  combined_hist
+  
+  plots <- list(combined_heatmap, combined_hist)
+
+  return (plots)
+  
 }
 
+
+##############################
+####    Genes by UMIs     ####
+##############################
+
+# Generate and return a combined genes by umi plot colored by emptyDrops
+# and by percent mitochondrial umis
+
+generate_genes_by_umis <- function(cds) {
+
+  ### By perc mito
+
+  genes_by_umi1 <- ggplot(data.frame(colData(cds)), aes(x=n.umi, y=num_genes_expressed, color=perc_mitochondrial_umis)) +
+    geom_point(aes(alpha=0.3), size=0.5) +
+    theme_bw(base_size = 10) +
+    theme(axis.title.x = element_text(margin = margin(t = 10)),
+          axis.title.y = element_text(margin = margin(r = 10)),
+          aspect.ratio = 1,
+          legend.title = element_text(size = 8),
+          legend.position="right") +
+    xlab("UMIs") +
+    ylab("Number of Genes Captured") +
+    scale_y_log10(labels=trans_format("log10", math_format(10^.x)), limit=c(1,max(cds$num_genes_expressed) + 1000)) +
+    scale_x_log10(labels=trans_format("log10", math_format(10^.x))) +
+    geom_abline(slope=1, color="grey") +
+    scale_colour_continuous(limit=c(0, 100), low = "black", high = "green") + 
+    guides(alpha = "none", size="none")
+
+  ### By emptydrops 
+
+  genes_by_umi2 <- ggplot(data.frame(colData(cds)), aes(x=n.umi, y=num_genes_expressed, color=emptyDrops_FDR)) +
+    geom_point(aes(alpha=0.3), size =0.5) +
+    theme_bw(base_size = 10) +
+    theme(axis.title.x = element_text(margin = margin(t = 10)),
+          axis.title.y = element_text(margin = margin(r = 10)),
+          aspect.ratio = 1,
+          legend.title = element_text(size = 8),
+          legend.position="right") +
+    xlab("UMIs") +
+    ylab("Number of Genes Captured") +
+    scale_y_log10(labels=trans_format("log10", math_format(10^.x)), limit=c(1,max(cds$num_genes_expressed) + 1000)) +
+    scale_x_log10(labels=trans_format("log10", math_format(10^.x))) +
+    geom_abline(slope=1, color="grey") + 
+    guides(alpha = "none", size = "none")
+
+  genes_by_umi <- plot_grid(genes_by_umi1, genes_by_umi2, align="hv", ncol=1)
+  ggsave("genes_by_umi.png", genes_by_umi, width=5, height=7, dpi=600, units='in')
+
+  return(genes_by_umi)
+
+}
+
+
+##############################
+####    Hash Knee Plots   ####
+##############################
+
+
+# Generate ranked barcodes by hash umis knee plot 
+# and hash top-second-best-ratio knee plot
+# Returns a combined plot
+
+generate_hash_plots <- function(cds) {
+
+  print("here in hash")
+  df <- data.frame(colData(cds))
+
+  # Rank barcodes by hash umis
+  df = df %>% mutate(n.umi.rank = min_rank(-hash_umis)) %>% ungroup() %>% data.frame()
+
+  # Hash umi by barcode rank knee plot 
+  # Removes duplicate ranks
+  hash_umis <- ggplot(
+    df %>% 
+      arrange(-hash_umis) %>% select(hash_umis, n.umi.rank) %>% distinct(),
+    aes(x = n.umi.rank, y = hash_umis)) +
+    geom_point(shape = 21) +
+    scale_x_log10(labels=trans_format("log10", math_format(10^.x))) + 
+    scale_y_log10(labels=trans_format("log10", math_format(10^.x))) + 
+    xlab("# of barcodes") +
+    ylab("hash umis") +
+    theme_bw(base_size = 10)+
+    theme(axis.title.y = element_text(margin = margin(r = 15))) 
+
+
+  # Hash top-to-second-best ratio vs hash barcode ranks
+  df <- data.frame(colData(cds))
+
+  df <- df[!is.na(df$hash_umis) &
+            df$hash_umis > 0 &
+            is.finite(df$top_to_second_best_ratio),]
+
+  df = df %>% mutate(n.umi.rank = min_rank(-top_to_second_best_ratio)) %>% ungroup() %>% data.frame()
+  head(df)
+
+  # Hash top-to-second best ratio vs hash barcode ranks knee plot
+
+  hash_top_knee <- ggplot(
+    df %>% 
+      arrange(-top_to_second_best_ratio) %>% select(top_to_second_best_ratio, n.umi.rank) %>% distinct(),
+    aes(x = n.umi.rank, y = top_to_second_best_ratio)) +
+    geom_point(shape=21) +
+    scale_x_log10(labels=trans_format("log10", math_format(10^.x))) + 
+    scale_y_log10(labels=trans_format("log10", math_format(10^.x))) + 
+    xlab("# of barcodes") +
+    ylab("top to second best ratio") +
+    theme_bw(base_size = 10)+
+    theme(axis.title.y = element_text(margin = margin(r = 15))) + 
+    geom_hline(yintercept = 2, linetype= "dotted", color = "firebrick", size= 0.5) + 
+    geom_hline(yintercept = 5, linetype= "dotted", color = "cornflowerblue", size =0.5) +
+    annotate("text", x = 100 , y = 2 * 0.45, label = "top-to-second-best cutoff = 2", vjust = -0.5, hjust = 1, size = 2) +
+    annotate("text", x = 100  , y = 5 * 1.10, label = "top-to-second-best cutoff = 5", vjust = -0.5, hjust = 1, size = 2) 
+    
+
+  hash_top_knee
+
+
+  combined_knee <- plot_grid(hash_umis, hash_top_knee, ncol=1, align = "hv")
+
+  return(combined_knee)
+}
+
+
 #################################################
-##             Start QC checks                 ##
+##             START QC CHECKS                 ##
 #################################################
 
 
 gen_plots <- function(sample_name, sample_path) {
   
-  samp_cds <- NULL
-  if (file.size(paste0(sample_path,"/bpcells_matrix_dir/col_names")) != 0) {
-    samp_cds <- load_monocle_objects(sample_path)
-  } else {
-    samp_cds <- readRDS(paste0(sample_path,"/cds_object.rds"))
-  }
+  # if (file.size(paste0(sample_path,"/bpcells_matrix_dir/col_names")) != 0) {
+  #   samp_cds <- load_monocle_objects(sample_path)
+  # } else {
+  #   samp_cds <- readRDS(paste0(sample_path,"/cds_object.rds"))
+  # }
 
-  garnett_mods <- names(colData(samp_cds))[grepl("garnett_type", names(colData(samp_cds)))]  
+  # garnett_mods <- names(colData(samp_cds))[grepl("garnett_type", names(colData(samp_cds)))]  
 
   samp_cds <- tryCatch({
 
-    # If Empty drops was ran, then filter out cds object for Empty Drops FDR < 0.01
+    samp_cds <- load_monocle_objects(sample_path)
+
+    # If Empty drops was ran, then add info for Empty Drops FDR <= 0.01
+    if(is(emptydrops_data, 'DFrame')) {
+      samp_cds$emptyDrops_FDR_0.01 <- ifelse(
+        is.na(colData(samp_cds)$emptyDrops_FDR), "NA", 
+        ifelse(colData(samp_cds)$emptyDrops_FDR <= 0.01, "TRUE", "FALSE"))
+    }
+
+    samp_cds <- extractBarcode(samp_cds)
+    samp_cds <- detect_genes(samp_cds)
+    
+    umi_plots <- generate_umi_plots(samp_cds)
+    ggsave(paste0(sample_name, "_umi.png"), umi_plots, width=5, height=8, dpi=600, units="in")
+
+    genes_umi_plot <- generate_genes_by_umis(samp_cds)
+    ggsave(paste0(sample_name, "_genes_by_umi.png"), genes_umi_plot, width=5, height=7, dpi=600, units='in')
+
     if(is(emptydrops_data, 'DFrame')) {
       keep_na <- samp_cds[,is.na(colData(samp_cds)$emptyDrops_FDR)]
       keep_cells <- samp_cds[,!is.na(colData(samp_cds)$emptyDrops_FDR) & colData(samp_cds)$emptyDrops_FDR <= 0.01]
       samp_cds <- combine_cds(list(keep_na, keep_cells), sample_col_name="og_cds")
     }
 
-    # Generate UMI and mitochondrial stats by rt barcode 
-    cds_rt_data <- rt_stats(sample_name, samp_cds) # Returns a list of data with cds and list of plots 
-    samp_cds <- cds_rt_data[[1]]
-    # ggsave("umi_plot", rt_plots[[3]])
+    psb_plots <- calc_pseudobulk(samp_cds, sample_name)
+    ggsave(paste0(sample_name, "_pseudobulk_heatmap.png"), psb_plots[[1]], width=5, height=10, dpi=800, units='in')
+    ggsave(paste0(sample_name, "_pseudobulk_histogram.png"), psb_plots[[2]], width=5, height=10, dpi=800, units='in')
 
-
-    # Subsample cells from cds object if > 300,000 cells for preprocessing and clustering
-    # Original cds will be used for RT umi and mitochondrial stats
-
-    sub_cds <- NULL 
-    wellcheck_data <- NULL 
-
-    if(nrow(colData(samp_cds)) >300000) {
-
-      sub_cds <- samp_cds[, samp_cds$cell %in% sample(samp_cds$cell, 300000)]
-      sub_cds <- preprocess_cds(sub_cds)
-      sub_cds <- reduce_dimension(sub_cds)
-      sub_cds <- cluster_cells(sub_cds, k=ceiling(sqrt(dim(sub_cds)[2])*0.25))
-
-      # Reduce number of clusters if clusters are > 12 
-      if (dim(table(clusters(sub_cds))) > 12 ) {
-        sub_cds <- cluster_cells(sub_cds, k=ceiling(sqrt(dim(sub_cds)[2])*0.75))
-      }  
-
-      # Increase number of clusters if clusters are < 5
-      if (dim(table(clusters(sub_cds))) < 5 ) {
-        sub_cds <- cluster_cells(sub_cds, k=ceiling(sqrt(dim(sub_cds)[2])*0.1))
-      }  
-
-      wellcheck_data = well_check(sample_name, sub_cds)
-      colpal = wellcheck_data[[3]]
-
-      # Plot umap 
-      file_name <- paste0(sample_name, "_UMAP.png")
-      ggp_obj <- suppressMessages(plot_cells_simp(sub_cds, colpal) + theme(text = element_text(size = 8)))
-      ggsave(filename=file_name, ggp_obj, device='png', width=5, height=5, dpi=600, units='in')
+    # Skip hash plots if not a hash run 
+    if (args$hash != 'false') {
+      hash_plots <- generate_hash_plots(samp_cds)
+      ggsave(paste0(sample_name, "_hash_plots.png"), hash_plots, width=5, height=7, dpi=600, units='in')
 
     } else {
+      file_name <- paste0(sample_name, "_hash_plots.png")
+      ggp_obj <- ggplot() + theme_void() + geom_text(aes(x = 1, y = 1, label = "Process hash skipped.")) 
+      ggsave(filename=file_name, ggp_obj, device='png')
 
-      samp_cds <- preprocess_cds(samp_cds)
-      samp_cds <- reduce_dimension(samp_cds)
-      samp_cds <- cluster_cells(samp_cds, k=ceiling(sqrt(dim(samp_cds)[2])*0.25))
-
-      # Reduce number of clusters if clusters are > 12 
-      if (dim(table(clusters(samp_cds))) > 12 ) {
-        samp_cds <- cluster_cells(samp_cds, k=ceiling(sqrt(dim(samp_cds)[2])*0.75))
-      }  
-
-      # Increase number of clusters if clusters are < 5
-      if (dim(table(clusters(samp_cds))) < 5 ) {
-        samp_cds <- cluster_cells(samp_cds, k=ceiling(sqrt(dim(sub_cds)[2])*0.1))
-      }  
-
-      wellcheck_data = well_check(sample_name, samp_cds)
-      colpal = wellcheck_data[[3]]
-      
-#    file_name <- paste0(sample_name, "_UMAP.png")
-#    png(file_name, width = 5, height = 5, res = 600, units = "in")
-#    print(suppressMessages(plot_cells_simp(samp_cds, colpal) + theme(text = element_text(size = 8))))
-#    dev.off()
-
-      # Plot umap
-      file_name <- paste0(sample_name, "_UMAP.png")
-      
-      ggp_obj <- suppressMessages(plot_cells_simp(samp_cds, colpal) + theme(text = element_text(size = 8)))
-      ggsave(filename=file_name, ggp_obj, device='png', width=5, height=5, dpi=600, units='in')
-      
     }
 
-    # Combine mito, umi, and rt well check plots 
-    well_check_combined <- plot_grid(cds_rt_data[[2]], cds_rt_data[[3]], # mito and umi rt barcode plots 
-                    wellcheck_data[[1]], wellcheck_data[[2]], # perc cluster plots from rt well check
-                    nrow=4, align='hv',
-                    rel_heights = c(1,1,1,2))
-
-
-    ggsave(paste0(sample_name, "_wellcheck.png"), well_check_combined, width=15, height = 30)
-
-
-    for (mod in garnett_mods) {
-#      file_name <- paste0(sample_name, "_", gsub("garnett_type_", "", mod) ,"_Garnett.png")
-#      png(file_name, width = 7, height = 5, res = 600, units = "in")
-#      print(suppressMessages(plot_cells_simp(samp_cds, color_cells_by = mod) + theme(text = element_text(size = 8)) + theme(legend.position = "none")))
-#      dev.off()
-
-      file_name <- paste0(sample_name, "_", gsub("garnett_type_", "", mod) ,"_Garnett.png")
-      ggp_obj <- suppressMessages(plot_cells_simp(samp_cds, color_cells_by = mod) + theme(text = element_text(size = 8)) + theme(legend.position = "none"))
-      ggsave(filename=file_name, ggp_obj, device='png', width=7, height=5, dpi=600, units='in')
-    }
-    
-    samp_cds
   }, error = function(e) {
 
-#    png(paste0(sample_name, "_UMAP.png"), width = 5, height = 5, res = 600, units = "in")
-#    print(ggplot() + geom_text(aes(x = 1, y = 1, label = "Insufficient cells for UMAP")) + monocle3:::monocle_theme_opts() + theme(legend.position = "none") + labs(x="UMAP 1", y = "UMAP 2"))
-#    dev.off()
+    # Generate empty plots if error
+    file_name <- paste0(sample_name, "_umi.png")
+    ggp_obj <- ggplot() + theme_void() + geom_text(aes(x = 1, y = 1, label = "Insufficient cells for UMI plot")) 
+    ggsave(filename=file_name, ggp_obj, device='png')
 
-     file_name <- paste0(sample_name, "_UMAP.png")
-     ggp_obj <- ggplot() + geom_text(aes(x = 1, y = 1, label = "Insufficient cells for UMAP")) + monocle3:::monocle_theme_opts() + theme(legend.position = "none") + labs(x="UMAP 1", y = "UMAP 2")
-     ggsave(filename=file_name, ggp_obj, device='png', width=5, height=5, dpi=600, units='in')
-   
-#    png(paste0(sample_name, "_wellcheck.png"), width = 5, height = 5, res = 600, units = "in")
-#    print(ggplot() + geom_text(aes(x = 1, y = 1, label = "Insufficient cells for WellCheck")) + monocle3:::monocle_theme_opts() + theme(legend.position = "none") + labs(x="RT Barcodes", y = "UMIs"))
-#    dev.off()
+    file_name <- paste0(sample_name, "_pseudobulk_heatmap.png")
+    ggp_obj <- ggplot() + theme_void() + geom_text(aes(x = 1, y = 1, label = "Insufficient cells for Pseudobulk correlations")) 
+    ggsave(filename=file_name, ggp_obj, device='png')
 
-    file_name <- paste0(sample_name, "_wellcheck.png")
-    ggp_obj <- ggplot() + geom_text(aes(x = 1, y = 1, label = "Insufficient cells for WellCheck")) + monocle3:::monocle_theme_opts() + theme(legend.position = "none") + labs(x="RT Barcodes", y = "UMIs")
-     ggsave(filename=file_name, ggp_obj, device='png', width=5, height=5, dpi=600, units='in')
+    file_name <- paste0(sample_name, "_pseudobulk_histogram.png")
+    ggp_obj <- ggplot() + theme_void() + geom_text(aes(x = 1, y = 1, label = "Insufficient cells for Pseudobulk correlations")) 
+    ggsave(filename=file_name, ggp_obj, device='png')
 
-    write.table("Insufficent UMIs for RT stats", file=paste0(sample_name, "_mito_rt_stats.csv"), quote=FALSE, row.names=FALSE, col.names=FALSE)
-    write.table("Insufficent UMIs for RT stats", file=paste0(sample_name, "_umi_rt_stats.csv"), quote=FALSE, row.names=FALSE, col.names=FALSE)
+    if (args$hash != 'false') { 
+      file_name <- paste0(sample_name, "_hash_plots.png")
+      ggp_obj <- ggplot() + theme_void() + geom_text(aes(x = 1, y = 1, label = "Insufficient hash umis")) 
+      ggsave(filename=file_name, ggp_obj, device='png')
 
-    for (mod in garnett_mods) {
-#      png(paste0(sample_name, "_", gsub("garnett_type_", "", mod) ,"_Garnett.png"), width = 7, height = 5, res = 600, units = "in")
-#      print(ggplot() + geom_text(aes(x = 1, y = 1, label = "Insufficient cells for UMAP")) + monocle3:::monocle_theme_opts() + theme(legend.position = "none") + labs(x="UMAP 1", y = "UMAP 2"))
-#      dev.off()
-
-      file_name <- paste0(sample_name, "_", gsub("garnett_type_", "", mod) ,"_Garnett.png")
-      ggp_obj <- ggplot() + geom_text(aes(x = 1, y = 1, label = "Insufficient cells for UMAP")) + monocle3:::monocle_theme_opts() + theme(legend.position = "none") + labs(x="UMAP 1", y = "UMAP 2")
-      ggsave(filename=file_name, ggp_obj, device='png', width=7, height=5, dpi=600, units='in')
-
+    } else {
+      file_name <- paste0(sample_name, "_hash_plots.png")
+      ggp_obj <- ggplot() + theme_void() + geom_text(aes(x = 1, y = 1, label = "Process hash skipped.")) 
+      ggsave(filename=file_name, ggp_obj, device='png')
     }
-    samp_cds  
+
+
   })
 
-  plot <- ggplot(as.data.frame(pData(samp_cds)), aes(n.umi, perc_mitochondrial_umis)) +
-    geom_point(size=.5) + theme_bw() +
-    lims(x=c(0, 100)) +
-    labs(x="# of UMIs", y="Percent of UMIs from mitochondrial genome") +
-    geom_rug(size=0.1) +
-    scale_x_log10() + geom_density(aes(n.umi, (..density.. * max(pData(samp_cds)$perc_mitochondrial_umis))))
-    ggsave(paste0( sample_name, '_cell_qc.png'), plot = plot, units = "in", width = 3.5*1.3, height = 3.5)
-  
-    samp_cds
 }
 
 
@@ -675,7 +551,7 @@ gen_knee <- function(sample_name, cutoff) {
     }
     
     plot = plot +
-      geom_hline(aes(yintercept = cutoff), linetype="dotted", size = .5, color = "firebrick2") + 
+      geom_hline(aes(yintercept = cutoff), linetype="dotted", linewidth = .5, color = "firebrick2") + 
       annotate("text", x = max(df$n.umi.rank), y = cutoff, label = "umi cutoff", vjust = -0.5, hjust = 1, size = 2) 
     
     ggsave(paste0(sample_name, "_knee_plot.png"), plot = plot, units = "in", width = 3.5*1.3, height = 3.5)
