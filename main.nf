@@ -378,11 +378,8 @@ save_hash_umis = {params.output_dir + "/" + it - ~/_hash_umis_per_cell.txt/ + "/
 save_hash_table = {params.output_dir + "/" + it - ~/_hash_assigned_table.txt/ + "/" + it}
 save_hash_dup = {params.output_dir + "/" + it - ~/_hash_dup_per_cell.txt/ + "/" + it}
 
-// save_sorted_hash = {params.output_dir + "/" + it - ~/_sorted_hash_combined.gz/ + "/" + it}
 
-/*
-** We no longer need or make the _sorted_hash_combined file.
-*/
+
 process process_hashes {
     cache 'lenient'
     publishDir path: "${params.output_dir}/", saveAs: save_hash_cell, pattern: "*hashumis_cells.txt", mode: 'copy'
@@ -392,7 +389,6 @@ process process_hashes {
     publishDir path: "${params.output_dir}/", saveAs: save_hash_umis, pattern: "*hash_umis_per_cell.txt", mode: 'copy'
     publishDir path: "${params.output_dir}/", saveAs: save_hash_table, pattern: "*hash_assigned_table.txt", mode: 'copy'
     publishDir path: "${params.output_dir}/", saveAs: save_hash_dup, pattern: "*hash_dup_per_cell.txt", mode: 'copy'
-//    publishDir path: "${params.output_dir}/", saveAs: save_sorted_hash, pattern: "*sorted_hash_combined.gz", mode: 'copy'
 
     input:
         set key, file(input_fastq) from fastqs_for_hash
@@ -402,7 +398,6 @@ process process_hashes {
         set key, file("*mtx"), file("*hashumis_cells.txt"), file("*hashumis_hashes.txt") into hash_mats
         set key, file("*hash_reads_per_cell.txt"), file("*hash_umis_per_cell.txt"), file("*hash_assigned_table.txt") into hash_results
         set key, file("*hash_dup_per_cell.txt") into for_hash_calc
-//        set key, file("*_sorted_hash_combined.gz") into sorted_hash_combined
 
     when:
         params.hash_list != false
@@ -414,11 +409,13 @@ process process_hashes {
     # bash watch for errors
     set -ueo pipefail
 
-    input_key="${key}"
+    input_key=\$(echo "${key}" | sed 's/_/./g')
 
     if [ ${params.hash_rt_split} == true ]; then
-        input_key="${sample_name}"
+        input_key=\$(echo "${sample_name}" | sed 's/_/./g')
     fi
+
+    echo \$input_key
 
     awk 'NF < 4 {print "ERROR: Hash sample sheet contains rows with fewer than 4 columns"; exit 1}' $params.hash_list
 
