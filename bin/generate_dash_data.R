@@ -42,24 +42,24 @@ all_dups$V1 <- as.character(all_dups$V1)
 all_dups$V6[all_dups$V6 == "NaN%"] <-  "Fail"
 
 all_dups$c100 <- ct100[all_dups$V1,"V3"]
-all_dups$c1000 <- ct1000[all_dups$V1,"V3"]
+# all_dups$c1000 <- ct1000[all_dups$V1,"V3"]
 all_dups$cfdr_p01 <- ctfdr_p01[all_dups$V1,"V3"]
-all_dups$cfdr_p001 <- ctfdr_p001[all_dups$V1,"V3"]
+# all_dups$cfdr_p001 <- ctfdr_p001[all_dups$V1,"V3"]
 
 row.names(all_dups) <- all_dups$V1
 
 names(all_dups) <- c("Sample", "Total_reads",
                      "Total_UMIs",
+                     "Duplication_rate",
                      "Median_UMIs",
                      "Median_Mitochondrial_UMIs_Percent",
-                     "Duplication_rate",
                     #  "Doublet_Number", 
                     #  "Doublet_Percent",
                     #  "Doublet_NAs",
                      "Cells_100_UMIs",
-                     "Cells_1000_UMIs" ,
-                     "Cells_FDR_p01",
-                     "Cells_FDR_p001"
+                    #  "Cells_1000_UMIs" ,
+                     "Cells_FDR_p01"
+                    #  "Cells_FDR_p001"
                      )
 
 # all_dups$Doublet_Number[is.na(all_dups$Doublet_Number)] <- "Fail"
@@ -110,15 +110,17 @@ if(!( length(unique(all_dups$Cells_FDR_p01)) == 1 && unique(all_dups$Cells_FDR_p
   sum_Cells_FDR_p01 <- '-'
 }
 
-if(!( length(unique(all_dups$Cells_FDR_p001)) == 1 && unique(all_dups$Cells_FDR_p001)[1] == '-')) {
-  sum_Cells_FDR_p001 <- sum(as.numeric(all_dups$Cells_FDR_p001))
-} else {
-  sum_Cells_FDR_p001 <- '-'
-}
+# if(!( length(unique(all_dups$Cells_FDR_p001)) == 1 && unique(all_dups$Cells_FDR_p001)[1] == '-')) {
+#   sum_Cells_FDR_p001 <- sum(as.numeric(all_dups$Cells_FDR_p001))
+# } else {
+#   sum_Cells_FDR_p001 <- '-'
+# }
 
 sample_list <- as.list(sample_list)
 json_info <- list("run_name" = project_name,
-                  "cell_counts" = c(sum(as.numeric(all_dups$Cells_100_UMIs)), sum(as.numeric(all_dups$Cells_1000_UMIs)), sum_Cells_FDR_p01, sum_Cells_FDR_p001),
+                  # "cell_counts" = c(sum(as.numeric(all_dups$Cells_100_UMIs)), sum(as.numeric(all_dups$Cells_1000_UMIs)), sum_Cells_FDR_p01, sum_Cells_FDR_p001),
+
+                  "cell_counts" = c(sum(as.numeric(all_dups$Cells_100_UMIs)), sum_Cells_FDR_p01),
                   "sample_list" = sample_list,
                   "barn_collision" = barn_collision,
                   "sample_stats" = all_dup_lst)

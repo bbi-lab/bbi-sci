@@ -1754,7 +1754,7 @@ process reformat_qc {
                 median_umis = median(pData(cds)\$n.umi),
                 median_perc_mito_umis = round(median(pData(cds)\$perc_mitochondrial_umis), 1),
                 duplication_rate = dup_stats\$V4)
-    } else {
+    } else if (nrow(pData(cds)) < 1 || $params.hash_list != 'false') {
         df <- data.frame(sample="$key", n.reads = dup_stats\$V2, n.umi = dup_stats\$V3,
                     median_umis = "NA",
                     median_perc_mito_umis = "NA",
@@ -1817,7 +1817,7 @@ combine_cds_input = for_combine_cds
     }
     .groupTuple()
     // .view()
-                        
+
 process combine_cds {
     cache 'lenient'
 
@@ -1825,10 +1825,10 @@ process combine_cds {
         // set key, file(input_cds) from rscrub_out_for_combine_cds.collect()
         tuple val(sample_name), path(cds_list) from combine_cds_input
 
-
     output:
         set val(sample_name), file("*combined_cds.mobs") into combined_cds_out 
         set val(sample_name), file("*combined_cds.mobs") into for_gen_qc_cds 
+        set val(sample_name), file("*median_stats.csv") into median_stats
 
     when: 
         params.hash_rt_split != false
@@ -1850,6 +1850,8 @@ process combine_cds {
         file.copy(from = list.files(new_cds_list[1], full.names = TRUE),
           to = paste0("$sample_name", "_combined_cds.mobs"),
           recursive = TRUE)
+
+        write.csv(data.frame(), "$sample_name", "_median_stats.csv", quote=FALSE, row.names = FALSE)
         quit(save="no", status=0)
     }
 
@@ -1863,7 +1865,14 @@ process combine_cds {
     cds <- combine_cds(temp_cds_list) 
     cds\$sample <- "$sample_name"
     rownames(colData(cds)) <- cds\$cell
+
+    median_stats <- data.frame(sample="$sample_name",
+                               median_umis = median(pData(cds)\$n.umi),
+                               median_perc_mito_umis = round(median(pData(cds)\$perc_mitochondrial_umis), 1))
     
+    write.csv(median_stats, file=paste0("$sample_name", "_median_stats.csv"), quote=FALSE, row.names=FALSE)
+
+
    # saveRDS(cds, paste0("$sample_name", "_combined_cds.RDS"))
     save_monocle_objects(cds,directory_path=paste0("$sample_name", '_combined_cds.mobs'), archive_control=list(archive_type='none', archive_compression='none'))
     
@@ -1897,6 +1906,7 @@ Process: collect_stats
 
 *************/
 
+// Collection all rt-level stats and group by sample
 sample_stats_in = sample_stats.flatten()
     .map { stats ->
         def fname = stats.getName()
@@ -1906,11 +1916,14 @@ sample_stats_in = sample_stats.flatten()
     }
     .groupTuple()
 
+// Join median umis and mitochondrial stats by sample 
+combined_stats = sample_stats_in.join(median_stats)
+
 process collect_stats {
     cache 'lenient' 
 
     input: 
-        tuple val (sample_name), path(stats) from sample_stats_in 
+        tuple val (sample_name), path(stats), path(median) from combined_stats
 
     output: 
         file ("*_sample_stats.csv") into combined_sample_stats
@@ -1922,12 +1935,16 @@ process collect_stats {
     # bash watch for errors
     set -ueo pipefail
     
-    echo "test"
-
+    echo "sample,n.reads,n.umi, duplication_rate" > "${sample_name}_temp.csv"
     for file in ${stats}; do
-        echo "sample,n.reads,n.umi,median_umis,median_perc_mito_umis,duplication_rate" > "${sample_name}_sample_stats.csv"
-         awk -F"," 'BEGIN {OFS=","}  NR>1 {sum_reads+=\$2; sum_umis +=\$3} END {print ${sample_name}, sum_reads, sum_umis, \$4, \$5, \$6}' "\$file" 
-    done >> "${sample_name}_sample_stats.csv"
+         awk -F"," 'BEGIN {OFS=","}  NR>1 {sum_reads+=\$2; sum_umis +=\$3} END {print ${sample_name}, sum_reads, sum_umis, \$6}' "\$file" 
+    done >> "${sample_name}_temp.csv"
+
+    echo "sample,n.reads,n.umi, duplication_rate, median_umis,median_perc_mito_umis" > "${sample_name}_sample_stats.csv"
+    temp_vals=\$(awk -F"," 'BEGIN {OFS=","}  NR>1 {sum_reads+=\$2; sum_umis +=\$3} END {print ${sample_name}, sum_reads, sum_umis, \$4}' "${sample_name}_temp.csv") 
+    median_vals=\$(awk -F"," 'BEGIN {OFS=","}  NR>1  {print \$2, \$3}' "${median}")
+    
+    echo "\$temp_vals,\$median_vals" >> "${sample_name}_sample_stats.csv"
     
     """
 }

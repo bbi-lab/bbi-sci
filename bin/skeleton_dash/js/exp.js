@@ -243,7 +243,9 @@ function RegRow(props) {
 
 function StatsPane(props) {
   var sample_stat = props.sample_stats[props.sample_id];
-  var stats_list = ["Total Reads", "Total UMIs", "Median UMIs", "Median Mitochondrial UMIs", "Duplication Rate", "Cells with >100 UMIs", "Cells with >1000 UMIs", "Cells with FDR<=.01", "Cells with FDR<=.001"];
+  // var stats_list = ["Total Reads", "Total UMIs", "Median UMIs", "Median Mitochondrial UMIs", "Duplication Rate", ",Cells with >100 UMIs", "Cells with >1000 UMIs", "Cells with FDR<=.01", "Cells with FDR<=.001"];
+  var stats_list = ["Total Reads", "Total UMIs", "Median UMIs", "Median Mitochondrial UMIs", "Duplication Rate", ",Cells with >100 UMIs", "Cells with FDR<=.01"];
+
 
   var safe_name = "hp" + props.sample_id.replace(/[.]/g, "");
   return React.createElement(
@@ -281,9 +283,9 @@ function StatsPane(props) {
           React.createElement(RegRow, { val: sample_stat.Median_Mitochondrial_UMIs_Percent}),
           React.createElement(RegRow, { val: sample_stat.Duplication_rate }),
           React.createElement(RegRow, { val: sample_stat.Cells_100_UMIs }),
-          React.createElement(RegRow, { val: sample_stat.Cells_1000_UMIs }),
-          React.createElement(RegRow, { val: sample_stat.Cells_FDR_p01 }),
-          React.createElement(RegRow, { val: sample_stat.Cells_FDR_p001 })
+          // React.createElement(RegRow, { val: sample_stat.Cells_1000_UMIs }),
+          React.createElement(RegRow, { val: sample_stat.Cells_FDR_p01 })
+          // React.createElement(RegRow, { val: sample_stat.Cells_FDR_p001 })
         )
       )
     )
@@ -765,16 +767,16 @@ var Table = function (_React$Component) {
       _this.setState({
         currentSort: nextSort
       });
-    }, _this.onSortc1000 = function () {
-      var currentSort = _this.state.currentSort;
+    // }, _this.onSortc1000 = function () {
+    //   var currentSort = _this.state.currentSort;
 
-      var nextSort = void 0;
+    //   var nextSort = void 0;
 
-      if (currentSort === 'c1000_down') nextSort = 'c1000_up';else if (currentSort === 'c1000_up') nextSort = 'c1000_down';else nextSort = 'c1000_up';
+    //   if (currentSort === 'c1000_down') nextSort = 'c1000_up';else if (currentSort === 'c1000_up') nextSort = 'c1000_down';else nextSort = 'c1000_up';
 
-      _this.setState({
-        currentSort: nextSort
-      });
+    //   _this.setState({
+    //     currentSort: nextSort
+    //   });
     }, _this.onSortfdr_p01 = function () {
       var currentSort = _this.state.currentSort;
 
@@ -785,16 +787,16 @@ var Table = function (_React$Component) {
       _this.setState({
         currentSort: nextSort
       });
-    }, _this.onSortfdr_p001 = function () {
-      var currentSort = _this.state.currentSort;
+    // }, _this.onSortfdr_p001 = function () {
+    //   var currentSort = _this.state.currentSort;
 
-      var nextSort = void 0;
+    //   var nextSort = void 0;
 
-      if (currentSort === 'cfdr_p001_down') nextSort = 'cfdr_p001_up';else if (currentSort === 'cfdr_p001_up') nextSort = 'cfdr_p001_down';else nextSort = 'cfdr_p001_up';
+    //   if (currentSort === 'cfdr_p001_down') nextSort = 'cfdr_p001_up';else if (currentSort === 'cfdr_p001_up') nextSort = 'cfdr_p001_down';else nextSort = 'cfdr_p001_up';
 
-      _this.setState({
-        currentSort: nextSort
-      });
+    //   _this.setState({
+    //     currentSort: nextSort
+    //   });
     }, _temp), _possibleConstructorReturn(_this, _ret);
   }
 
@@ -912,16 +914,16 @@ var Table = function (_React$Component) {
                   React.createElement("i", { className: "fas fa-sort" })
                 )
               ),
-              React.createElement(
-                "th",
-                null,
-                "Cells with >1000 UMIs",
-                React.createElement(
-                  "button",
-                  { onClick: this.onSortc1000, className: "sort_button" },
-                  React.createElement("i", { className: "fas fa-sort" })
-                )
-              ),
+              // React.createElement(
+              //   "th",
+              //   null,
+              //   "Cells with >1000 UMIs",
+              //   React.createElement(
+              //     "button",
+              //     { onClick: this.onSortc1000, className: "sort_button" },
+              //     React.createElement("i", { className: "fas fa-sort" })
+              //   )
+              // ),
               React.createElement(
                 "th",
                 null,
@@ -932,16 +934,16 @@ var Table = function (_React$Component) {
                   React.createElement("i", { className: "fas fa-sort" })
                 )
               ),
-              React.createElement(
-                "th",
-                null,
-                "Cells with FDR<=.001",
-                React.createElement(
-                  "button",
-                  { onClick: this.onSortfdr_p001, className: "sort_button" },
-                  React.createElement("i", { className: "fas fa-sort" })
-                )
-              )
+              // React.createElement(
+              //   "th",
+              //   null,
+              //   "Cells with FDR<=.001",
+              //   React.createElement(
+              //     "button",
+              //     { onClick: this.onSortfdr_p001, className: "sort_button" },
+              //     React.createElement("i", { className: "fas fa-sort" })
+              //   )
+              // )
             )
           ),
           React.createElement(
@@ -992,21 +994,21 @@ var Table = function (_React$Component) {
                   null,
                   p.Cells_100_UMIs
                 ),
-                React.createElement(
-                  "td",
-                  null,
-                  p.Cells_1000_UMIs
-                ),
+                // React.createElement(
+                //   "td",
+                //   null,
+                //   p.Cells_1000_UMIs
+                // ),
                 React.createElement(
                   "td",
                   null,
                   p.Cells_FDR_p01
                 ),
-                React.createElement(
-                  "td",
-                  null,
-                  p.Cells_FDR_p001
-                )
+                // React.createElement(
+                //   "td",
+                //   null,
+                //   p.Cells_FDR_p001
+                // )
               );
             })
           )
