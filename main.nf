@@ -76,7 +76,8 @@ if (params.help) {
     log.info '    params.hash_umi_cutoff = 5                 The hash umi cutoff to determine hash vs background in top to second best hash oligo. Default is 5'
     log.info '    params.hash_ratio = false                  The min hash umi ratio for top to second best. Default is false and not filtered'
     log.info '    params.hash_dup = false                    Whether to run hash PCR duplication rate per plate and what indicates a plate. Options are "p5" and "pcr_plate". params.hash_list also needs to be set to true. Default is false.'
-    log.info 'Issues? Contact hpliner@uw.edu'
+    log.info '    params.hash_rt_split = false               Split run by at RT level instead of sample level. Default is false.'
+    log.info 'Issues? Contact scibats@uw.edu'
     exit 1
 }
 
@@ -2821,14 +2822,6 @@ Process: generate_dashboard
 *************/
 
 
-// include a condition to use emptyDrops original cell counts file or rt-level mod cell counts
-
-// cell_counts_in = cell_counts
-// if (params.hash_rt_split) {
-//     cell_counts_in = combined_cell_counts
-// }
-
-
 process generate_dashboard {
     cache 'lenient'
     publishDir path: "${params.output_dir}/", pattern: "exp_dash", mode: 'copy'
@@ -2836,7 +2829,6 @@ process generate_dashboard {
     input:
         file all_sample_stats
         file cell_counts
-        // file cell_counts_in
         file all_collision
         file plots from qc_plots.collect()
         file scrublet_png from scrub_pngs.collect()
@@ -2934,6 +2926,7 @@ process finish_log {
     printf "    params.hash_list:             $params.hash_list\n" >> ${key}_full.log
     printf "    params.hash_umi_cutoff:       $params.hash_umi_cutoff\n" >> ${key}_full.log
     printf "    params.hash_ratio:            $params.hash_ratio\n" >> ${key}_full.log
+    printf "    params.hash_rt_split"         $params.hash_rt_split\n >> ${key}_full.log
     printf "    params.max_wells_per_sample:  $params.max_wells_per_sample\n\n" >> ${key}_full.log
     printf "    params.garnett_file:          $params.garnett_file\n\n" >> ${key}_full.log
     printf "    params.skip_doublet_detect:   $params.skip_doublet_detect\n\n" >> ${key}_full.log
@@ -3019,6 +3012,90 @@ process finish_log {
 
 }
 
+
+/*************
+
+Process: collect_rt_logs
+
+ Inputs:
+    summary_log - collected log file with rt-level read metrics - flattened
+    full_log    - collected log file with full pipeline parameters and metrics - flattend
+
+ Outputs:
+    combined_sample_logs - sample-level read metrics
+    combined_full_logs - sample-level full pipeline log
+
+ Pass through:
+
+ Summary:
+    Collect all rt-level logs into sample-level metrics and logs
+
+ Downstream:
+    zip_up_log_data
+
+ Published:
+
+ Notes:
+    Only runs when samples are split by rt-level
+
+*************/
+
+// Collection all rt-level stats and group by sample
+
+
+// Collection all rt-level logs and group by sample
+sample_logs = summary_log.flatten()
+    .map { metric_logs ->
+        def fname = metric_logs.getName()
+        def sample_name = fname.split(/\.P[0-9]{1,2}\.[A-H][0-9]{1,2}/)[0] 
+        tuple(sample_name, metric_logs)
+    }
+    .groupTuple()
+
+full_logs = full_log.flatten()
+    .map { logs ->
+        def fname = logs.getName()
+        def sample_name = fname.split(/\.P[0-9]{1,2}\.[A-H][0-9]{1,2}/)[0] 
+        tuple(sample_name, logs)
+    }
+    .groupTuple()
+
+
+
+process collect_rt_logs {
+    cache 'lenient' 
+
+    input: 
+        tuple val (sample_name), path(metric_logs) from sample_logs
+        tuple val (sample_name), path(logs) from full_logs
+
+    output: 
+        file ("*_read_metrics.log") into combined_sample_logs
+        file ("*_full.log") into combined_full_logs
+
+    when:
+        params.hash_rt_split != false
+    
+    """
+    # bash watch for errors
+    set -ueo pipefail
+    
+    for file in ${metric_logs}; do
+        echo "\${file}:"
+        cat \${file} 
+        printf "\n"
+    done > "${sample_name}_read_metrics.log"
+
+    for file in ${logs}; do
+        echo "\${file}:"
+        cat \${file} 
+        printf "\n"
+    done > "${sample_name}_full.log"
+
+
+    """
+}
+
 /*************
 
 Process: zip_up_log_data
@@ -3042,16 +3119,29 @@ Process: zip_up_log_data
     log_data.js - Logging info for dashboards
 
  Notes:
+    Includes condition on whether sample-level or rt-level files are inputs
 
 *************/
+
+
+summary_log_in = null 
+full_log_in = null
+
+if (params.hash_rt_split != false) {
+    summary_log_in = combined_sample_logs.collect()
+    full_log_in = combined_full_logs.collect()
+} else {
+    summary_log_in = summary_log.collect()
+    full_log_in = full_log.collect()
+}
 
 process zip_up_log_data {
     cache 'lenient'
     publishDir path: "${params.output_dir}/exp_dash/js/", pattern: "*.js", mode: 'copy'
 
     input:
-        file summary_log from summary_log.collect()
-        file full_log from full_log.collect()
+        file summary_log from summary_log_in
+        file full_log from full_log_in
 
     output:
         file "*.js" into log_js

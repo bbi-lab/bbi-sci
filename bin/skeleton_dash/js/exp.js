@@ -244,7 +244,7 @@ function RegRow(props) {
 function StatsPane(props) {
   var sample_stat = props.sample_stats[props.sample_id];
   // var stats_list = ["Total Reads", "Total UMIs", "Median UMIs", "Median Mitochondrial UMIs", "Duplication Rate", ",Cells with >100 UMIs", "Cells with >1000 UMIs", "Cells with FDR<=.01", "Cells with FDR<=.001"];
-  var stats_list = ["Total Reads", "Total UMIs", "Median UMIs", "Median Mitochondrial UMIs", "Duplication Rate", ",Cells with >100 UMIs", "Cells with FDR<=.01"];
+  var stats_list = ["Total Reads", "Total UMIs", "Median UMIs", "Median Mitochondrial UMIs", "Duplication Rate", "Cells with >100 UMIs", "Cells with FDR<=.01"];
 
 
   var safe_name = "hp" + props.sample_id.replace(/[.]/g, "");
