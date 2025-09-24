@@ -119,8 +119,22 @@ Process: check_sample_sheet
 
 *************/
 
+
+sample_sheet = file("${params.sample_sheet}")
+
+if (params.hash_rt_split) {
+    sample_sheet = file("${params.output_dir}/rt_sample_sheet.csv")
+}
+
+sample_sheet1 = sample_sheet
+println sample_sheet1
+
+
 process check_sample_sheet {
     cache 'lenient'
+
+    input: 
+        file sample_sheet
 
     output:
         file "*.csv" into good_sample_sheet
@@ -140,13 +154,13 @@ process check_sample_sheet {
         \$(python --version)\n\n" >> start.log
     printf "    Process command:
         check_sample_sheet.py
-            --sample_sheet $params.sample_sheet
+            --sample_sheet ${sample_sheet}
             --star_file $params.star_file
             --level $params.level --rt_barcode_file $params.rt_barcode_file
             --max_wells_per_samp $params.max_wells_per_sample\n\n" >> start.log
 
 
-    check_sample_sheet.py --sample_sheet $params.sample_sheet --star_file $params.star_file \
+    check_sample_sheet.py --sample_sheet ${sample_sheet} --star_file $params.star_file \
         --level $params.level --rt_barcode_file $params.rt_barcode_file \
         --max_wells_per_samp $params.max_wells_per_sample
 
@@ -158,7 +172,8 @@ process check_sample_sheet {
 }
 
 // Generate a sample list with fixed naming
-samp_file = file(params.sample_sheet)
+// samp_file = file(params.sample_sheet)
+samp_file = sample_sheet1
 def samp_list = []
 
 for (line in samp_file.readLines()) {
