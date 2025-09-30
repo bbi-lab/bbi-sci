@@ -81,6 +81,8 @@ n_fun <- function(y){return(data.frame(y=max(y), label = paste0(length(y))))}
 # Generate and returns a combined violin plot for umis by plates and p5 
 
 generate_umi_plots <- function(cds) {
+
+
   n_fun <- function(y){return(data.frame(y=max(y), label = paste0(length(y))))}
 
   barcode_list <- list("RT_plate", "Ligation_plate", "P5_barcode")
@@ -271,7 +273,6 @@ calc_pseudobulk <- function(cds, sample_name) {
 generate_genes_by_umis <- function(cds) {
 
   ### By perc mito
-
   genes_by_umi1 <- ggplot(data.frame(colData(cds)), aes(x=n.umi, y=num_genes_expressed, color=perc_mitochondrial_umis)) +
     geom_point(aes(alpha=0.3), size=0.5) +
     theme_bw(base_size = 10) +
@@ -306,7 +307,6 @@ generate_genes_by_umis <- function(cds) {
     guides(alpha = "none", size = "none")
 
   genes_by_umi <- plot_grid(genes_by_umi1, genes_by_umi2, align="hv", ncol=1)
-  ggsave("genes_by_umi.png", genes_by_umi, width=5, height=7, dpi=600, units='in')
 
   return(genes_by_umi)
 
@@ -324,7 +324,6 @@ generate_genes_by_umis <- function(cds) {
 
 generate_hash_plots <- function(cds) {
 
-  print("here in hash")
   df <- data.frame(colData(cds))
 
   # Rank barcodes by hash umis
@@ -398,7 +397,7 @@ gen_plots <- function(sample_name, sample_path) {
 
   # garnett_mods <- names(colData(samp_cds))[grepl("garnett_type", names(colData(samp_cds)))]  
 
-  samp_cds <- tryCatch({
+  # samp_cds <- tryCatch({
 
     samp_cds <- load_monocle_objects(sample_path)
 
@@ -407,16 +406,31 @@ gen_plots <- function(sample_name, sample_path) {
       samp_cds$emptyDrops_FDR_0.01 <- ifelse(
         is.na(colData(samp_cds)$emptyDrops_FDR), "NA", 
         ifelse(colData(samp_cds)$emptyDrops_FDR <= 0.01, "TRUE", "FALSE"))
+    } else {
+      samp_cds$emptyDrops_FDR <- "NA"
     }
 
     samp_cds <- extractBarcode(samp_cds)
     samp_cds <- detect_genes(samp_cds)
     
-    umi_plots <- generate_umi_plots(samp_cds)
-    ggsave(paste0(sample_name, "_umi.png"), umi_plots, width=5, height=8, dpi=600, units="in")
+    tryCatch ({ 
+      umi_plots <- generate_umi_plots(samp_cds)
+      ggsave(paste0(sample_name, "_umi.png"), umi_plots, width=5, height=8, dpi=600, units="in")
+    }, error = function(e) {
+        file_name <- paste0(sample_name, "_umi.png")
+        ggp_obj <- ggplot() + theme_void() + geom_text(aes(x = 1, y = 1, label = "Insufficient cells for UMI plot")) 
+        ggsave(filename=file_name, ggp_obj, device='png')
 
-    genes_umi_plot <- generate_genes_by_umis(samp_cds)
-    ggsave(paste0(sample_name, "_genes_by_umi.png"), genes_umi_plot, width=5, height=7, dpi=600, units='in')
+    })
+
+    tryCatch ({
+      genes_umi_plot <- generate_genes_by_umis(samp_cds)
+      ggsave(paste0(sample_name, "_genes_by_umi.png"), genes_umi_plot, width=5, height=7, dpi=600, units='in')
+    }, error = function(e) {
+        file_name <- paste0(sample_name, "_genes_by_umi.png")
+        ggp_obj <- ggplot() + theme_void() + geom_text(aes(x = 1, y = 1, label = "Insufficient cells for Genes by UMI plot")) 
+        ggsave(filename=file_name, ggp_obj, device='png')
+    })
 
     if(is(emptydrops_data, 'DFrame')) {
       keep_na <- samp_cds[,is.na(colData(samp_cds)$emptyDrops_FDR)]
@@ -424,14 +438,31 @@ gen_plots <- function(sample_name, sample_path) {
       samp_cds <- combine_cds(list(keep_na, keep_cells), sample_col_name="og_cds")
     }
 
-    psb_plots <- calc_pseudobulk(samp_cds, sample_name)
-    ggsave(paste0(sample_name, "_pseudobulk_heatmap.png"), psb_plots[[1]], width=5, height=10, dpi=800, units='in')
-    ggsave(paste0(sample_name, "_pseudobulk_histogram.png"), psb_plots[[2]], width=5, height=10, dpi=800, units='in')
+    tryCatch ({
+      psb_plots <- calc_pseudobulk(samp_cds, sample_name)
+      ggsave(paste0(sample_name, "_pseudobulk_heatmap.png"), psb_plots[[1]], width=5, height=10, dpi=800, units='in')
+      ggsave(paste0(sample_name, "_pseudobulk_histogram.png"), psb_plots[[2]], width=5, height=10, dpi=800, units='in')
+      
+    }, error = function(e) {        file_name <- paste0(sample_name, "_pseudobulk_heatmap.png")
+        ggp_obj <- ggplot() + theme_void() + geom_text(aes(x = 1, y = 1, label = "Insufficient cells for Pseudobulk correlations")) 
+        ggsave(filename=file_name, ggp_obj, device='png')
+    })
+
 
     # Skip hash plots if not a hash run 
     if (args$hash != 'false') {
-      hash_plots <- generate_hash_plots(samp_cds)
-      ggsave(paste0(sample_name, "_hash_plots.png"), hash_plots, width=5, height=7, dpi=600, units='in')
+      tryCatch ({
+        hash_plots <- generate_hash_plots(samp_cds)
+        ggsave(paste0(sample_name, "_hash_plots.png"), hash_plots, width=5, height=7, dpi=600, units='in')
+      
+      }, error = function(e) {
+      
+        file_name <- paste0(sample_name, "_hash_plots.png")
+        ggp_obj <- ggplot() + theme_void() + geom_text(aes(x = 1, y = 1, label = "Insufficient hash umis")) 
+        ggsave(filename=file_name, ggp_obj, device='png')
+      
+      })
+
 
     } else {
       file_name <- paste0(sample_name, "_hash_plots.png")
@@ -440,34 +471,31 @@ gen_plots <- function(sample_name, sample_path) {
 
     }
 
-  }, error = function(e) {
+#   }, error = function(e) {
 
-    # Generate empty plots if error
-    file_name <- paste0(sample_name, "_umi.png")
-    ggp_obj <- ggplot() + theme_void() + geom_text(aes(x = 1, y = 1, label = "Insufficient cells for UMI plot")) 
-    ggsave(filename=file_name, ggp_obj, device='png')
+#     # Generate empty plots if error
 
-    file_name <- paste0(sample_name, "_pseudobulk_heatmap.png")
-    ggp_obj <- ggplot() + theme_void() + geom_text(aes(x = 1, y = 1, label = "Insufficient cells for Pseudobulk correlations")) 
-    ggsave(filename=file_name, ggp_obj, device='png')
+#     file_name <- paste0(sample_name, "_pseudobulk_heatmap.png")
+#     ggp_obj <- ggplot() + theme_void() + geom_text(aes(x = 1, y = 1, label = "Insufficient cells for Pseudobulk correlations")) 
+#     ggsave(filename=file_name, ggp_obj, device='png')
 
-    file_name <- paste0(sample_name, "_pseudobulk_histogram.png")
-    ggp_obj <- ggplot() + theme_void() + geom_text(aes(x = 1, y = 1, label = "Insufficient cells for Pseudobulk correlations")) 
-    ggsave(filename=file_name, ggp_obj, device='png')
+#     file_name <- paste0(sample_name, "_pseudobulk_histogram.png")
+#     ggp_obj <- ggplot() + theme_void() + geom_text(aes(x = 1, y = 1, label = "Insufficient cells for Pseudobulk correlations")) 
+#     ggsave(filename=file_name, ggp_obj, device='png')
 
-    if (args$hash != 'false') { 
-      file_name <- paste0(sample_name, "_hash_plots.png")
-      ggp_obj <- ggplot() + theme_void() + geom_text(aes(x = 1, y = 1, label = "Insufficient hash umis")) 
-      ggsave(filename=file_name, ggp_obj, device='png')
+#     if (args$hash != 'false') { 
+#       file_name <- paste0(sample_name, "_hash_plots.png")
+#       ggp_obj <- ggplot() + theme_void() + geom_text(aes(x = 1, y = 1, label = "Insufficient hash umis")) 
+#       ggsave(filename=file_name, ggp_obj, device='png')
 
-    } else {
-      file_name <- paste0(sample_name, "_hash_plots.png")
-      ggp_obj <- ggplot() + theme_void() + geom_text(aes(x = 1, y = 1, label = "Process hash skipped.")) 
-      ggsave(filename=file_name, ggp_obj, device='png')
-    }
+#     } else {
+#       file_name <- paste0(sample_name, "_hash_plots.png")
+#       ggp_obj <- ggplot() + theme_void() + geom_text(aes(x = 1, y = 1, label = "Process hash skipped.")) 
+#       ggsave(filename=file_name, ggp_obj, device='png')
+#     }
 
 
-  })
+#   })
 
 }
 
@@ -515,8 +543,10 @@ gen_knee <- function(sample_name, cutoff) {
     # Color barcode rank knee plot by empty drops FDR if empty drops was called 
     if(is(emptydrops_data, 'DFrame')) {
 
-      df = cbind(df, emptyDrops_FDR=emptydrops_data$FDR)
-      df$emptyDrops_FDR_0.01 <- ifelse(is.na(emptydrops_data$FDR), "NA", ifelse(df$emptyDrops_FDR <= 0.01, "TRUE", "FALSE"))
+      emptydrops_data$barcode <- rownames(emptydrops_data)  
+      emptydrops_data
+      df$emptyDrops_FDR = emptydrops_data$FDR[match(df$barcode, emptydrops_data$barcode)]
+      df$emptyDrops_FDR_0.01 <- ifelse(is.na(df$emptyDrops_FDR), "NA", ifelse(df$emptyDrops_FDR <= 0.01, "TRUE", "FALSE"))
       df = df %>% mutate(n.umi.rank = min_rank(-n.umi))
 
       plot = ggplot(df %>%

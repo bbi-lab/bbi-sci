@@ -21,10 +21,33 @@ args = parser$parse_args()
 
 sample_name <- args$key
 
-cds <- load_mm_data(mat_path = args$matrix, feature_anno_path = args$gene_data, 
+cds <- NULL
+
+if(file.info(args$cell_data)$size < 1 ) {
+  cell_md <- data.frame(row.names = character())     
+  mat <- Matrix::readMM(args$matrix)
+  genes <- read.delim(args$gene_data, header = FALSE, stringsAsFactors = FALSE)
+  rownames(mat) <- genes[[1]]
+  gene_md <- data.frame(gene_short_name = genes[[2]], row.names = genes[[1]])
+  
+
+  cds <- new_cell_data_set(mat,
+                         cell_metadata = cell_md,
+                         gene_metadata = gene_md)
+
+  
+  suppressMessages(save_monocle_objects(cds, directory_path=paste0(sample_name, '_cds.mobs'), archive_control=list(archive_type='none', archive_compression='none')))
+  write.csv("", file=paste0(sample_name, "_cell_qc.csv"), quote=FALSE, row.names = FALSE)
+  writeMM(as(as.matrix(exprs(cds)), "dgCMatrix"), paste0(sample_name, "_for_scrub.mtx"))
+  quit(save="no", status=0)
+
+} else {
+
+  cds <- load_mm_data(mat_path = args$matrix, feature_anno_path = args$gene_data, 
                     cell_anno_path = args$cell_data, umi_cutoff=as.numeric(args$umi_cutoff),
                     feature_metadata_column_names=c('gene_short_name'), sep="",
                     matrix_control=list(matrix_class='BPCells'))
+}
 
 gene_bed <- read.table(args$gene_bed)
 row.names(gene_bed) <- gene_bed$V4
@@ -43,7 +66,7 @@ pData(cds)$perc_mitochondrial_umis <- Matrix::colSums(exprs(mt_cds))/Matrix::col
 #pData(cds)$perc_rRNA_umis <- Matrix::colSums(exprs(rt_cds))/Matrix::colSums(exprs(cds)) * 100
 
 
-temp_cds <- detect_genes(cds) # not saving cds with gene info to save space
+temp_cds <- detect_genes(cds) # not saving cds with gene info to save space\
 qc <- as.data.frame(pData(temp_cds))[,c("cell", "n.umi", "perc_mitochondrial_umis", "num_genes_expressed")]
 write.csv(qc, file=paste0(sample_name, "_cell_qc.csv"), quote=FALSE, row.names = FALSE)
 
