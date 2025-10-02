@@ -496,6 +496,7 @@ gen_plots <- function(sample_name, sample_path) {
 
 
 #   })
+  return (samp_cds)
 
 }
 
