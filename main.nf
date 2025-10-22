@@ -37,6 +37,8 @@ params.hash_umi_cutoff = 5
 params.hash_ratio = false
 params.hash_dup = false // Default is false. Other options are "p5" or "pcr_plate". params.hash_list must also be true.
 params.hash_rt_split = false // Default is false. If true, will process on hash samples demuxed by RT barcodes. 
+params.barnyard = "Fishbowl_seahub" 
+params.pipeline_name = "bbi-sci" // Default; DO NOT CHANGE; used for generating qc plots
 
 //print usage
 if (params.help) {
@@ -75,6 +77,8 @@ if (params.help) {
     log.info '    params.hash_umi_cutoff = 5                 The hash umi cutoff to determine hash vs background in top to second best hash oligo. Default is 5'
     log.info '    params.hash_ratio = false                  The min hash umi ratio for top to second best. Default is false and not filtered'
     log.info '    params.hash_dup = false                    Whether to run hash PCR duplication rate per plate and what indicates a plate. Options are "p5" and "pcr_plate". params.hash_list also needs to be set to true. Default is false.'
+    log.info '    params.barnyard = "Barnyard"               Reference genome to use for Barnyard plots. Default is mouse/human Barnyard.'
+    log.info '    params.pipeline_name = "bbi-sci"           Name of pipeline. Used for extracting barcodes in generate qc plots.'
     log.info 'Leave issue reports at "https://github.com/bbi-lab/bbi-sci/issues".'
     exit 1
 }
@@ -581,6 +585,7 @@ process align_reads {
     # bash watch for errors
     set -ueo pipefail
 
+    echo "test"
     cat ${logfile} > align.log
     printf "** Start process 'align_reads' for $trimmed_fastq at: \$(date)\n\n" > piece.log
     printf "    Process versions:
@@ -1552,6 +1557,7 @@ process make_cds {
     # bash watch for errors
     set -ueo pipefail
 
+    
     cat ${logfile} > make_cds.log
     printf "** Start process 'make_cds' at: \$(date)\n\n" >> make_cds.log
     printf "    Process versions:
@@ -1768,24 +1774,20 @@ process reformat_qc {
         library(BPCells)
     })
 
+    print("test")
+
     dir.create("temp_fold")
     cell_qc <- read.csv("$cell_qc")
     dup_stats <- read.table(paste0("$key", ".duplication_rate_stats.txt"))
 
-    if (file.size("$cds_object/bpcells_matrix_dir/col_names") == 0) {
-        file.copy("$cds_object", "temp_fold/", recursive=TRUE)
-        file.copy("$cell_qc", "temp_fold/")
+    cds <- NULL
 
-        df <- data.frame(sample="$key", n.reads = dup_stats\$V2, n.umi = dup_stats\$V3,
-                    median_umis = "NA",
-                    median_perc_mito_umis = "NA",
-                    duplication_rate = dup_stats\$V4)
-
-        write.csv(df, file=paste0("$key", "_sample_stats.csv"), quote=FALSE, row.names=FALSE)
-        quit(save="no", status=0)
-    } 
-
-    cds <- load_monocle_objects("$cds_object")
+    if (file.size("$cds_object/bpcells_matrix_dir/col_names") > 0) {
+        cds <- load_monocle_objects("$cds_object")
+    } else {
+        cds <- readRDS("$cds_object/cds_object.rds")    
+    }
+    
     cell_qc <- read.csv("$cell_qc")
     dup_stats <- read.table(paste0("$key", ".duplication_rate_stats.txt"))
 
@@ -1802,7 +1804,7 @@ process reformat_qc {
                 median_umis = median(pData(cds)\$n.umi),
                 median_perc_mito_umis = round(median(pData(cds)\$perc_mitochondrial_umis), 1),
                 duplication_rate = dup_stats\$V4)
-    } else if (nrow(pData(cds)) < 1 || $params.hash_list != 'false') {
+    } else if (nrow(pData(cds)) < 1 || "$params.hash_list" != 'false') {
         df <- data.frame(sample="$key", n.reads = dup_stats\$V2, n.umi = dup_stats\$V3,
                     median_umis = "NA",
                     median_perc_mito_umis = "NA",
@@ -1885,37 +1887,38 @@ process combine_cds {
 
     new_cds_list = strsplit("$cds_list", " ")[[1]]
 
-    if (length(new_cds_list) < 2) {
+    tryCatch({
+
+        temp_cds_list <- list()
+
+        for(cds in new_cds_list) {
+            temp_cds <- load_monocle_objects(cds)
+            temp_cds_list[[cds]] <- temp_cds
+        }
+
+        cds <- combine_cds(temp_cds_list) 
+        cds\$sample <- "$sample_name"
+        rownames(colData(cds)) <- cds\$cell
+
+        median_stats <- data.frame(sample="$sample_name",
+                                median_umis = median(pData(cds)\$n.umi),
+                                median_perc_mito_umis = round(median(pData(cds)\$perc_mitochondrial_umis), 1))
+        
+        write.csv(median_stats, file=paste0("$sample_name", "_median_stats.csv"), quote=FALSE, row.names=FALSE)
+
+
+    # saveRDS(cds, paste0("$sample_name", "_combined_cds.RDS"))
+        save_monocle_objects(cds,directory_path=paste0("$sample_name", '_combined_cds.mobs'), archive_control=list(archive_type='none', archive_compression='none'))
+    
+    }, error = function(e) {
         dir.create(paste0("$sample_name", "_combined_cds.mobs"))
         file.copy(from = list.files(new_cds_list[1], full.names = TRUE),
-          to = paste0("$sample_name", "_combined_cds.mobs"),
-          recursive = TRUE)
+                to = paste0("$sample_name", "_combined_cds.mobs"),
+                recursive = TRUE)
 
         write.csv(data.frame(), paste0("$sample_name", "_median_stats.csv"), quote=FALSE, row.names = FALSE)
-        quit(save="no", status=0)
-    }
-
-    temp_cds_list <- list()
-
-    for(cds in new_cds_list) {
-        temp_cds <- load_monocle_objects(cds) 
-        temp_cds_list[[cds]] <- temp_cds
-    }
-
-    cds <- combine_cds(temp_cds_list) 
-    cds\$sample <- "$sample_name"
-    rownames(colData(cds)) <- cds\$cell
-
-    median_stats <- data.frame(sample="$sample_name",
-                               median_umis = median(pData(cds)\$n.umi),
-                               median_perc_mito_umis = round(median(pData(cds)\$perc_mitochondrial_umis), 1))
     
-    write.csv(median_stats, file=paste0("$sample_name", "_median_stats.csv"), quote=FALSE, row.names=FALSE)
-
-
-   # saveRDS(cds, paste0("$sample_name", "_combined_cds.RDS"))
-    save_monocle_objects(cds,directory_path=paste0("$sample_name", '_combined_cds.mobs'), archive_control=list(archive_type='none', archive_compression='none'))
-    
+    })
 
     """
 }
@@ -1950,8 +1953,8 @@ Process: collect_stats
 sample_stats_in = sample_stats.flatten()
     .map { stats ->
         def fname = stats.getName()
-        // def sample_name = sample.split(/\.P[0-9]{1,2}\.[A-H][0-9]{1,2}/)[0] 
-        def sample_name = fname.split(/\.P[0-9]{1,2}\.[A-H][0-9]{1,2}/)[0] 
+        def base = fname.replaceFirst(/_sample_stats\.csv$/, '')
+        def sample_name = base.split(/\.P[0-9]{1,2}\.[A-H][0-9]{1,2}/)[0] 
         tuple(sample_name, stats)
     }
     .groupTuple()
@@ -1966,7 +1969,7 @@ process collect_stats {
         tuple val (sample_name), path(stats), path(median) from combined_stats
 
     output: 
-        file ("*_sample_stats.csv") into combined_sample_stats
+        file ("temp_fold/*_sample_stats.csv") into combined_sample_stats
 
     when:
         params.hash_rt_split != false
@@ -1975,16 +1978,18 @@ process collect_stats {
     # bash watch for errors
     set -ueo pipefail
     
-    echo "sample,n.reads,n.umi, duplication_rate" > "${sample_name}_temp.csv"
+    mkdir temp_fold
+
+    echo "sample,n.reads,n.umi, duplication_rate" > "temp_fold/${sample_name}_temp.csv"
     for file in ${stats}; do
          awk -F"," -v sample="${sample_name}" 'BEGIN {OFS=","}  NR>1 {sum_reads+=\$2; sum_umis +=\$3} END {print sample, sum_reads, sum_umis, \$6}' "\$file" 
-    done >> "${sample_name}_temp.csv"
+    done >> "temp_fold/${sample_name}_temp.csv"
 
-    echo "sample,n.reads,n.umi, duplication_rate, median_umis,median_perc_mito_umis" > "${sample_name}_sample_stats.csv"
-    temp_vals=\$(awk -F"," -v sample="${sample_name}" 'BEGIN {OFS=","}  NR>1 {sum_reads+=\$2; sum_umis +=\$3} END {print sample, sum_reads, sum_umis, \$4}' "${sample_name}_temp.csv") 
+    echo "sample,n.reads,n.umi, duplication_rate, median_umis,median_perc_mito_umis" > "temp_fold/${sample_name}_sample_stats.csv"
+    temp_vals=\$(awk -F"," -v sample="${sample_name}" 'BEGIN {OFS=","}  NR>1 {sum_reads+=\$2; sum_umis +=\$3} END {print sample, sum_reads, sum_umis, \$4}' "temp_fold/${sample_name}_temp.csv") 
     median_vals=\$(awk -F"," 'BEGIN {OFS=","}  NR>1  {print \$2, \$3}' "${median}")
     
-    echo "\$temp_vals,\$median_vals" >> "${sample_name}_sample_stats.csv"
+    echo "\$temp_vals,\$median_vals" >> "temp_fold/${sample_name}_sample_stats.csv"
     
     """
 }
@@ -2180,26 +2185,27 @@ Process: combine_eds
 combine_eds_input = for_combine_eds
     .map { file ->
         def fname = file.getName() // e.g. "GENE3.P1.A02_cds.RDS"
-        def base = fname.replaceFirst(/_cds\.mobs$/, '') // "GENE3.P1.A02"
+        def base = fname.replaceFirst(/_emptyDrops\.RDS$/, '') // "GENE3.P1.A02"
         def sample_name = base.split(/\.P[0-9]\.[A-H][0-9]{2}/)[0] // "GENE3"
         tuple(sample_name, file)
     }
     .groupTuple()
 
 
-save_combined_eds = {params.output_dir + "/" + it - ~/_emptyDrops.RDS/ + "/" + it}
-    
+
+save_combined_eds = {params.output_dir + "/" + it - ~/_emptyDrops.RDS/ - ~/temp_fold/  + "/emptyDrops.RDS"}
+
 
 process combine_eds {
     cache 'lenient'
-    publishDir path: "${params.output_dir}/", saveAs: save_combined_eds, pattern: "*_emptyDrops.RDS", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_combined_eds, pattern: "temp_fold/*_emptyDrops.RDS", mode: 'copy'
 
     input:
         tuple val(sample_name), path(eds_list) from combine_eds_input
 
 
     output:
-        set val(sample_name), file("*.RDS") into combined_eds_out 
+        set val(sample_name), file("temp_fold/*.RDS") into combined_eds_out 
 
     when: 
         params.hash_rt_split != false
@@ -2209,11 +2215,13 @@ process combine_eds {
      """
     #!/usr/bin/env Rscript
 
+    dir.create("temp_fold")
+
     new_eds_list = strsplit("$eds_list", " ")[[1]]
     new_eds_list <- lapply(new_eds_list, readRDS)
     combined_df <- do.call(rbind, new_eds_list)
 
-    saveRDS(combined_df, "${sample_name}_emptyDrops.RDS")
+    saveRDS(combined_df, "temp_fold/${sample_name}_emptyDrops.RDS")
 
     """
 }
@@ -2405,6 +2413,8 @@ process assign_hash_rt_split {
     # bash watch for errors
     set -ueo pipefail
 
+    echo "test"
+
     assign_hash.R \
         $key \
         $hash_mtx \
@@ -2500,9 +2510,14 @@ process generate_qc_metrics {
     # bash watch for errors
     set -ueo pipefail
 
-    echo "test"
     generate_qc.R\
-        $cds_object $umis_per_cell $key $emptydrops $params.hash_list \
+        $cds_object \
+        $umis_per_cell \
+        $key \
+        $emptydrops \
+        $params.hash_list \
+        $params.barnyard \
+        $params.pipeline_name \
         --specify_cutoff $params.umi_cutoff
 
     """
@@ -2779,19 +2794,19 @@ Process: publish_cds_and_cell_qc
 
 *************/
 
-save_cds = {params.output_dir + "/" + it - ~/_cds.RDS/ + "/" + it}
+save_cds = {params.output_dir + "/" + it - ~/_cds.mobs/ + "/" + it}
 save_cell_qc = {params.output_dir + "/" + it - ~/_cell_qc.csv/ + "/" + it}
 
 process publish_cds_and_cell_qc {
     cache 'lenient'
-    publishDir path: "${params.output_dir}/", saveAs: save_cds, pattern: "*cds.RDS", mode: 'copy'
+    publishDir path: "${params.output_dir}/", saveAs: save_cds, pattern: "*cds.mobs", mode: 'copy'
     publishDir path: "${params.output_dir}/", saveAs: save_cell_qc, pattern: "*cell_qc.csv", mode: 'copy'
 
     input:
         set key,file(cds_dir) from temp_dir_copy02
 
     output:
-        file("*cds.RDS") into pub_cds
+        file("*cds.mobs") into pub_cds
         file("*cell_qc.csv") into pub_cell_qc
     
     when:
@@ -2801,7 +2816,7 @@ process publish_cds_and_cell_qc {
     # bash watch for errors
     set -ueo pipefail
  
-    cp $cds_dir/*.RDS . 
+    cp -r $cds_dir/*.mobs . 
     cp $cds_dir/*.csv . 
 
     """
@@ -2998,6 +3013,8 @@ process finish_log {
     printf "    params.garnett_file:          $params.garnett_file\n\n" >> ${key}_full.log
     printf "    params.skip_doublet_detect:   $params.skip_doublet_detect\n\n" >> ${key}_full.log
     printf "    params.hash_dup:              $params.hash_dup\n\n" >> ${key}_full.log
+    printf "    params.barnyard:              $params.barnyard\n\n" >> ${key}_full.log
+    printf "    params.pipeline_name:  =      $params.pipeline_name\n\n" >> ${key}_full.log
 
     tail -n +2 ${logfile} >> ${key}_full.log
     printf "\n** End processes generate qc metrics and dashboard at: \$(date)\n\n" >> ${key}_full.log

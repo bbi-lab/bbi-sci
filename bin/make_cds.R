@@ -21,33 +21,33 @@ args = parser$parse_args()
 
 sample_name <- args$key
 
-cds <- NULL
+# cds <- NULL
 
-if(file.info(args$cell_data)$size < 1 ) {
-  cell_md <- data.frame(row.names = character())     
-  mat <- Matrix::readMM(args$matrix)
-  genes <- read.delim(args$gene_data, header = FALSE, stringsAsFactors = FALSE)
-  rownames(mat) <- genes[[1]]
-  gene_md <- data.frame(gene_short_name = genes[[2]], row.names = genes[[1]])
+# if(file.info(args$cell_data)$size < 1 ) {
+#   cell_md <- data.frame(row.names = character())     
+#   mat <- Matrix::readMM(args$matrix)
+#   genes <- read.delim(args$gene_data, header = FALSE, stringsAsFactors = FALSE)
+#   rownames(mat) <- genes[[1]]
+#   gene_md <- data.frame(gene_short_name = genes[[2]], row.names = genes[[1]])
   
 
-  cds <- new_cell_data_set(mat,
-                         cell_metadata = cell_md,
-                         gene_metadata = gene_md)
+#   cds <- new_cell_data_set(mat,
+#                          cell_metadata = cell_md,
+#                          gene_metadata = gene_md)
 
   
-  suppressMessages(save_monocle_objects(cds, directory_path=paste0(sample_name, '_cds.mobs'), archive_control=list(archive_type='none', archive_compression='none')))
-  write.csv("", file=paste0(sample_name, "_cell_qc.csv"), quote=FALSE, row.names = FALSE)
-  writeMM(as(as.matrix(exprs(cds)), "dgCMatrix"), paste0(sample_name, "_for_scrub.mtx"))
-  quit(save="no", status=0)
+#   suppressMessages(save_monocle_objects(cds, directory_path=paste0(sample_name, '_cds.mobs'), archive_control=list(archive_type='none', archive_compression='none')))
+#   write.csv("", file=paste0(sample_name, "_cell_qc.csv"), quote=FALSE, row.names = FALSE)
+#   writeMM(as(as.matrix(exprs(cds)), "dgCMatrix"), paste0(sample_name, "_for_scrub.mtx"))
+#   quit(save="no", status=0)
 
-} else {
+# } else {
 
-  cds <- load_mm_data(mat_path = args$matrix, feature_anno_path = args$gene_data, 
+cds <- load_mm_data(mat_path = args$matrix, feature_anno_path = args$gene_data, 
                     cell_anno_path = args$cell_data, umi_cutoff=as.numeric(args$umi_cutoff),
                     feature_metadata_column_names=c('gene_short_name'), sep="",
                     matrix_control=list(matrix_class='BPCells'))
-}
+# }
 
 gene_bed <- read.table(args$gene_bed)
 row.names(gene_bed) <- gene_bed$V4
@@ -108,6 +108,7 @@ colnames(read_counts) <- c("cell", "total_reads")
 
 col_data_merged = as.data.frame(left_join(x=as.data.frame(colData(cds)), y=read_counts, by = "cell", keep=FALSE))
 colData(cds) <- as(col_data_merged, "DataFrame")
+colnames(cds) <- cds$cell
 
 
 save_monocle_objects(cds, directory_path=paste0(sample_name, '_cds.mobs'), archive_control=list(archive_type='none', archive_compression='none'))

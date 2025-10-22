@@ -93,12 +93,7 @@ assign_hash_labels <-
                                second_best_hash_umi = second_best_hash_umi)
   }
 
-cds <- NULL
-if (file.size(paste0(args$cds,"/bpcells_matrix_dir/col_names")) != 0) {
-  cds <- load_monocle_objects(args$cds)
-} else {
-  cds <- readRDS(paste0(args$cds,"/cds_object.rds"))
-}
+cds <- load_monocle_objects(args$cds)
 
 # Extract meta info from cell name 
 df <- as.data.frame(colData(cds))
@@ -113,7 +108,7 @@ for (m in meta_types) {
 # Extract RT plate number
 cds$RT_plate <- sapply(strsplit(as.character(meta$RT_barcode), "-"), `[`, 1)
 
-if ((file.info(args$cell_list)$size==0)) {
+if ((file.info(args$cell_list)$size < 1)) {
   # saveRDS(cds,file=paste0(args$key, "_cds.RDS"))
   save_monocle_objects(cds,directory_path=paste0(args$key, "_cds.mobs"), archive_control=list(archive_type='none', archive_compression='none'))
   file.create(paste0(args$key, "_hash_table.csv"))
