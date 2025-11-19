@@ -1,0 +1,366 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FAQ &mdash; Nextflow 20.10.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+
+  
+    <link rel="shortcut icon" href="_static/favicon.ico"/>
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+      <script src="_static/documentation_options.js?v=a23069cb"></script>
+      <script src="_static/doctools.js?v=888ff710"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Nextflow
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="getstarted.html">Get started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="basic.html">Basic concepts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="script.html">Nextflow scripting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="process.html">Processes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="channel.html">Channels</a></li>
+<li class="toctree-l1"><a class="reference internal" href="operator.html">Operators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="executor.html">Executors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="config.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dsl2.html">DSL 2</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cli.html">Command line interface (CLI)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="awscloud.html">Amazon Cloud</a></li>
+<li class="toctree-l1"><a class="reference internal" href="amazons3.html">Amazon S3 storage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="google.html">Google Cloud</a></li>
+<li class="toctree-l1"><a class="reference internal" href="conda.html">Conda environments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="docker.html">Docker containers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="shifter.html">Shifter Containers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="singularity.html">Singularity containers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="podman.html">Podman containers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ignite.html">Apache Ignite</a></li>
+<li class="toctree-l1"><a class="reference internal" href="kubernetes.html">Kubernetes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tracing.html">Tracing &amp; visualisation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sharing.html">Pipeline sharing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="metadata.html">Workflow introspection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mail.html">Mail &amp; Notifications</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Nextflow</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">FAQ</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="faq">
+<span id="faq-page"></span><h1>FAQ<a class="headerlink" href="#faq" title="Link to this heading">¶</a></h1>
+<section id="how-do-i-process-multiple-input-files-in-parallel">
+<h2>How do I process multiple input files in parallel?<a class="headerlink" href="#how-do-i-process-multiple-input-files-in-parallel" title="Link to this heading">¶</a></h2>
+<p>Q: <em>I have a collection of input files (e.g. carrots.fa, onions.fa, broccoli.fa). How can I specify that a process is performed on each input file in a parallel manner?</em></p>
+<p>A: The idea here is to create a <code class="docutils literal notranslate"><span class="pre">channel</span></code> that will trigger a process
+execution for each of your files. First define a parameter that specifies where
+the input files are:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">params</span><span class="o">.</span><span class="n">input</span> <span class="o">=</span> <span class="s2">&quot;data/*.fa&quot;</span>
+</pre></div>
+</div>
+<p>Each of the files in the data directory can be made into a channel with:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">vegetable_datasets</span> <span class="o">=</span> <span class="n">Channel</span><span class="o">.</span><span class="n">fromPath</span><span class="p">(</span><span class="n">params</span><span class="o">.</span><span class="n">input</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>From here, each time the variable <code class="docutils literal notranslate"><span class="pre">vegetable_datasets</span></code> is called as an
+input to a process, the process will be performed on each of the files
+in the vegetable datasets. For example, each input file may contain a
+collection of unaligned sequences. We can specify a process to align
+them as follows:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">process</span> <span class="n">clustalw2_align</span> <span class="p">{</span>
+    <span class="nb">input</span><span class="p">:</span>
+    <span class="n">file</span> <span class="n">vegetable_fasta</span> <span class="kn">from</span> <span class="nn">vegetable_datasets</span>
+
+    <span class="n">output</span><span class="p">:</span>
+    <span class="n">file</span> <span class="s2">&quot;$</span><span class="si">{vegetable_fasta.baseName}</span><span class="s2">.aln&quot;</span> <span class="n">into</span> <span class="n">vegetable_alns</span>
+
+    <span class="n">script</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    clustalw2 -INFILE=${vegetable_fasta}</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>This would result in the alignment of the three vegetable fasta files
+into <code class="docutils literal notranslate"><span class="pre">carrots.aln</span></code>, <code class="docutils literal notranslate"><span class="pre">onions.aln</span></code> and <code class="docutils literal notranslate"><span class="pre">broccoli.aln</span></code>.</p>
+<p>These aligned files are now in the channel <code class="docutils literal notranslate"><span class="pre">vegetable_alns</span></code> and can be
+used as input for a further process.</p>
+</section>
+<section id="how-do-i-get-a-unique-id-based-on-the-file-name">
+<h2>How do I get a unique ID based on the file name?<a class="headerlink" href="#how-do-i-get-a-unique-id-based-on-the-file-name" title="Link to this heading">¶</a></h2>
+<p><em>Q: How do I get a unique identifier based on a dataset file names (e.g. broccoli from broccoli.fa) and have the results going to a specific folder (e.g. results/broccoli/)?</em></p>
+<p>A: First we can specify a results directory as shown below:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>results_path = $PWD/results
+</pre></div>
+</div>
+<p>The best way to manage this is to have the channel emit a tuple
+containing both the file base name (<code class="docutils literal notranslate"><span class="pre">broccoli</span></code>) and the full file path
+(<code class="docutils literal notranslate"><span class="pre">data/broccoli.fa</span></code>):</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">datasets</span> <span class="o">=</span> <span class="n">Channel</span>
+                <span class="o">.</span><span class="n">fromPath</span><span class="p">(</span><span class="n">params</span><span class="o">.</span><span class="n">input</span><span class="p">)</span>
+                <span class="o">.</span><span class="n">map</span> <span class="p">{</span> <span class="n">file</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">file</span><span class="o">.</span><span class="n">baseName</span><span class="p">,</span> <span class="n">file</span><span class="p">)</span> <span class="p">}</span>
+</pre></div>
+</div>
+<p>And in the process we can then reference these variables (<code class="docutils literal notranslate"><span class="pre">datasetID</span></code>
+and <code class="docutils literal notranslate"><span class="pre">datasetFile</span></code>):</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">process</span> <span class="n">clustalw2_align</span> <span class="p">{</span>
+    <span class="n">publishDir</span> <span class="s2">&quot;$results_path/$datasetID&quot;</span>
+
+    <span class="nb">input</span><span class="p">:</span>
+    <span class="nb">set</span> <span class="n">datasetID</span><span class="p">,</span> <span class="n">file</span><span class="p">(</span><span class="n">datasetFile</span><span class="p">)</span> <span class="kn">from</span> <span class="nn">datasets</span>
+
+    <span class="n">output</span><span class="p">:</span>
+    <span class="nb">set</span> <span class="n">datasetID</span><span class="p">,</span> <span class="n">file</span><span class="p">(</span><span class="s2">&quot;$</span><span class="si">{datasetID}</span><span class="s2">.aln&quot;</span><span class="p">)</span> <span class="n">into</span> <span class="n">aligned_files</span>
+
+    <span class="n">script</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    clustalw2 -INFILE=${datasetFile} -OUTFILE=${datasetID}.aln</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>In our example above would now have the folder <code class="docutils literal notranslate"><span class="pre">broccoli</span></code> in the results directory which would
+contain the file <code class="docutils literal notranslate"><span class="pre">broccoli.aln</span></code>.</p>
+<p>If the input file has multiple extensions (e.g. <code class="docutils literal notranslate"><span class="pre">brocolli.tar.gz</span></code>), you will want to use
+<code class="docutils literal notranslate"><span class="pre">file.simpleName</span></code> instead, to strip all of them (available since Nextflow 0.25+).</p>
+</section>
+<section id="how-do-i-use-the-same-channel-multiple-times">
+<h2>How do I use the same channel multiple times?<a class="headerlink" href="#how-do-i-use-the-same-channel-multiple-times" title="Link to this heading">¶</a></h2>
+<p><em>Q: Can a channel be used in two input statements? For example, I want carrots.fa to be aligned by both ClustalW and T-Coffee.</em></p>
+<p>A: A channel can be consumed only by one process or operator (except if channel only ever contains one item). You must
+duplicate a channel before calling it as an input in different processes.
+First we create the channel emitting the input files:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">vegetable_datasets</span> <span class="o">=</span> <span class="n">Channel</span><span class="o">.</span><span class="n">fromPath</span><span class="p">(</span><span class="n">params</span><span class="o">.</span><span class="n">input</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Next we can split it into two channels by using the <a class="reference internal" href="operator.html#operator-into"><span class="std std-ref">into</span></a> operator:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">vegetable_datasets</span><span class="o">.</span><span class="n">into</span> <span class="p">{</span> <span class="n">datasets_clustalw</span><span class="p">;</span> <span class="n">datasets_tcoffee</span> <span class="p">}</span>
+</pre></div>
+</div>
+<p>Then we can define a process for aligning the datasets with <em>ClustalW</em>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">process</span> <span class="n">clustalw2_align</span> <span class="p">{</span>
+    <span class="nb">input</span><span class="p">:</span>
+    <span class="n">file</span> <span class="n">vegetable_fasta</span> <span class="kn">from</span> <span class="nn">datasets_clustalw</span>
+
+    <span class="n">output</span><span class="p">:</span>
+    <span class="n">file</span> <span class="s2">&quot;$</span><span class="si">{vegetable_fasta.baseName}</span><span class="s2">.aln&quot;</span> <span class="n">into</span> <span class="n">clustalw_alns</span>
+
+    <span class="n">script</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    clustalw2 -INFILE=${vegetable_fasta}</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>And a process for aligning the datasets with <em>T-Coffee</em>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">process</span> <span class="n">tcoffee_align</span> <span class="p">{</span>
+    <span class="nb">input</span><span class="p">:</span>
+    <span class="n">file</span> <span class="n">vegetable_fasta</span> <span class="kn">from</span> <span class="nn">datasets_tcoffee</span>
+
+    <span class="n">output</span><span class="p">:</span>
+    <span class="n">file</span> <span class="s2">&quot;$</span><span class="si">{vegetable_fasta.baseName}</span><span class="s2">.aln&quot;</span> <span class="n">into</span> <span class="n">tcoffee_alns</span>
+
+    <span class="n">script</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    t_coffee ${vegetable_fasta}</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The upside of splitting the channels is that given our three unaligned
+fasta files (<code class="docutils literal notranslate"><span class="pre">broccoli.fa</span></code>, <code class="docutils literal notranslate"><span class="pre">onion.fa</span></code> and <code class="docutils literal notranslate"><span class="pre">carrots.fa</span></code>) six
+alignment processes (three x ClustalW) + (three x T-Coffee) will be
+executed as parallel processes.</p>
+</section>
+<section id="how-do-i-invoke-custom-scripts-and-tools">
+<h2>How do I invoke custom scripts and tools?<a class="headerlink" href="#how-do-i-invoke-custom-scripts-and-tools" title="Link to this heading">¶</a></h2>
+<p><em>Q: I have executables in my code, how should I call them in Nextflow?</em></p>
+<p>A: Nextflow will automatically add the directory <code class="docutils literal notranslate"><span class="pre">bin</span></code> into the <code class="docutils literal notranslate"><span class="pre">PATH</span></code>
+environmental variable. So therefore any executable in the <code class="docutils literal notranslate"><span class="pre">bin</span></code>
+folder of a Nextflow pipeline can be called without the need to
+reference the full path.</p>
+<p>For example, we may wish to reformat our <em>ClustalW</em> alignments from
+Question 3 into <em>PHYLIP</em> format. We will use the handy tool
+<code class="docutils literal notranslate"><span class="pre">esl-reformat</span></code> for this task.</p>
+<p>First we place copy (or create a symlink to) the <code class="docutils literal notranslate"><span class="pre">esl-reformat</span></code>
+executable to the project’s bin folder. From above we see the <em>ClustalW</em>
+alignments are in the channel <code class="docutils literal notranslate"><span class="pre">clustalw_alns</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">process</span> <span class="n">phylip_reformat</span> <span class="p">{</span>
+    <span class="nb">input</span><span class="p">:</span>
+    <span class="n">file</span> <span class="n">clustalw_alignment</span> <span class="kn">from</span> <span class="nn">clustalw_alns</span>
+
+    <span class="n">output</span><span class="p">:</span>
+    <span class="n">file</span> <span class="s2">&quot;$</span><span class="si">{clustalw_alignment.baseName}</span><span class="s2">.phy&quot;</span> <span class="n">to</span> <span class="n">clustalw_phylips</span>
+
+    <span class="n">script</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    esl-reformat phylip ${clustalw_alignment} ${clustalw_alignment.baseName}.phy</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<span class="p">}</span>
+
+
+<span class="n">process</span> <span class="n">generate_bootstrap_replicates</span> <span class="p">{</span>
+    <span class="nb">input</span><span class="p">:</span>
+    <span class="n">file</span> <span class="n">clustalw_phylip</span> <span class="kn">from</span> <span class="nn">clustalw_phylips</span>
+    <span class="n">output</span><span class="p">:</span>
+    <span class="n">file</span> <span class="s2">&quot;$</span><span class="si">{clustalw_alignment.baseName}</span><span class="s2">.phy&quot;</span> <span class="n">to</span> <span class="n">clustalw_phylips</span>
+
+    <span class="n">script</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    esl-reformat phylip ${clustalw_alignment} ${clustalw_alignment.baseName}.phy</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="how-do-i-iterate-over-a-process-n-times">
+<h2>How do I iterate over a process n times?<a class="headerlink" href="#how-do-i-iterate-over-a-process-n-times" title="Link to this heading">¶</a></h2>
+<p>To perform a process <em>n</em> times, we can specify the input to be
+<code class="docutils literal notranslate"><span class="pre">each</span> <span class="pre">x</span> <span class="pre">from</span> <span class="pre">y..z</span></code>. For example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">bootstrapReplicates</span><span class="o">=</span><span class="mi">100</span>
+
+<span class="n">process</span> <span class="n">bootstrapReplicateTrees</span> <span class="p">{</span>
+    <span class="n">publishDir</span> <span class="s2">&quot;$results_path/$datasetID/bootstrapsReplicateTrees&quot;</span>
+
+    <span class="nb">input</span><span class="p">:</span>
+    <span class="n">each</span> <span class="n">x</span> <span class="kn">from</span> <span class="mf">1.</span><span class="o">.</span><span class="n">bootstrapReplicates</span>
+    <span class="nb">set</span> <span class="n">val</span><span class="p">(</span><span class="n">datasetID</span><span class="p">),</span> <span class="n">file</span><span class="p">(</span><span class="n">ClustalwPhylips</span><span class="p">)</span>
+
+    <span class="n">output</span><span class="p">:</span>
+    <span class="n">file</span> <span class="s2">&quot;bootstrapTree_$</span><span class="si">{x}</span><span class="s2">.nwk&quot;</span> <span class="n">into</span> <span class="n">bootstrapReplicateTrees</span>
+
+    <span class="n">script</span><span class="p">:</span>
+    <span class="o">//</span> <span class="n">Generate</span> <span class="n">Bootstrap</span> <span class="n">Trees</span>
+
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    raxmlHPC -m PROTGAMMAJTT -n tmpPhylip${x} -s tmpPhylip${x}</span>
+<span class="sd">    mv &quot;RAxML_bestTree.tmpPhylip${x}&quot; bootstrapTree_${x}.nwk</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="how-do-i-iterate-over-nth-files-from-within-a-process">
+<h2>How do I iterate over nth files from within a process?<a class="headerlink" href="#how-do-i-iterate-over-nth-files-from-within-a-process" title="Link to this heading">¶</a></h2>
+<p><em>Q: For example, I have 100 files emitted by a channel. I wish to perform one process where I iterate over each file inside the process.</em></p>
+<p>A: The idea here to transform a channel emitting multiple items into a channel
+that will collect all files into a list object and produce that list as a single emission. We do this using the <code class="docutils literal notranslate"><span class="pre">collect()</span></code> operator. The process script would then be able to iterate over
+the files by using a simple for-loop.</p>
+<p>This is also useful if all the items of a channel are required to be in the work directory.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">process</span> <span class="n">concatenateBootstrapReplicates</span> <span class="p">{</span>
+    <span class="n">publishDir</span> <span class="s2">&quot;$results_path/$datasetID/concatenate&quot;</span>
+
+    <span class="nb">input</span><span class="p">:</span>
+    <span class="n">file</span> <span class="n">bootstrapTreeList</span> <span class="kn">from</span> <span class="nn">bootstrapReplicateTrees.collect</span><span class="p">()</span>
+
+    <span class="n">output</span><span class="p">:</span>
+    <span class="n">file</span> <span class="s2">&quot;concatenatedBootstrapTrees.nwk&quot;</span>
+
+    <span class="o">//</span> <span class="n">Concatenate</span> <span class="n">Bootstrap</span> <span class="n">Trees</span>
+    <span class="n">script</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    for treeFile in ${bootstrapTreeList}</span>
+<span class="sd">    do</span>
+<span class="sd">        cat \$treeFile &gt;&gt; concatenatedBootstrapTrees.nwk</span>
+<span class="sd">    done</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="how-do-i-use-a-specific-version-of-nextflow">
+<h2>How do I use a specific version of Nextflow?<a class="headerlink" href="#how-do-i-use-a-specific-version-of-nextflow" title="Link to this heading">¶</a></h2>
+<p><em>Q: I need to specify a version of Nextflow to use, or I need to pull a snapshot release.</em></p>
+<p>A: Sometimes it is necessary to use a different version of Nextflow for a specific feature or testing purposes. Nextflow is able to automatically pull versions when the <code class="docutils literal notranslate"><span class="pre">NXF_VER</span></code> environment variable is defined on the commandline.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">NXF_VER</span><span class="o">=</span><span class="mf">0.28.0</span> <span class="n">nextflow</span> <span class="n">run</span> <span class="n">main</span><span class="o">.</span><span class="n">nf</span>
+</pre></div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2020, Seqera Labs. 2013-2019, Centre for Genomic Regulation (CRG)..</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+    <!-- Theme Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-364526-10"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'UA-364526-10', {
+          'anonymize_ip': false,
+      });
+    </script> 
+
+</body>
+</html>

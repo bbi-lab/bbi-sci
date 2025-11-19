@@ -1,0 +1,1020 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tracing &amp; visualisation &mdash; Nextflow 20.10.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+
+  
+    <link rel="shortcut icon" href="_static/favicon.ico"/>
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+      <script src="_static/documentation_options.js?v=a23069cb"></script>
+      <script src="_static/doctools.js?v=888ff710"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Pipeline sharing" href="sharing.html" />
+    <link rel="prev" title="Kubernetes" href="kubernetes.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Nextflow
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="getstarted.html">Get started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="basic.html">Basic concepts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="script.html">Nextflow scripting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="process.html">Processes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="channel.html">Channels</a></li>
+<li class="toctree-l1"><a class="reference internal" href="operator.html">Operators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="executor.html">Executors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="config.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dsl2.html">DSL 2</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cli.html">Command line interface (CLI)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="awscloud.html">Amazon Cloud</a></li>
+<li class="toctree-l1"><a class="reference internal" href="amazons3.html">Amazon S3 storage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="google.html">Google Cloud</a></li>
+<li class="toctree-l1"><a class="reference internal" href="conda.html">Conda environments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="docker.html">Docker containers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="shifter.html">Shifter Containers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="singularity.html">Singularity containers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="podman.html">Podman containers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ignite.html">Apache Ignite</a></li>
+<li class="toctree-l1"><a class="reference internal" href="kubernetes.html">Kubernetes</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Tracing &amp; visualisation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#execution-log">Execution log</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#customizing-fields">Customizing fields</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#templates">Templates</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#filtering">Filtering</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#execution-report">Execution report</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#summary">Summary</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#resource-usage">Resource Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#tasks">Tasks</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#trace-report">Trace report</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#timeline-report">Timeline report</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#dag-visualisation">DAG visualisation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#weblog-via-http">Weblog via HTTP</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#weblog-started-example-message">Weblog Started example message</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#weblog-completed-example-message">Weblog Completed example message</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="sharing.html">Pipeline sharing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="metadata.html">Workflow introspection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mail.html">Mail &amp; Notifications</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Nextflow</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Tracing &amp; visualisation</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="tracing-visualisation">
+<span id="perfanalysis-page"></span><h1>Tracing &amp; visualisation<a class="headerlink" href="#tracing-visualisation" title="Link to this heading">¶</a></h1>
+<section id="execution-log">
+<span id="id1"></span><h2>Execution log<a class="headerlink" href="#execution-log" title="Link to this heading">¶</a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">nextflow</span> <span class="pre">log</span></code> command shows information about executed pipelines in the current folder:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">nextflow</span> <span class="n">log</span> <span class="o">&lt;</span><span class="n">run</span> <span class="n">name</span><span class="o">&gt;</span> <span class="p">[</span><span class="n">options</span><span class="p">]</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Both the <a class="reference internal" href="#execution-report"><span class="std std-ref">execution report</span></a> and the <a class="reference internal" href="#trace-report"><span class="std std-ref">trace report</span></a> must be specified when the pipeline is first called. By contrast, the <code class="docutils literal notranslate"><span class="pre">log</span></code> option is useful after a pipeline has already run and is available for every executed pipeline.</p>
+</div>
+<p>By default, <code class="docutils literal notranslate"><span class="pre">log</span></code> prints the list of executed pipelines:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow log
+TIMESTAMP            RUN NAME         SESSION ID                            COMMAND
+2016-08-01 11:44:51  grave_poincare   18cbe2d3-d1b7-4030-8df4-ae6c42abaa9c  nextflow run hello
+2016-08-01 11:44:55  small_goldstine  18cbe2d3-d1b7-4030-8df4-ae6c42abaa9c  nextflow run hello -resume
+2016-08-01 11:45:09  goofy_kilby      0a1f1589-bd0e-4cfc-b688-34a03810735e  nextflow run rnatoy -with-docker
+</pre></div>
+</div>
+<p>Specifying a run name or session id prints tasks executed by that pipeline run:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow log goofy_kilby
+/Users/../work/0b/be0d1c4b6fd6c778d509caa3565b64
+/Users/../work/ec/3100e79e21c28a12ec2204304c1081
+/Users/../work/7d/eb4d4471d04cec3c69523aab599fd4
+/Users/../work/8f/d5a26b17b40374d37338ccfe967a30
+/Users/../work/94/dfdfb63d5816c9c65889ae34511b32
+</pre></div>
+</div>
+<section id="customizing-fields">
+<h3>Customizing fields<a class="headerlink" href="#customizing-fields" title="Link to this heading">¶</a></h3>
+<p>By default, only the task execution paths are printed. A custom list of fields to print can be provided via the <code class="docutils literal notranslate"><span class="pre">-f</span></code> (<code class="docutils literal notranslate"><span class="pre">-fields</span></code>) option. For example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow log goofy_kilby -f hash,name,exit,status
+0b/be0d1c  buildIndex (ggal_1_48850000_49020000.Ggal71.500bpflank)  0  COMPLETED
+ec/3100e7  mapping (ggal_gut)                                       0  COMPLETED
+7d/eb4d44  mapping (ggal_liver)                                     0  COMPLETED
+8f/d5a26b  makeTranscript (ggal_liver)                              0  COMPLETED
+94/dfdfb6  makeTranscript (ggal_gut)                                0  COMPLETED
+</pre></div>
+</div>
+<p>The fields accepted by the <code class="docutils literal notranslate"><span class="pre">-f</span></code> options are the ones in the <a class="reference internal" href="#trace-fields"><span class="std std-ref">trace report</span></a>, as well as: script, stdout, stderr, env. List available fields using the <code class="docutils literal notranslate"><span class="pre">-l</span></code> (<code class="docutils literal notranslate"><span class="pre">-list-fields</span></code>) option.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">script</span></code> field is useful for examining script commands run in each task:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow log goofy_kilby -f name,status,script
+align_genome      COMPLETED
+   bowtie --index /data/genome input.fastq &gt; output
+...
+</pre></div>
+</div>
+</section>
+<section id="templates">
+<h3>Templates<a class="headerlink" href="#templates" title="Link to this heading">¶</a></h3>
+<p>The <code class="docutils literal notranslate"><span class="pre">-t</span></code> option allows a template (string or file) to be specified. This makes it possible to create complex custom report in any text based format.  For example you could save this markdown snippet to a file:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>## $name
+
+script:
+
+    $script
+
+exist status: $exit
+task status: $status
+task folder: $folder
+</pre></div>
+</div>
+<p>Then, the following command will output a markdown file containing the script, exit status and folder of all executed tasks:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">nextflow</span> <span class="n">log</span> <span class="n">goofy_kilby</span> <span class="o">-</span><span class="n">t</span> <span class="n">my</span><span class="o">-</span><span class="n">template</span><span class="o">.</span><span class="n">md</span> <span class="o">&gt;</span> <span class="n">execution</span><span class="o">-</span><span class="n">report</span><span class="o">.</span><span class="n">md</span>
+</pre></div>
+</div>
+</section>
+<section id="filtering">
+<h3>Filtering<a class="headerlink" href="#filtering" title="Link to this heading">¶</a></h3>
+<p>The <code class="docutils literal notranslate"><span class="pre">filter</span></code> option makes it possible to select which entries to include in the log report. Any valid groovy boolean expression on the log fields can be used to define the filter condition. For example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">nextflow</span> <span class="n">log</span> <span class="n">goofy_kilby</span> <span class="o">-</span><span class="nb">filter</span> <span class="s1">&#39;name =~ /foo.*/ &amp;&amp; status == &quot;FAILED&quot;&#39;</span>
+</pre></div>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">log</span></code> command replaces the deprecated <code class="docutils literal notranslate"><span class="pre">history</span></code> command.</p>
+</div>
+</section>
+</section>
+<section id="execution-report">
+<span id="id2"></span><h2>Execution report<a class="headerlink" href="#execution-report" title="Link to this heading">¶</a></h2>
+<p>Nextflow can create an HTML execution report: a single document which includes many useful metrics
+about a workflow execution. The report is organised in the three main sections: <cite>Summary</cite>, <cite>Resources</cite> and <cite>Tasks</cite>
+(see below for details).</p>
+<p>To enable the creation of this report add the <code class="docutils literal notranslate"><span class="pre">-with-report</span></code> command line option when launching the pipeline
+execution. For example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">nextflow</span> <span class="n">run</span> <span class="o">&lt;</span><span class="n">pipeline</span> <span class="n">name</span><span class="o">&gt;</span> <span class="o">-</span><span class="k">with</span><span class="o">-</span><span class="n">report</span> <span class="p">[</span><span class="n">file</span> <span class="n">name</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>The report file name can be specified as an optional parameter following the report option.</p>
+<section id="summary">
+<h3>Summary<a class="headerlink" href="#summary" title="Link to this heading">¶</a></h3>
+<p>The <cite>Summary</cite> section reports the execution status, the launch command, overall execution time and some
+other workflow metadata. You can see an example below:</p>
+<img alt="_images/report-summary-min.png" src="_images/report-summary-min.png" />
+</section>
+<section id="resource-usage">
+<h3>Resource Usage<a class="headerlink" href="#resource-usage" title="Link to this heading">¶</a></h3>
+<p>The <cite>Resources</cite> sections plots the distributions of resource usages for each workflow process
+using the interactive <a class="reference external" href="https://plot.ly/javascript/">plotly.js</a> plotting library.</p>
+<p>Plots are shown for CPU, memory, job duration and disk I/O. They have two (or three) tabs with the raw values and a percentage representation showing what proportion of the requested resources
+were used. These plots are very helpful to check that job pipeline requests are efficient.</p>
+<img alt="_images/report-resource-cpu.png" src="_images/report-resource-cpu.png" />
+<p>Learn more about how resource usage are computed in the <a class="reference internal" href="metrics.html#metrics-page"><span class="std std-ref">Metrics documentation</span></a>.</p>
+</section>
+<section id="tasks">
+<h3>Tasks<a class="headerlink" href="#tasks" title="Link to this heading">¶</a></h3>
+<p>Finally the <cite>Tasks</cite> section lists all executed tasks reporting for each of them, the status, the actual command script
+and many other runtime metrics. You can see an example below:</p>
+<img alt="_images/report-tasks-min.png" src="_images/report-tasks-min.png" />
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Nextflow collect these metrics running a background process for each job in the target environment.
+Make sure the following tools are available <code class="docutils literal notranslate"><span class="pre">awk</span></code>, <code class="docutils literal notranslate"><span class="pre">date</span></code>, <code class="docutils literal notranslate"><span class="pre">grep</span></code>, <code class="docutils literal notranslate"><span class="pre">egrep</span></code>, <code class="docutils literal notranslate"><span class="pre">ps</span></code>, <code class="docutils literal notranslate"><span class="pre">sed</span></code>, <code class="docutils literal notranslate"><span class="pre">tail</span></code>, <code class="docutils literal notranslate"><span class="pre">tee</span></code> in the
+system where the jobs are executed. Moreover some of these metrics are not reported when using a Mac OSX system. See the note
+message about that in the <a class="reference external" href="trace-report">Trace report</a> below.</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>A common problem when using a third party container image is that it does not ship one or more of the
+above utilities resulting in an empty execution report.</p>
+</div>
+<p>Please read <a class="reference internal" href="config.html#config-report"><span class="std std-ref">Report scope</span></a> section to learn more about the execution report configuration details.</p>
+</section>
+</section>
+<section id="trace-report">
+<span id="id3"></span><h2>Trace report<a class="headerlink" href="#trace-report" title="Link to this heading">¶</a></h2>
+<p>Nextflow creates an execution tracing file that contains some useful information about each process executed in your pipeline
+script, including: submission time, start time, completion time, cpu and memory used.</p>
+<p>In order to create the execution trace file add the <code class="docutils literal notranslate"><span class="pre">-with-trace</span></code> command line option when launching the pipeline execution.
+For example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">nextflow</span> <span class="n">run</span> <span class="o">&lt;</span><span class="n">pipeline</span> <span class="n">name</span><span class="o">&gt;</span> <span class="o">-</span><span class="k">with</span><span class="o">-</span><span class="n">trace</span>
+</pre></div>
+</div>
+<p>It will create a file named <code class="docutils literal notranslate"><span class="pre">trace.txt</span></code> in the current directory. The content looks like the above example:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>task_id</p></th>
+<th class="head"><p>hash</p></th>
+<th class="head"><p>native_id</p></th>
+<th class="head"><p>name</p></th>
+<th class="head"><p>status</p></th>
+<th class="head"><p>exit</p></th>
+<th class="head"><p>submit</p></th>
+<th class="head"><p>duration</p></th>
+<th class="head"><p>walltime</p></th>
+<th class="head"><p>%cpu</p></th>
+<th class="head"><p>rss</p></th>
+<th class="head"><p>vmem</p></th>
+<th class="head"><p>rchar</p></th>
+<th class="head"><p>wchar</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>19</p></td>
+<td><p>45/ab752a</p></td>
+<td><p>2032</p></td>
+<td><p>blast (1)</p></td>
+<td><p>COMPLETED</p></td>
+<td><p>0</p></td>
+<td><p>2014-10-23 16:33:16.288</p></td>
+<td><p>1m</p></td>
+<td><p>5s</p></td>
+<td><p>0.0%</p></td>
+<td><p>29.8 MB</p></td>
+<td><p>354 MB</p></td>
+<td><p>33.3 MB</p></td>
+<td><p>0</p></td>
+</tr>
+<tr class="row-odd"><td><p>20</p></td>
+<td><p>72/db873d</p></td>
+<td><p>2033</p></td>
+<td><p>blast (2)</p></td>
+<td><p>COMPLETED</p></td>
+<td><p>0</p></td>
+<td><p>2014-10-23 16:34:17.211</p></td>
+<td><p>30s</p></td>
+<td><p>10s</p></td>
+<td><p>35.7%</p></td>
+<td><p>152.8 MB</p></td>
+<td><p>428.1 MB</p></td>
+<td><p>192.7 MB</p></td>
+<td><p>1 MB</p></td>
+</tr>
+<tr class="row-even"><td><p>21</p></td>
+<td><p>53/d13188</p></td>
+<td><p>2034</p></td>
+<td><p>blast (3)</p></td>
+<td><p>COMPLETED</p></td>
+<td><p>0</p></td>
+<td><p>2014-10-23 16:34:17.518</p></td>
+<td><p>29s</p></td>
+<td><p>20s</p></td>
+<td><p>4.5%</p></td>
+<td><p>289.5 MB</p></td>
+<td><p>381.6 MB</p></td>
+<td><p>33.3 MB</p></td>
+<td><p>0</p></td>
+</tr>
+<tr class="row-odd"><td><p>22</p></td>
+<td><p>26/f65116</p></td>
+<td><p>2035</p></td>
+<td><p>blast (4)</p></td>
+<td><p>COMPLETED</p></td>
+<td><p>0</p></td>
+<td><p>2014-10-23 16:34:18.459</p></td>
+<td><p>30s</p></td>
+<td><p>9s</p></td>
+<td><p>6.0%</p></td>
+<td><p>122.8 MB</p></td>
+<td><p>353.4 MB</p></td>
+<td><p>33.3 MB</p></td>
+<td><p>0</p></td>
+</tr>
+<tr class="row-even"><td><p>23</p></td>
+<td><p>88/bc00e4</p></td>
+<td><p>2036</p></td>
+<td><p>blast (5)</p></td>
+<td><p>COMPLETED</p></td>
+<td><p>0</p></td>
+<td><p>2014-10-23 16:34:18.507</p></td>
+<td><p>30s</p></td>
+<td><p>19s</p></td>
+<td><p>5.0%</p></td>
+<td><p>195 MB</p></td>
+<td><p>395.8 MB</p></td>
+<td><p>65.3 MB</p></td>
+<td><p>121 KB</p></td>
+</tr>
+<tr class="row-odd"><td><p>24</p></td>
+<td><p>74/2556e9</p></td>
+<td><p>2037</p></td>
+<td><p>blast (6)</p></td>
+<td><p>COMPLETED</p></td>
+<td><p>0</p></td>
+<td><p>2014-10-23 16:34:18.553</p></td>
+<td><p>30s</p></td>
+<td><p>12s</p></td>
+<td><p>43.6%</p></td>
+<td><p>140.7 MB</p></td>
+<td><p>432.2 MB</p></td>
+<td><p>192.7 MB</p></td>
+<td><p>182.7 MB</p></td>
+</tr>
+<tr class="row-even"><td><p>28</p></td>
+<td><p>b4/0f9613</p></td>
+<td><p>2041</p></td>
+<td><p>exonerate (1)</p></td>
+<td><p>COMPLETED</p></td>
+<td><p>0</p></td>
+<td><p>2014-10-23 16:38:19.657</p></td>
+<td><p>1m 30s</p></td>
+<td><p>1m 11s</p></td>
+<td><p>94.3%</p></td>
+<td><p>611.6 MB</p></td>
+<td><p>693.8 MB</p></td>
+<td><p>961.2 GB</p></td>
+<td><p>6.1 GB</p></td>
+</tr>
+<tr class="row-odd"><td><p>32</p></td>
+<td><p>af/7f2f57</p></td>
+<td><p>2044</p></td>
+<td><p>exonerate (4)</p></td>
+<td><p>COMPLETED</p></td>
+<td><p>0</p></td>
+<td><p>2014-10-23 16:46:50.902</p></td>
+<td><p>1m 1s</p></td>
+<td><p>38s</p></td>
+<td><p>36.6%</p></td>
+<td><p>115.8 MB</p></td>
+<td><p>167.8 MB</p></td>
+<td><p>364 GB</p></td>
+<td><p>5.1 GB</p></td>
+</tr>
+<tr class="row-even"><td><p>33</p></td>
+<td><p>37/ab1fcc</p></td>
+<td><p>2045</p></td>
+<td><p>exonerate (5)</p></td>
+<td><p>COMPLETED</p></td>
+<td><p>0</p></td>
+<td><p>2014-10-23 16:47:51.625</p></td>
+<td><p>30s</p></td>
+<td><p>12s</p></td>
+<td><p>59.6%</p></td>
+<td><p>696 MB</p></td>
+<td><p>734.6 MB</p></td>
+<td><p>354.3 GB</p></td>
+<td><p>420.4 MB</p></td>
+</tr>
+<tr class="row-odd"><td><p>31</p></td>
+<td><p>d7/eabe51</p></td>
+<td><p>2042</p></td>
+<td><p>exonerate (3)</p></td>
+<td><p>COMPLETED</p></td>
+<td><p>0</p></td>
+<td><p>2014-10-23 16:45:50.846</p></td>
+<td><p>3m 1s</p></td>
+<td><p>2m 6s</p></td>
+<td><p>130.1%</p></td>
+<td><p>703.3 MB</p></td>
+<td><p>760.9 MB</p></td>
+<td><p>1.1 TB</p></td>
+<td><p>28.6 GB</p></td>
+</tr>
+<tr class="row-even"><td><p>36</p></td>
+<td><p>c4/d6cc15</p></td>
+<td><p>2048</p></td>
+<td><p>exonerate (6)</p></td>
+<td><p>COMPLETED</p></td>
+<td><p>0</p></td>
+<td><p>2014-10-23 16:48:48.718</p></td>
+<td><p>3m 1s</p></td>
+<td><p>2m 43s</p></td>
+<td><p>116.6%</p></td>
+<td><p>682.1 MB</p></td>
+<td><p>743.6 MB</p></td>
+<td><p>868.5 GB</p></td>
+<td><p>42 GB</p></td>
+</tr>
+<tr class="row-odd"><td><p>30</p></td>
+<td><p>4f/1ad1f0</p></td>
+<td><p>2043</p></td>
+<td><p>exonerate (2)</p></td>
+<td><p>COMPLETED</p></td>
+<td><p>0</p></td>
+<td><p>2014-10-23 16:45:50.961</p></td>
+<td><p>10m 2s</p></td>
+<td><p>9m 16s</p></td>
+<td><p>95.5%</p></td>
+<td><p>706.2 MB</p></td>
+<td><p>764 MB</p></td>
+<td><p>1.6 TB</p></td>
+<td><p>172.4 GB</p></td>
+</tr>
+<tr class="row-even"><td><p>52</p></td>
+<td><p>72/41d0c6</p></td>
+<td><p>2055</p></td>
+<td><p>similarity (1)</p></td>
+<td><p>COMPLETED</p></td>
+<td><p>0</p></td>
+<td><p>2014-10-23 17:13:23.543</p></td>
+<td><p>30s</p></td>
+<td><p>352ms</p></td>
+<td><p>0.0%</p></td>
+<td><p>35.6 MB</p></td>
+<td><p>58.3 MB</p></td>
+<td><p>199.3 MB</p></td>
+<td><p>7.9 MB</p></td>
+</tr>
+<tr class="row-odd"><td><p>57</p></td>
+<td><p>9b/111b5e</p></td>
+<td><p>2058</p></td>
+<td><p>similarity (6)</p></td>
+<td><p>COMPLETED</p></td>
+<td><p>0</p></td>
+<td><p>2014-10-23 17:13:23.655</p></td>
+<td><p>30s</p></td>
+<td><p>488ms</p></td>
+<td><p>0.0%</p></td>
+<td><p>108.2 MB</p></td>
+<td><p>158 MB</p></td>
+<td><p>317.1 MB</p></td>
+<td><p>9.8 MB</p></td>
+</tr>
+<tr class="row-even"><td><p>53</p></td>
+<td><p>3e/bca30f</p></td>
+<td><p>2061</p></td>
+<td><p>similarity (2)</p></td>
+<td><p>COMPLETED</p></td>
+<td><p>0</p></td>
+<td><p>2014-10-23 17:13:23.770</p></td>
+<td><p>30s</p></td>
+<td><p>238ms</p></td>
+<td><p>0.0%</p></td>
+<td><p>6.7 MB</p></td>
+<td><p>29.6 MB</p></td>
+<td><p>190 MB</p></td>
+<td><p>91.2 MB</p></td>
+</tr>
+<tr class="row-odd"><td><p>54</p></td>
+<td><p>8b/d45b47</p></td>
+<td><p>2062</p></td>
+<td><p>similarity (3)</p></td>
+<td><p>COMPLETED</p></td>
+<td><p>0</p></td>
+<td><p>2014-10-23 17:13:23.808</p></td>
+<td><p>30s</p></td>
+<td><p>442ms</p></td>
+<td><p>0.0%</p></td>
+<td><p>108.1 MB</p></td>
+<td><p>158 MB</p></td>
+<td><p>832 MB</p></td>
+<td><p>565.6 MB</p></td>
+</tr>
+<tr class="row-even"><td><p>55</p></td>
+<td><p>51/ac19c6</p></td>
+<td><p>2064</p></td>
+<td><p>similarity (4)</p></td>
+<td><p>COMPLETED</p></td>
+<td><p>0</p></td>
+<td><p>2014-10-23 17:13:23.873</p></td>
+<td><p>30s</p></td>
+<td><p>6s</p></td>
+<td><p>0.0%</p></td>
+<td><p>112.7 MB</p></td>
+<td><p>162.8 MB</p></td>
+<td><p>4.9 GB</p></td>
+<td><p>3.9 GB</p></td>
+</tr>
+<tr class="row-odd"><td><p>56</p></td>
+<td><p>c3/ec5f4a</p></td>
+<td><p>2066</p></td>
+<td><p>similarity (5)</p></td>
+<td><p>COMPLETED</p></td>
+<td><p>0</p></td>
+<td><p>2014-10-23 17:13:23.948</p></td>
+<td><p>30s</p></td>
+<td><p>616ms</p></td>
+<td><p>0.0%</p></td>
+<td><p>10.4 MB</p></td>
+<td><p>34.6 MB</p></td>
+<td><p>238 MB</p></td>
+<td><p>8.4 MB</p></td>
+</tr>
+<tr class="row-even"><td><p>98</p></td>
+<td><p>de/d6c0a6</p></td>
+<td><p>2099</p></td>
+<td><p>matrix (1)</p></td>
+<td><p>COMPLETED</p></td>
+<td><p>0</p></td>
+<td><p>2014-10-23 17:14:27.139</p></td>
+<td><p>30s</p></td>
+<td><p>1s</p></td>
+<td><p>0.0%</p></td>
+<td><p>4.8 MB</p></td>
+<td><p>42 MB</p></td>
+<td><p>240.6 MB</p></td>
+<td><p>79 KB</p></td>
+</tr>
+</tbody>
+</table>
+<p id="trace-fields">The following table shows the fields that can be included in the execution report:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Name</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>task_id</p></td>
+<td><p>Task ID.</p></td>
+</tr>
+<tr class="row-odd"><td><p>hash</p></td>
+<td><p>Task hash code.</p></td>
+</tr>
+<tr class="row-even"><td><p>native_id</p></td>
+<td><p>Task ID given by the underlying execution system e.g. POSIX process PID when executed locally, job ID when executed by a grid engine, etc.</p></td>
+</tr>
+<tr class="row-odd"><td><p>process</p></td>
+<td><p>Nextflow process name.</p></td>
+</tr>
+<tr class="row-even"><td><p>tag</p></td>
+<td><p>User provided identifier associated this task.</p></td>
+</tr>
+<tr class="row-odd"><td><p>name</p></td>
+<td><p>Task name.</p></td>
+</tr>
+<tr class="row-even"><td><p>status</p></td>
+<td><p>Task status.</p></td>
+</tr>
+<tr class="row-odd"><td><p>exit</p></td>
+<td><p>POSIX process exit status.</p></td>
+</tr>
+<tr class="row-even"><td><p>module</p></td>
+<td><p>Environment module used to run the task.</p></td>
+</tr>
+<tr class="row-odd"><td><p>container</p></td>
+<td><p>Docker image name used to execute the task.</p></td>
+</tr>
+<tr class="row-even"><td><p>cpus</p></td>
+<td><p>The cpus number request for the task execution.</p></td>
+</tr>
+<tr class="row-odd"><td><p>time</p></td>
+<td><p>The time request for the task execution</p></td>
+</tr>
+<tr class="row-even"><td><p>disk</p></td>
+<td><p>The disk space request for the task execution.</p></td>
+</tr>
+<tr class="row-odd"><td><p>memory</p></td>
+<td><p>The memory request for the task execution.</p></td>
+</tr>
+<tr class="row-even"><td><p>attempt</p></td>
+<td><p>Attempt at which the task completed.</p></td>
+</tr>
+<tr class="row-odd"><td><p>submit</p></td>
+<td><p>Timestamp when the task has been submitted.</p></td>
+</tr>
+<tr class="row-even"><td><p>start</p></td>
+<td><p>Timestamp when the task execution has started.</p></td>
+</tr>
+<tr class="row-odd"><td><p>complete</p></td>
+<td><p>Timestamp when task execution has completed.</p></td>
+</tr>
+<tr class="row-even"><td><p>duration</p></td>
+<td><p>Time elapsed to complete since the submission.</p></td>
+</tr>
+<tr class="row-odd"><td><p>realtime</p></td>
+<td><p>Task execution time i.e. delta between completion and start timestamp.</p></td>
+</tr>
+<tr class="row-even"><td><p>queue</p></td>
+<td><p>The queue that the executor attempted to run the process on.</p></td>
+</tr>
+<tr class="row-odd"><td><p>%cpu</p></td>
+<td><p>Percentage of CPU used by the process.</p></td>
+</tr>
+<tr class="row-even"><td><p>%mem</p></td>
+<td><p>Percentage of memory used by the process.</p></td>
+</tr>
+<tr class="row-odd"><td><p>rss</p></td>
+<td><p>Real memory (resident set) size of the process. Equivalent to <code class="docutils literal notranslate"><span class="pre">ps</span> <span class="pre">-o</span> <span class="pre">rss</span></code> .</p></td>
+</tr>
+<tr class="row-even"><td><p>vmem</p></td>
+<td><p>Virtual memory size of the process. Equivalent to <code class="docutils literal notranslate"><span class="pre">ps</span> <span class="pre">-o</span> <span class="pre">vsize</span></code> .</p></td>
+</tr>
+<tr class="row-odd"><td><p>peak_rss</p></td>
+<td><p>Peak of real memory. This data is read from field <code class="docutils literal notranslate"><span class="pre">VmHWM</span></code> in <code class="docutils literal notranslate"><span class="pre">/proc/$pid/status</span></code> file.</p></td>
+</tr>
+<tr class="row-even"><td><p>peak_vmem</p></td>
+<td><p>Peak of virtual memory. This data is read from field <code class="docutils literal notranslate"><span class="pre">VmPeak</span></code> in <code class="docutils literal notranslate"><span class="pre">/proc/$pid/status</span></code> file.</p></td>
+</tr>
+<tr class="row-odd"><td><p>rchar</p></td>
+<td><p>Number of bytes the process read, using any read-like system call from files, pipes, tty, etc. This data is read from file <code class="docutils literal notranslate"><span class="pre">/proc/$pid/io</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p>wchar</p></td>
+<td><p>Number of bytes the process wrote, using any write-like system call. This data is read from file <code class="docutils literal notranslate"><span class="pre">/proc/$pid/io</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p>syscr</p></td>
+<td><p>Number of read-like system call invocations that the process performed. This data is read from file <code class="docutils literal notranslate"><span class="pre">/proc/$pid/io</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p>syscw</p></td>
+<td><p>Number of write-like system call invocations that the process performed. This data is read from file <code class="docutils literal notranslate"><span class="pre">/proc/$pid/io</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p>read_bytes</p></td>
+<td><p>Number of bytes the process directly read from disk. This data is read from file <code class="docutils literal notranslate"><span class="pre">/proc/$pid/io</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p>write_bytes</p></td>
+<td><p>Number of bytes the process originally dirtied in the page-cache (assuming they will go to disk later). This data is read from file <code class="docutils literal notranslate"><span class="pre">/proc/$pid/io</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p>vol_ctxt</p></td>
+<td><p>Number of voluntary context switches.</p></td>
+</tr>
+<tr class="row-even"><td><p>inv_ctxt</p></td>
+<td><p>Number of involuntary context switches.</p></td>
+</tr>
+<tr class="row-odd"><td><p>env</p></td>
+<td><p>The variables defined in task execution environment.</p></td>
+</tr>
+<tr class="row-even"><td><p>workdir</p></td>
+<td><p>The directory path where the task was executed.</p></td>
+</tr>
+<tr class="row-odd"><td><p>script</p></td>
+<td><p>The task command script.</p></td>
+</tr>
+<tr class="row-even"><td><p>scratch</p></td>
+<td><p>The value of the process <code class="docutils literal notranslate"><span class="pre">scratch</span></code> directive.</p></td>
+</tr>
+<tr class="row-odd"><td><p>error_action</p></td>
+<td><p>The action applied on errof task failure.</p></td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>These numbers provide an estimation of the resources used by running tasks. They should not be intended as an alternative
+to low level performance analysis provided by other tools and they may not be fully accurate, in particular for very short-lived tasks
+(running for less than one second).</p>
+</div>
+<p>Trace report layout and other configuration settings can be specified by using the <code class="docutils literal notranslate"><span class="pre">nextflow.config</span></code> configuration file.</p>
+<p>Please read <a class="reference internal" href="config.html#config-trace"><span class="std std-ref">Trace scope</span></a> section to learn more about it.</p>
+</section>
+<section id="timeline-report">
+<span id="id4"></span><h2>Timeline report<a class="headerlink" href="#timeline-report" title="Link to this heading">¶</a></h2>
+<p>Nextflow can render an HTML timeline for all processes executed in your pipeline. An example of the timeline
+report is shown below:</p>
+<img alt="_images/timeline-min.png" src="_images/timeline-min.png" />
+<p>Each bar represents a process run in the pipeline execution. The bar length represents the task duration time (wall-time).
+The colored area in each bar represents the real execution time. The grey area to the <em>left</em> of the colored area represents
+the task scheduling wait time. The grey area to the <em>right</em> of the colored area represents the task termination time
+(clean-up and file un-staging). The numbers on the x-axis represent the time in absolute units eg. minutes, hours, etc.</p>
+<p>Each bar displays two numbers: the task duration time and the virtual memory size peak.</p>
+<p>As each process can spawn many tasks, colors are used to identify those tasks belonging to the same process.</p>
+<p>To enable the creation of the timeline report add the <code class="docutils literal notranslate"><span class="pre">-with-timeline</span></code> command line option when launching the pipeline
+execution. For example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">nextflow</span> <span class="n">run</span> <span class="o">&lt;</span><span class="n">pipeline</span> <span class="n">name</span><span class="o">&gt;</span> <span class="o">-</span><span class="k">with</span><span class="o">-</span><span class="n">timeline</span> <span class="p">[</span><span class="n">file</span> <span class="n">name</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>The report file name can be specified as an optional parameter following the timeline option.</p>
+</section>
+<section id="dag-visualisation">
+<span id="id5"></span><h2>DAG visualisation<a class="headerlink" href="#dag-visualisation" title="Link to this heading">¶</a></h2>
+<p>A Nextflow pipeline is implicitly modelled by a direct acyclic graph (DAG). The vertices in the graph represent
+the pipeline’s processes and operators, while the edges represent the data connections (i.e. channels) between them.</p>
+<p>The pipeline execution DAG can be outputted by adding the <code class="docutils literal notranslate"><span class="pre">-with-dag</span></code> option to the run command line.
+It creates a file named <code class="docutils literal notranslate"><span class="pre">dag.dot</span></code> containing a textual representation of the pipeline execution graph
+in the <a class="reference external" href="http://www.graphviz.org/content/dot-language">DOT format</a>.</p>
+<p>The execution DAG can be rendered in a different format by specifying an output file name which has an extension
+corresponding to the required format. For example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">nextflow</span> <span class="n">run</span> <span class="o">&lt;</span><span class="n">script</span><span class="o">-</span><span class="n">name</span><span class="o">&gt;</span> <span class="o">-</span><span class="k">with</span><span class="o">-</span><span class="n">dag</span> <span class="n">flowchart</span><span class="o">.</span><span class="n">png</span>
+</pre></div>
+</div>
+<p>List of supported file formats:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Extension</p></th>
+<th class="head"><p>File format</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>dot</p></td>
+<td><p>Graphviz DOT file</p></td>
+</tr>
+<tr class="row-odd"><td><p>html</p></td>
+<td><p>HTML file</p></td>
+</tr>
+<tr class="row-even"><td><p>pdf</p></td>
+<td><p>PDF file (*)</p></td>
+</tr>
+<tr class="row-odd"><td><p>png</p></td>
+<td><p>PNG file (*)</p></td>
+</tr>
+<tr class="row-even"><td><p>svg</p></td>
+<td><p>SVG file (*)</p></td>
+</tr>
+<tr class="row-odd"><td><p>gexf</p></td>
+<td><p>Graph Exchange XML file (Gephi)</p></td>
+</tr>
+</tbody>
+</table>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>The file formats marked with a <cite>*</cite> require the <a class="reference external" href="http://www.graphviz.org">Graphviz</a> tool installed
+in your computer.</p>
+</div>
+<p>The DAG produced by Nextflow for the <a class="reference external" href="https://github.com/cbcrg/shootstrap/">Shootstrap</a> pipeline:</p>
+<img alt="_images/dag.png" src="_images/dag.png" />
+</section>
+<section id="weblog-via-http">
+<span id="weblog-service"></span><h2>Weblog via HTTP<a class="headerlink" href="#weblog-via-http" title="Link to this heading">¶</a></h2>
+<p>Nextflow is able to send detailed workflow execution metadata and runtime statistics to a HTTP endpoint.
+To enable this feature use  the <code class="docutils literal notranslate"><span class="pre">-with-weblog</span></code> as shown below:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">nextflow</span> <span class="n">run</span> <span class="o">&lt;</span><span class="n">pipeline</span> <span class="n">name</span><span class="o">&gt;</span> <span class="o">-</span><span class="k">with</span><span class="o">-</span><span class="n">weblog</span> <span class="p">[</span><span class="n">url</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>Workflow events are sent as HTTP POST requests to the given URL. The message is formatted using the
+following JSON structure:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+     <span class="s2">&quot;runName&quot;</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">run</span> <span class="n">name</span><span class="o">&gt;</span><span class="p">,</span>
+     <span class="s2">&quot;runId&quot;</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">uuid</span><span class="o">&gt;</span><span class="p">,</span>
+     <span class="s2">&quot;event&quot;</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">started</span><span class="o">|</span><span class="n">process_submitted</span><span class="o">|</span><span class="n">process_started</span><span class="o">|</span><span class="n">process_completed</span><span class="o">|</span><span class="n">error</span><span class="o">|</span><span class="n">completed</span><span class="o">&gt;</span><span class="p">,</span>
+     <span class="s2">&quot;utcTime&quot;</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">UTC</span> <span class="n">timestamp</span><span class="o">&gt;</span><span class="p">,</span>
+     <span class="s2">&quot;trace&quot;</span><span class="p">:</span> <span class="p">{</span> <span class="o">...</span> <span class="p">},</span>
+     <span class="s2">&quot;metadata&quot;</span><span class="p">:</span> <span class="p">{</span> <span class="o">...</span> <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The JSON object contains the following attributes:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Attribute</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>runName</p></td>
+<td><p>The workflow execution run name.</p></td>
+</tr>
+<tr class="row-odd"><td><p>runId</p></td>
+<td><p>The workflow execution unique ID.</p></td>
+</tr>
+<tr class="row-even"><td><p>event</p></td>
+<td><p>The workflow execution event. One of <code class="docutils literal notranslate"><span class="pre">started</span></code>, <code class="docutils literal notranslate"><span class="pre">process_submitted</span></code>, <code class="docutils literal notranslate"><span class="pre">process_started</span></code>, <code class="docutils literal notranslate"><span class="pre">process_completed</span></code>, <code class="docutils literal notranslate"><span class="pre">error</span></code>, <code class="docutils literal notranslate"><span class="pre">completed</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p>utcTime</p></td>
+<td><p>The UTC timestamp in ISO 8601 format.</p></td>
+</tr>
+<tr class="row-even"><td><p>trace</p></td>
+<td><p>A process runtime information as described in the <a class="reference internal" href="#trace-fields"><span class="std std-ref">trace fields</span></a> section. This attribute is only provided for the following events: <code class="docutils literal notranslate"><span class="pre">process_submitted</span></code>, <code class="docutils literal notranslate"><span class="pre">process_started</span></code>, <code class="docutils literal notranslate"><span class="pre">process_completed</span></code>, <code class="docutils literal notranslate"><span class="pre">error</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p>metadata</p></td>
+<td><p>The workflow metadata including the <a class="reference internal" href="config.html#config-manifest"><span class="std std-ref">config manifest</span></a>. For a list of all fields, have a look at the bottom message examples. This attribute is only provided for the following events: <code class="docutils literal notranslate"><span class="pre">started</span></code>, <code class="docutils literal notranslate"><span class="pre">completed</span></code>.</p></td>
+</tr>
+</tbody>
+</table>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>The content of the <code class="docutils literal notranslate"><span class="pre">trace</span></code> attribute depends on the settings for the <a class="reference external" href="trace-report">Trace report</a> defined in the
+<code class="docutils literal notranslate"><span class="pre">nextflow.config</span></code> file. See the <a class="reference internal" href="config.html#config-trace"><span class="std std-ref">Trace configuration</span></a> section to learn more.</p>
+</div>
+<section id="weblog-started-example-message">
+<h3>Weblog Started example message<a class="headerlink" href="#weblog-started-example-message" title="Link to this heading">¶</a></h3>
+<p>When a workflow execution is started, a message like the following is posted to the specified end-point. Be aware that the
+properties in the parameter scope will look different for your workflow. This is an example output from the <code class="docutils literal notranslate"><span class="pre">nf-core/hlatyping</span></code>
+pipeline with the weblog feature enabled:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+  <span class="s2">&quot;runName&quot;</span><span class="p">:</span> <span class="s2">&quot;friendly_pesquet&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;runId&quot;</span><span class="p">:</span> <span class="s2">&quot;170aa09c-105f-49d0-99b4-8eb6a146e4a7&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;event&quot;</span><span class="p">:</span> <span class="s2">&quot;started&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;utcTime&quot;</span><span class="p">:</span> <span class="s2">&quot;2018-10-07T11:42:08Z&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;metadata&quot;</span><span class="p">:</span> <span class="p">{</span>
+          <span class="s2">&quot;params&quot;</span><span class="p">:</span> <span class="p">{</span>
+              <span class="s2">&quot;container&quot;</span><span class="p">:</span> <span class="s2">&quot;nfcore/hlatyping:1.1.4&quot;</span><span class="p">,</span>
+              <span class="s2">&quot;help&quot;</span><span class="p">:</span> <span class="n">false</span><span class="p">,</span>
+              <span class="s2">&quot;outdir&quot;</span><span class="p">:</span> <span class="s2">&quot;results&quot;</span><span class="p">,</span>
+              <span class="s2">&quot;bam&quot;</span><span class="p">:</span> <span class="n">true</span><span class="p">,</span>
+              <span class="s2">&quot;singleEnd&quot;</span><span class="p">:</span> <span class="n">false</span><span class="p">,</span>
+              <span class="s2">&quot;single-end&quot;</span><span class="p">:</span> <span class="n">false</span><span class="p">,</span>
+              <span class="s2">&quot;reads&quot;</span><span class="p">:</span> <span class="s2">&quot;data/test*{1,2}.fq.gz&quot;</span><span class="p">,</span>
+              <span class="s2">&quot;seqtype&quot;</span><span class="p">:</span> <span class="s2">&quot;dna&quot;</span><span class="p">,</span>
+              <span class="s2">&quot;solver&quot;</span><span class="p">:</span> <span class="s2">&quot;glpk&quot;</span><span class="p">,</span>
+              <span class="s2">&quot;igenomes_base&quot;</span><span class="p">:</span> <span class="s2">&quot;./iGenomes&quot;</span><span class="p">,</span>
+              <span class="s2">&quot;multiqc_config&quot;</span><span class="p">:</span> <span class="s2">&quot;/Users/sven1103/.nextflow/assets/nf-core/hlatyping/conf/multiqc_config.yaml&quot;</span><span class="p">,</span>
+              <span class="s2">&quot;clusterOptions&quot;</span><span class="p">:</span> <span class="n">false</span><span class="p">,</span>
+              <span class="s2">&quot;cluster-options&quot;</span><span class="p">:</span> <span class="n">false</span><span class="p">,</span>
+              <span class="s2">&quot;enumerations&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+              <span class="s2">&quot;beta&quot;</span><span class="p">:</span> <span class="mf">0.009</span><span class="p">,</span>
+              <span class="s2">&quot;prefix&quot;</span><span class="p">:</span> <span class="s2">&quot;hla_run&quot;</span><span class="p">,</span>
+              <span class="s2">&quot;base_index&quot;</span><span class="p">:</span> <span class="s2">&quot;/Users/sven1103/.nextflow/assets/nf-core/hlatyping/data/indices/yara/hla_reference_&quot;</span><span class="p">,</span>
+              <span class="s2">&quot;index&quot;</span><span class="p">:</span> <span class="s2">&quot;/Users/sven1103/.nextflow/assets/nf-core/hlatyping/data/indices/yara/hla_reference_dna&quot;</span><span class="p">,</span>
+              <span class="s2">&quot;custom_config_version&quot;</span><span class="p">:</span> <span class="s2">&quot;master&quot;</span><span class="p">,</span>
+              <span class="s2">&quot;custom_config_base&quot;</span><span class="p">:</span> <span class="s2">&quot;https://raw.githubusercontent.com/nf-core/configs/master&quot;</span>
+          <span class="p">},</span>
+          <span class="s2">&quot;workflow&quot;</span><span class="p">:</span> <span class="p">{</span>
+              <span class="s2">&quot;start&quot;</span><span class="p">:</span> <span class="s2">&quot;2019-03-25T12:09:52Z&quot;</span><span class="p">,</span>
+              <span class="s2">&quot;projectDir&quot;</span><span class="p">:</span> <span class="s2">&quot;/Users/sven1103/.nextflow/assets/nf-core/hlatyping&quot;</span><span class="p">,</span>
+              <span class="s2">&quot;manifest&quot;</span><span class="p">:</span> <span class="p">{</span>
+                  <span class="s2">&quot;nextflowVersion&quot;</span><span class="p">:</span> <span class="s2">&quot;&gt;=18.10.1&quot;</span><span class="p">,</span>
+                  <span class="s2">&quot;defaultBranch&quot;</span><span class="p">:</span> <span class="s2">&quot;master&quot;</span><span class="p">,</span>
+                  <span class="s2">&quot;version&quot;</span><span class="p">:</span> <span class="s2">&quot;1.1.4&quot;</span><span class="p">,</span>
+                  <span class="s2">&quot;homePage&quot;</span><span class="p">:</span> <span class="s2">&quot;https://github.com/nf-core/hlatyping&quot;</span><span class="p">,</span>
+                  <span class="s2">&quot;gitmodules&quot;</span><span class="p">:</span> <span class="n">null</span><span class="p">,</span>
+                  <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;Precision HLA typing from next-generation sequencing data.&quot;</span><span class="p">,</span>
+                  <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;nf-core/hlatyping&quot;</span><span class="p">,</span>
+                  <span class="s2">&quot;mainScript&quot;</span><span class="p">:</span> <span class="s2">&quot;main.nf&quot;</span><span class="p">,</span>
+                  <span class="s2">&quot;author&quot;</span><span class="p">:</span> <span class="n">null</span>
+              <span class="p">},</span>
+              <span class="s2">&quot;complete&quot;</span><span class="p">:</span> <span class="n">null</span><span class="p">,</span>
+              <span class="s2">&quot;profile&quot;</span><span class="p">:</span> <span class="s2">&quot;docker,test&quot;</span><span class="p">,</span>
+              <span class="s2">&quot;homeDir&quot;</span><span class="p">:</span> <span class="s2">&quot;/Users/sven1103&quot;</span><span class="p">,</span>
+              <span class="s2">&quot;workDir&quot;</span><span class="p">:</span> <span class="s2">&quot;/Users/sven1103/git/nextflow/work&quot;</span><span class="p">,</span>
+              <span class="s2">&quot;container&quot;</span><span class="p">:</span> <span class="s2">&quot;nfcore/hlatyping:1.1.4&quot;</span><span class="p">,</span>
+              <span class="s2">&quot;commitId&quot;</span><span class="p">:</span> <span class="s2">&quot;4bcced898ee23600bd8c249ff085f8f88db90e7c&quot;</span><span class="p">,</span>
+              <span class="s2">&quot;errorMessage&quot;</span><span class="p">:</span> <span class="n">null</span><span class="p">,</span>
+              <span class="s2">&quot;repository&quot;</span><span class="p">:</span> <span class="s2">&quot;https://github.com/nf-core/hlatyping.git&quot;</span><span class="p">,</span>
+              <span class="s2">&quot;containerEngine&quot;</span><span class="p">:</span> <span class="s2">&quot;docker&quot;</span><span class="p">,</span>
+              <span class="s2">&quot;scriptFile&quot;</span><span class="p">:</span> <span class="s2">&quot;/Users/sven1103/.nextflow/assets/nf-core/hlatyping/main.nf&quot;</span><span class="p">,</span>
+              <span class="s2">&quot;userName&quot;</span><span class="p">:</span> <span class="s2">&quot;sven1103&quot;</span><span class="p">,</span>
+              <span class="s2">&quot;launchDir&quot;</span><span class="p">:</span> <span class="s2">&quot;/Users/sven1103/git/nextflow&quot;</span><span class="p">,</span>
+              <span class="s2">&quot;runName&quot;</span><span class="p">:</span> <span class="s2">&quot;shrivelled_cantor&quot;</span><span class="p">,</span>
+              <span class="s2">&quot;configFiles&quot;</span><span class="p">:</span> <span class="p">[</span>
+                  <span class="s2">&quot;/Users/sven1103/.nextflow/assets/nf-core/hlatyping/nextflow.config&quot;</span>
+              <span class="p">],</span>
+              <span class="s2">&quot;sessionId&quot;</span><span class="p">:</span> <span class="s2">&quot;7f344978-999c-480d-8439-741bc7520f6a&quot;</span><span class="p">,</span>
+              <span class="s2">&quot;errorReport&quot;</span><span class="p">:</span> <span class="n">null</span><span class="p">,</span>
+              <span class="s2">&quot;scriptId&quot;</span><span class="p">:</span> <span class="s2">&quot;2902f5aa7f297f2dccd6baebac7730a2&quot;</span><span class="p">,</span>
+              <span class="s2">&quot;revision&quot;</span><span class="p">:</span> <span class="s2">&quot;master&quot;</span><span class="p">,</span>
+              <span class="s2">&quot;exitStatus&quot;</span><span class="p">:</span> <span class="n">null</span><span class="p">,</span>
+              <span class="s2">&quot;commandLine&quot;</span><span class="p">:</span> <span class="s2">&quot;./launch.sh run nf-core/hlatyping -profile docker,test -with-weblog &#39;http://localhost:4567&#39;&quot;</span><span class="p">,</span>
+              <span class="s2">&quot;nextflow&quot;</span><span class="p">:</span> <span class="p">{</span>
+                            <span class="s2">&quot;version&quot;</span><span class="p">:</span> <span class="s2">&quot;19.03.0-edge&quot;</span><span class="p">,</span>
+                            <span class="s2">&quot;build&quot;</span><span class="p">:</span> <span class="mi">5137</span><span class="p">,</span>
+                            <span class="s2">&quot;timestamp&quot;</span><span class="p">:</span> <span class="s2">&quot;2019-03-28T14:46:55Z&quot;</span>
+                          <span class="p">},</span>
+              <span class="p">},</span>
+              <span class="s2">&quot;stats&quot;</span><span class="p">:</span> <span class="p">{</span>
+                  <span class="s2">&quot;computeTimeFmt&quot;</span><span class="p">:</span> <span class="s2">&quot;(a few seconds)&quot;</span><span class="p">,</span>
+                  <span class="s2">&quot;cachedCount&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+                  <span class="s2">&quot;cachedDuration&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+                  <span class="s2">&quot;failedDuration&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+                  <span class="s2">&quot;succeedDuration&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+                  <span class="s2">&quot;failedCount&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+                  <span class="s2">&quot;cachedPct&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>
+                  <span class="s2">&quot;cachedCountFmt&quot;</span><span class="p">:</span> <span class="s2">&quot;0&quot;</span><span class="p">,</span>
+                  <span class="s2">&quot;succeedCountFmt&quot;</span><span class="p">:</span> <span class="s2">&quot;0&quot;</span><span class="p">,</span>
+                  <span class="s2">&quot;failedPct&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>
+                  <span class="s2">&quot;failedCountFmt&quot;</span><span class="p">:</span> <span class="s2">&quot;0&quot;</span><span class="p">,</span>
+                  <span class="s2">&quot;ignoredCountFmt&quot;</span><span class="p">:</span> <span class="s2">&quot;0&quot;</span><span class="p">,</span>
+                  <span class="s2">&quot;ignoredCount&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+                  <span class="s2">&quot;succeedPct&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>
+                  <span class="s2">&quot;succeedCount&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+                  <span class="s2">&quot;ignoredPct&quot;</span><span class="p">:</span> <span class="mf">0.0</span>
+              <span class="p">},</span>
+              <span class="s2">&quot;resume&quot;</span><span class="p">:</span> <span class="n">false</span><span class="p">,</span>
+              <span class="s2">&quot;success&quot;</span><span class="p">:</span> <span class="n">false</span><span class="p">,</span>
+              <span class="s2">&quot;scriptName&quot;</span><span class="p">:</span> <span class="s2">&quot;main.nf&quot;</span><span class="p">,</span>
+              <span class="s2">&quot;duration&quot;</span><span class="p">:</span> <span class="n">null</span>
+          <span class="p">}</span>
+      <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="weblog-completed-example-message">
+<h3>Weblog Completed example message<a class="headerlink" href="#weblog-completed-example-message" title="Link to this heading">¶</a></h3>
+<p>Once a process is completed, a message like the following is posted to the specified end-point:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+  <span class="s2">&quot;runName&quot;</span><span class="p">:</span> <span class="s2">&quot;friendly_pesquet&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;runId&quot;</span><span class="p">:</span> <span class="s2">&quot;170aa09c-105f-49d0-99b4-8eb6a146e4a7&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;event&quot;</span><span class="p">:</span> <span class="s2">&quot;process_completed&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;utcTime&quot;</span><span class="p">:</span> <span class="s2">&quot;2018-10-07T11:45:30Z&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;trace&quot;</span><span class="p">:</span> <span class="p">{</span>
+      <span class="s2">&quot;task_id&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+      <span class="s2">&quot;status&quot;</span><span class="p">:</span> <span class="s2">&quot;COMPLETED&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;hash&quot;</span><span class="p">:</span> <span class="s2">&quot;a1/0024fd&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;make_ot_config&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;exit&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+      <span class="s2">&quot;submit&quot;</span><span class="p">:</span> <span class="mi">1538912529498</span><span class="p">,</span>
+      <span class="s2">&quot;start&quot;</span><span class="p">:</span> <span class="mi">1538912529629</span><span class="p">,</span>
+      <span class="s2">&quot;process&quot;</span><span class="p">:</span> <span class="s2">&quot;make_ot_config&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;tag&quot;</span><span class="p">:</span> <span class="n">null</span><span class="p">,</span>
+      <span class="s2">&quot;module&quot;</span><span class="p">:</span> <span class="p">[</span>
+
+      <span class="p">],</span>
+      <span class="s2">&quot;container&quot;</span><span class="p">:</span> <span class="s2">&quot;nfcore/hlatyping:1.1.1&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;attempt&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+      <span class="s2">&quot;script&quot;</span><span class="p">:</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">    configbuilder --max-cpus 2 --solver glpk &gt; config.ini</span><span class="se">\n</span><span class="s2">    &quot;</span><span class="p">,</span>
+      <span class="s2">&quot;scratch&quot;</span><span class="p">:</span> <span class="n">null</span><span class="p">,</span>
+      <span class="s2">&quot;workdir&quot;</span><span class="p">:</span> <span class="s2">&quot;/home/sven1103/git/hlatyping-workflow/work/a1/0024fd028375e2b601aaed44d112e3&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;queue&quot;</span><span class="p">:</span> <span class="n">null</span><span class="p">,</span>
+      <span class="s2">&quot;cpus&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+      <span class="s2">&quot;memory&quot;</span><span class="p">:</span> <span class="mi">7516192768</span><span class="p">,</span>
+      <span class="s2">&quot;disk&quot;</span><span class="p">:</span> <span class="n">null</span><span class="p">,</span>
+      <span class="s2">&quot;time&quot;</span><span class="p">:</span> <span class="mi">7200000</span><span class="p">,</span>
+      <span class="s2">&quot;env&quot;</span><span class="p">:</span> <span class="s2">&quot;PATH=/home/sven1103/git/hlatyping-workflow/bin:$PATH</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;error_action&quot;</span><span class="p">:</span> <span class="n">null</span><span class="p">,</span>
+      <span class="s2">&quot;complete&quot;</span><span class="p">:</span> <span class="mi">1538912730599</span><span class="p">,</span>
+      <span class="s2">&quot;duration&quot;</span><span class="p">:</span> <span class="mi">201101</span><span class="p">,</span>
+      <span class="s2">&quot;realtime&quot;</span><span class="p">:</span> <span class="mi">69</span><span class="p">,</span>
+      <span class="s2">&quot;</span><span class="si">%c</span><span class="s2">pu&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>
+      <span class="s2">&quot;%mem&quot;</span><span class="p">:</span> <span class="mf">0.1</span><span class="p">,</span>
+      <span class="s2">&quot;vmem&quot;</span><span class="p">:</span> <span class="mi">54259712</span><span class="p">,</span>
+      <span class="s2">&quot;rss&quot;</span><span class="p">:</span> <span class="mi">10469376</span><span class="p">,</span>
+      <span class="s2">&quot;peak_vmem&quot;</span><span class="p">:</span> <span class="mi">20185088</span><span class="p">,</span>
+      <span class="s2">&quot;peak_rss&quot;</span><span class="p">:</span> <span class="mi">574972928</span><span class="p">,</span>
+      <span class="s2">&quot;rchar&quot;</span><span class="p">:</span> <span class="mi">7597</span><span class="p">,</span>
+      <span class="s2">&quot;wchar&quot;</span><span class="p">:</span> <span class="mi">162</span><span class="p">,</span>
+      <span class="s2">&quot;syscr&quot;</span><span class="p">:</span> <span class="mi">16</span><span class="p">,</span>
+      <span class="s2">&quot;syscw&quot;</span><span class="p">:</span> <span class="mi">4083712</span><span class="p">,</span>
+      <span class="s2">&quot;read_bytes&quot;</span><span class="p">:</span> <span class="mi">4096</span><span class="p">,</span>
+      <span class="s2">&quot;write_bytes&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+      <span class="s2">&quot;native_id&quot;</span><span class="p">:</span> <span class="mi">27185</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="kubernetes.html" class="btn btn-neutral float-left" title="Kubernetes" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="sharing.html" class="btn btn-neutral float-right" title="Pipeline sharing" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2020, Seqera Labs. 2013-2019, Centre for Genomic Regulation (CRG)..</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+    <!-- Theme Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-364526-10"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'UA-364526-10', {
+          'anonymize_ip': false,
+      });
+    </script> 
+
+</body>
+</html>

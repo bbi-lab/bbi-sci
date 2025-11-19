@@ -1,0 +1,644 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pipeline sharing &mdash; Nextflow 20.10.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+
+  
+    <link rel="shortcut icon" href="_static/favicon.ico"/>
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+      <script src="_static/documentation_options.js?v=a23069cb"></script>
+      <script src="_static/doctools.js?v=888ff710"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Workflow introspection" href="metadata.html" />
+    <link rel="prev" title="Tracing &amp; visualisation" href="tracing.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Nextflow
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="getstarted.html">Get started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="basic.html">Basic concepts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="script.html">Nextflow scripting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="process.html">Processes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="channel.html">Channels</a></li>
+<li class="toctree-l1"><a class="reference internal" href="operator.html">Operators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="executor.html">Executors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="config.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dsl2.html">DSL 2</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cli.html">Command line interface (CLI)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="awscloud.html">Amazon Cloud</a></li>
+<li class="toctree-l1"><a class="reference internal" href="amazons3.html">Amazon S3 storage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="google.html">Google Cloud</a></li>
+<li class="toctree-l1"><a class="reference internal" href="conda.html">Conda environments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="docker.html">Docker containers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="shifter.html">Shifter Containers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="singularity.html">Singularity containers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="podman.html">Podman containers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ignite.html">Apache Ignite</a></li>
+<li class="toctree-l1"><a class="reference internal" href="kubernetes.html">Kubernetes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tracing.html">Tracing &amp; visualisation</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Pipeline sharing</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#how-it-works">How it works</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#running-a-pipeline">Running a pipeline</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#handling-revisions">Handling revisions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#commands-to-manage-projects">Commands to manage projects</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#listing-available-projects">Listing available projects</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#showing-project-information">Showing project information</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pulling-or-updating-a-project">Pulling or updating a project</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#viewing-the-project-code">Viewing the project code</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cloning-a-project-into-a-folder">Cloning a project into a folder</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#deleting-a-downloaded-project">Deleting a downloaded project</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#scm-configuration-file">SCM configuration file</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#bitbucket-credentials">BitBucket credentials</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#bitbucket-server-credentials">BitBucket Server credentials</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#github-credentials">GitHub credentials</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gitlab-credentials">GitLab credentials</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gitea-credentials">Gitea credentials</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#private-server-configuration">Private server configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#local-repository-configuration">Local repository configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#publishing-your-pipeline">Publishing your pipeline</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#manage-dependencies">Manage dependencies</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#third-party-scripts">Third party scripts</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#system-environment">System environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#resource-manager">Resource manager</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#bootstrap-data">Bootstrap data</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#user-inputs">User inputs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#binary-applications">Binary applications</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="metadata.html">Workflow introspection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mail.html">Mail &amp; Notifications</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Nextflow</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Pipeline sharing</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="pipeline-sharing">
+<span id="sharing-page"></span><h1>Pipeline sharing<a class="headerlink" href="#pipeline-sharing" title="Link to this heading">¶</a></h1>
+<p>Nextflow seamlessly integrates with <a class="reference external" href="http://bitbucket.org/">BitBucket</a> <a class="footnote-reference brackets" href="#id3" id="id1" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a>, <a class="reference external" href="http://github.com">GitHub</a>,
+and <a class="reference external" href="http://gitlab.com">GitLab</a> hosted code repositories and sharing platforms. This feature allows you to manage your
+project code in a more consistent manner or use other people’s Nextflow pipelines, published through BitBucket/GitHub/GitLab,
+in a quick and transparent way.</p>
+<section id="how-it-works">
+<h2>How it works<a class="headerlink" href="#how-it-works" title="Link to this heading">¶</a></h2>
+<p>When you launch a script execution with Nextflow, it will look for a file with the pipeline name you’ve specified.
+If that file does not exist, it will look for a public repository with the same name on GitHub (unless otherwise specified).
+If it is found, the repository is automatically downloaded to your computer and executed. This repository is
+stored in the Nextflow home directory, that is by default the <code class="docutils literal notranslate"><span class="pre">$HOME/.nextflow</span></code> path, and thus will be reused for any further
+executions.</p>
+</section>
+<section id="running-a-pipeline">
+<h2>Running a pipeline<a class="headerlink" href="#running-a-pipeline" title="Link to this heading">¶</a></h2>
+<p>To launch the execution of a pipeline project, hosted in a remote code repository, you simply need to specify its <cite>qualified</cite> name
+or the repository URL after the <code class="docutils literal notranslate"><span class="pre">run</span></code> command. The qualified name is formed by two parts: the <cite>owner</cite> name and the
+<cite>repository</cite> name separated by a <code class="docutils literal notranslate"><span class="pre">/</span></code> character.</p>
+<p>In other words if a Nextflow project is hosted, for example, in a GitHub repository at the address
+<code class="docutils literal notranslate"><span class="pre">http://github.com/foo/bar</span></code>, it can be executed by entering the following command in your shell terminal:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">nextflow</span> <span class="n">run</span> <span class="n">foo</span><span class="o">/</span><span class="n">bar</span>
+</pre></div>
+</div>
+<p>or using the project URL:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">nextflow</span> <span class="n">run</span> <span class="n">http</span><span class="p">:</span><span class="o">//</span><span class="n">github</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">foo</span><span class="o">/</span><span class="n">bar</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>In the first case, if your project is hosted on a service other than GitHub, you will need to specify this hosting
+service in the command line by using the <code class="docutils literal notranslate"><span class="pre">-hub</span></code> option. For example <code class="docutils literal notranslate"><span class="pre">-hub</span> <span class="pre">bitbucket</span></code> or <code class="docutils literal notranslate"><span class="pre">-hub</span> <span class="pre">gitlab</span></code>.
+In the second case, i.e. when using the project URL as name, the <code class="docutils literal notranslate"><span class="pre">-hub</span></code> option is not needed.</p>
+</div>
+<p>You can try this feature out by simply entering the following command in your shell terminal:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">nextflow</span> <span class="n">run</span> <span class="n">nextflow</span><span class="o">-</span><span class="n">io</span><span class="o">/</span><span class="n">hello</span>
+</pre></div>
+</div>
+<p>It will download a trivial <cite>Hello</cite> example from the repository published at the following address
+<a class="reference external" href="http://github.com/nextflow-io/hello">http://github.com/nextflow-io/hello</a> and execute it in your computer.</p>
+<p>If the <cite>owner</cite> part in the pipeline name is omitted, Nextflow will look for a pipeline between the ones you have
+already executed having a name that matches the name specified. If none is found it will try to download
+it using the <cite>organisation</cite> name defined by the environment variable <code class="docutils literal notranslate"><span class="pre">NXF_ORG</span></code> (which by default is <code class="docutils literal notranslate"><span class="pre">nextflow-io</span></code>).</p>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>To access a private repository, specify the access credentials by using the <code class="docutils literal notranslate"><span class="pre">-user</span></code> command
+line option, then the program will ask you to enter the password interactively.
+Private repositories access credentials can also be defined in the <a class="reference internal" href="#scm-configuration-file">SCM configuration file</a>.</p>
+</div>
+</section>
+<section id="handling-revisions">
+<h2>Handling revisions<a class="headerlink" href="#handling-revisions" title="Link to this heading">¶</a></h2>
+<p>Any Git branch, tag or commit ID defined in a project repository, can be used to specify the revision that you want to execute
+when launching a pipeline by adding the <code class="docutils literal notranslate"><span class="pre">-r</span></code> option to the run command line. So for example you could enter:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">nextflow</span> <span class="n">run</span> <span class="n">nextflow</span><span class="o">-</span><span class="n">io</span><span class="o">/</span><span class="n">hello</span> <span class="o">-</span><span class="n">r</span> <span class="n">mybranch</span>
+</pre></div>
+</div>
+<p>or</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">nextflow</span> <span class="n">run</span> <span class="n">nextflow</span><span class="o">-</span><span class="n">io</span><span class="o">/</span><span class="n">hello</span> <span class="o">-</span><span class="n">r</span> <span class="n">v1</span><span class="mf">.1</span>
+</pre></div>
+</div>
+<p>It will execute two different project revisions corresponding to the Git tag/branch having that names.</p>
+</section>
+<section id="commands-to-manage-projects">
+<h2>Commands to manage projects<a class="headerlink" href="#commands-to-manage-projects" title="Link to this heading">¶</a></h2>
+<p>The following commands allows you to perform some basic operations that can be used to manage your projects.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Nextflow is not meant to replace functionalities provided by the <a class="reference external" href="https://git-scm.com/">Git</a> tool. You may still need it to create new
+repositories or commit changes, etc.</p>
+</div>
+<section id="listing-available-projects">
+<h3>Listing available projects<a class="headerlink" href="#listing-available-projects" title="Link to this heading">¶</a></h3>
+<p>The <code class="docutils literal notranslate"><span class="pre">list</span></code> command allows you to list all the projects you have downloaded in your computer. For example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">nextflow</span> <span class="nb">list</span>
+</pre></div>
+</div>
+<p>This prints a list similar to the following one:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">cbcrg</span><span class="o">/</span><span class="n">ampa</span><span class="o">-</span><span class="n">nf</span>
+<span class="n">cbcrg</span><span class="o">/</span><span class="n">piper</span><span class="o">-</span><span class="n">nf</span>
+<span class="n">nextflow</span><span class="o">-</span><span class="n">io</span><span class="o">/</span><span class="n">hello</span>
+<span class="n">nextflow</span><span class="o">-</span><span class="n">io</span><span class="o">/</span><span class="n">examples</span>
+</pre></div>
+</div>
+</section>
+<section id="showing-project-information">
+<h3>Showing project information<a class="headerlink" href="#showing-project-information" title="Link to this heading">¶</a></h3>
+<p>By using the <code class="docutils literal notranslate"><span class="pre">info</span></code> command you can show information from a downloaded project. For example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>project name: nextflow-io/hello
+repository  : http://github.com/nextflow-io/hello
+local path  : $HOME/.nextflow/assets/nextflow-io/hello
+main script : main.nf
+revisions   :
+* master (default)
+  mybranch
+  v1.1 [t]
+  v1.2 [t]
+</pre></div>
+</div>
+<p>Starting from the top it shows: 1) the project name; 2) the Git repository URL; 3) the local folder where the
+project has been downloaded; 4) the script that is executed when launched; 5) the list of available
+revisions i.e. branches and tags. Tags are marked with a <code class="docutils literal notranslate"><span class="pre">[t]</span></code> on the right, the current checked-out revision is
+marked with a <code class="docutils literal notranslate"><span class="pre">*</span></code> on the left.</p>
+</section>
+<section id="pulling-or-updating-a-project">
+<h3>Pulling or updating a project<a class="headerlink" href="#pulling-or-updating-a-project" title="Link to this heading">¶</a></h3>
+<p>The <code class="docutils literal notranslate"><span class="pre">pull</span></code> command allows you to download a project from a GitHub repository or to update it if
+that repository has already been downloaded. For example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">nextflow</span> <span class="n">pull</span> <span class="n">nextflow</span><span class="o">-</span><span class="n">io</span><span class="o">/</span><span class="n">examples</span>
+</pre></div>
+</div>
+<p>Altenatively, you can use the repository URL as the name of the project to pull:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">nextflow</span> <span class="n">pull</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">github</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">nextflow</span><span class="o">-</span><span class="n">io</span><span class="o">/</span><span class="n">examples</span>
+</pre></div>
+</div>
+<p>Downloaded pipeline projects are stored in the folder <code class="docutils literal notranslate"><span class="pre">$HOME/.nextflow/assets</span></code> in your computer.</p>
+</section>
+<section id="viewing-the-project-code">
+<h3>Viewing the project code<a class="headerlink" href="#viewing-the-project-code" title="Link to this heading">¶</a></h3>
+<p>The <code class="docutils literal notranslate"><span class="pre">view</span></code> command allows you to quickly show the content of the pipeline script you have downloaded. For example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">nextflow</span> <span class="n">view</span> <span class="n">nextflow</span><span class="o">-</span><span class="n">io</span><span class="o">/</span><span class="n">hello</span>
+</pre></div>
+</div>
+<p>By adding the <code class="docutils literal notranslate"><span class="pre">-l</span></code> option to the example above it will list the content of the repository.</p>
+</section>
+<section id="cloning-a-project-into-a-folder">
+<h3>Cloning a project into a folder<a class="headerlink" href="#cloning-a-project-into-a-folder" title="Link to this heading">¶</a></h3>
+<p>The <code class="docutils literal notranslate"><span class="pre">clone</span></code> command allows you to copy a Nextflow pipeline project to a directory of your choice. For example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">nextflow</span> <span class="n">clone</span> <span class="n">nextflow</span><span class="o">-</span><span class="n">io</span><span class="o">/</span><span class="n">hello</span> <span class="n">target</span><span class="o">-</span><span class="nb">dir</span>
+</pre></div>
+</div>
+<p>If the destination directory is omitted the specified project is cloned to a directory with the same name as the
+pipeline base name (e.g. <cite>hello</cite>) in the current folder.</p>
+<p>The clone command can be used to inspect or modify the source code of a pipeline project. You can eventually commit and push
+back your changes by using the usual Git/GitHub workflow.</p>
+</section>
+<section id="deleting-a-downloaded-project">
+<h3>Deleting a downloaded project<a class="headerlink" href="#deleting-a-downloaded-project" title="Link to this heading">¶</a></h3>
+<p>Downloaded pipelines can be deleted by using the <code class="docutils literal notranslate"><span class="pre">drop</span></code> command, as shown below:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">nextflow</span> <span class="n">drop</span> <span class="n">nextflow</span><span class="o">-</span><span class="n">io</span><span class="o">/</span><span class="n">hello</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="scm-configuration-file">
+<span id="sharing-scm-file"></span><h2>SCM configuration file<a class="headerlink" href="#scm-configuration-file" title="Link to this heading">¶</a></h2>
+<p>The file <code class="docutils literal notranslate"><span class="pre">$HOME/.nextflow/scm</span></code> allows you to centralise the security credentials required to access private project
+repositories on Bitbucket, GitHub and GitLab source code management (<cite>SCM</cite>) platforms or to manage the configuration properties
+of private server installations (of the same platforms).</p>
+<p>The configuration properties for each SCM platform are defined inside the <code class="docutils literal notranslate"><span class="pre">providers</span></code> section,
+properties for the same provider are grouped together with a common name and delimited with curly brackets as in this example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">providers</span> <span class="p">{</span>
+    <span class="o">&lt;</span><span class="n">provider</span><span class="o">-</span><span class="n">name</span><span class="o">&gt;</span> <span class="p">{</span>
+        <span class="nb">property</span> <span class="o">=</span> <span class="n">value</span>
+        <span class="p">:</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>In the above template replace <cite>&lt;provider-name&gt;</cite> with one of the “default” servers (i.e. <code class="docutils literal notranslate"><span class="pre">bitbucket</span></code>, <code class="docutils literal notranslate"><span class="pre">github</span></code> or <code class="docutils literal notranslate"><span class="pre">gitlab</span></code>)
+or a custom identifier representing a private SCM server installation.</p>
+<p>The following configuration properties are supported for each provider configuration:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Name</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>user</p></td>
+<td><p>User name required to access private repositories on the SCM server.</p></td>
+</tr>
+<tr class="row-odd"><td><p>password</p></td>
+<td><p>User password required to access private repositories on the SCM server.</p></td>
+</tr>
+<tr class="row-even"><td><p>token</p></td>
+<td><p>Private API access token (used only when the specified platform is <code class="docutils literal notranslate"><span class="pre">gitlab</span></code>).</p></td>
+</tr>
+<tr class="row-odd"><td><p><sup>*</sup> platform</p></td>
+<td><p>SCM platform name, either: <code class="docutils literal notranslate"><span class="pre">github</span></code>, <code class="docutils literal notranslate"><span class="pre">gitlab</span></code> or <code class="docutils literal notranslate"><span class="pre">bitbucket</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p><sup>*</sup> server</p></td>
+<td><p>SCM server name including the protocol prefix e.g. <code class="docutils literal notranslate"><span class="pre">https://github.com</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><sup>*</sup> endpoint</p></td>
+<td><p>SCM API <cite>endpoint</cite> URL e.g. <code class="docutils literal notranslate"><span class="pre">https://api.github.com</span></code> (default: the same value specified for <code class="docutils literal notranslate"><span class="pre">server</span></code>).</p></td>
+</tr>
+</tbody>
+</table>
+<p>The attributes marked with a * are only required when defining the configuration of a private SCM server.</p>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<blockquote>
+<div><p>A custom location for the SCM file can be specified using the <code class="docutils literal notranslate"><span class="pre">NXF_SCM_FILE</span></code> environment variable (requires</p>
+</div></blockquote>
+<p>version <code class="docutils literal notranslate"><span class="pre">20.10.0</span></code> or later).</p>
+</div>
+<section id="bitbucket-credentials">
+<h3>BitBucket credentials<a class="headerlink" href="#bitbucket-credentials" title="Link to this heading">¶</a></h3>
+<p>Create a <code class="docutils literal notranslate"><span class="pre">bitbucket</span></code> entry in the <a class="reference internal" href="#scm-configuration-file">SCM configuration file</a> specifying your user name and app password, as shown below:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">providers</span> <span class="p">{</span>
+
+    <span class="n">bitbucket</span> <span class="p">{</span>
+        <span class="n">user</span> <span class="o">=</span> <span class="s1">&#39;me&#39;</span>
+        <span class="n">password</span> <span class="o">=</span> <span class="s1">&#39;my-secret&#39;</span>
+    <span class="p">}</span>
+
+<span class="p">}</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>App passwords are substitute passwords for a user account which you can use for scripts and integrating
+tools to avoid putting your real password into configuration files.
+Learn more at <a class="reference external" href="https://support.atlassian.com/bitbucket-cloud/docs/app-passwords/">this link</a>.</p>
+</div>
+</section>
+<section id="bitbucket-server-credentials">
+<h3>BitBucket Server credentials<a class="headerlink" href="#bitbucket-server-credentials" title="Link to this heading">¶</a></h3>
+<p><a class="reference external" href="https://confluence.atlassian.com/bitbucketserver">BitBucket Server</a> is a self-hosted Git repository and management
+platform.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>BitBucket Server uses different API from the <a class="reference external" href="https://bitbucket.org/">BitBucket</a> cloud service. Make sure to
+use the right configuration whether you are using the cloud service or a self-hosted installation.</p>
+</div>
+<p>To access your local BitBucket Server create an entry in the <a class="reference internal" href="#scm-configuration-file">SCM configuration file</a> specifying as shown below:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">providers</span> <span class="p">{</span>
+
+    <span class="n">mybitbucket</span> <span class="p">{</span>
+        <span class="n">platform</span> <span class="o">=</span> <span class="s1">&#39;bitbucketserver&#39;</span>
+        <span class="n">server</span> <span class="o">=</span> <span class="s1">&#39;https://your.bitbucket.host.com&#39;</span>
+        <span class="n">endpoint</span> <span class="o">=</span> <span class="s1">&#39;https://your.bitbucket.host.com&#39;</span>
+        <span class="n">user</span> <span class="o">=</span> <span class="s1">&#39;your-user&#39;</span>
+        <span class="n">password</span> <span class="o">=</span> <span class="s1">&#39;your-password or your-token&#39;</span>
+    <span class="p">}</span>
+
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="github-credentials">
+<h3>GitHub credentials<a class="headerlink" href="#github-credentials" title="Link to this heading">¶</a></h3>
+<p>Create a <code class="docutils literal notranslate"><span class="pre">github</span></code> entry in the <a class="reference internal" href="#scm-configuration-file">SCM configuration file</a> specifying your user name and password as shown below:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">providers</span> <span class="p">{</span>
+
+    <span class="n">github</span> <span class="p">{</span>
+        <span class="n">user</span> <span class="o">=</span> <span class="s1">&#39;me&#39;</span>
+        <span class="n">password</span> <span class="o">=</span> <span class="s1">&#39;my-secret&#39;</span>
+    <span class="p">}</span>
+
+<span class="p">}</span>
+</pre></div>
+</div>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>You can use use a <a class="reference external" href="https://github.com/blog/1509-personal-api-tokens">Personal API token</a> in place of your
+GitHub password.</p>
+</div>
+</section>
+<section id="gitlab-credentials">
+<h3>GitLab credentials<a class="headerlink" href="#gitlab-credentials" title="Link to this heading">¶</a></h3>
+<p>Create a <code class="docutils literal notranslate"><span class="pre">gitlab</span></code> entry in the <a class="reference internal" href="#scm-configuration-file">SCM configuration file</a> specifying the user name, password and your API access token
+that can be found in your GitLab <a class="reference external" href="https://gitlab.com/profile/account">account page</a> (sign in required). For example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">providers</span> <span class="p">{</span>
+
+    <span class="n">gitlab</span> <span class="p">{</span>
+        <span class="n">user</span> <span class="o">=</span> <span class="s1">&#39;me&#39;</span>
+        <span class="n">password</span> <span class="o">=</span> <span class="s1">&#39;my-secret&#39;</span>
+        <span class="n">token</span> <span class="o">=</span> <span class="s1">&#39;YgpR8m7viH_ZYnC8YSe8&#39;</span>
+    <span class="p">}</span>
+
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="gitea-credentials">
+<h3>Gitea credentials<a class="headerlink" href="#gitea-credentials" title="Link to this heading">¶</a></h3>
+<p><a class="reference external" href="https://gitea.io">Gitea</a> is a Git repository server with GitHub-like GUI access. Since Gitea installation is quite
+easy, it is suitable for building a private development environment in your network. To access your Gitea server, you
+have to provide all the credential information below:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">providers</span> <span class="p">{</span>
+
+    <span class="n">mygitea</span> <span class="p">{</span>
+        <span class="n">server</span> <span class="o">=</span> <span class="s1">&#39;http://your-domain.org/gitea&#39;</span>
+        <span class="n">endpoint</span> <span class="o">=</span> <span class="s1">&#39;http://your-domain.org/gitea/api/v1&#39;</span>
+        <span class="n">platform</span> <span class="o">=</span> <span class="s1">&#39;gitea&#39;</span>
+        <span class="n">user</span> <span class="o">=</span> <span class="s1">&#39;your-user&#39;</span>
+        <span class="n">password</span> <span class="o">=</span> <span class="s1">&#39;your-password&#39;</span>
+        <span class="n">token</span> <span class="o">=</span> <span class="s1">&#39;your-api-token&#39;</span>
+    <span class="p">}</span>
+
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>See <a class="reference external" href="https://docs.gitea.io/en-us/api-usage/">Gitea documentation</a> about how to enable API access on your
+server and how to issue a token.</p>
+</section>
+</section>
+<section id="private-server-configuration">
+<h2>Private server configuration<a class="headerlink" href="#private-server-configuration" title="Link to this heading">¶</a></h2>
+<p>Nextflow is able to access repositories hosted on private BitBucket, GitHub, GitLab and Gitea server installations.</p>
+<p>In order to use a private SCM installation you will need to set the server name and access credentials
+in your <a class="reference internal" href="#scm-configuration-file">SCM configuration file</a> .</p>
+<p>If, for example, the host name of your private GitLab server is <code class="docutils literal notranslate"><span class="pre">gitlab.acme.org</span></code>, you will need to have in the
+<code class="docutils literal notranslate"><span class="pre">$HOME/.nextflow/scm</span></code> file a configuration like the following:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">providers</span> <span class="p">{</span>
+
+    <span class="n">mygit</span> <span class="p">{</span>
+        <span class="n">server</span> <span class="o">=</span> <span class="s1">&#39;http://gitlab.acme.org&#39;</span>
+        <span class="n">platform</span> <span class="o">=</span> <span class="s1">&#39;gitlab&#39;</span>
+        <span class="n">user</span> <span class="o">=</span> <span class="s1">&#39;your-user&#39;</span>
+        <span class="n">password</span> <span class="o">=</span> <span class="s1">&#39;your-password&#39;</span>
+        <span class="n">token</span> <span class="o">=</span> <span class="s1">&#39;your-api-token&#39;</span>
+    <span class="p">}</span>
+
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Then you will be able to run/pull a project with Nextflow using the following command line:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow run foo/bar -hub mygit
+</pre></div>
+</div>
+<p>Or, in alternative, using the Git clone URL:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow run http://gitlab.acme.org/foo/bar.git
+</pre></div>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>When accessing a private SCM installation over <code class="docutils literal notranslate"><span class="pre">https</span></code> and that server uses a custom SSL certificate
+you may need to import such certificate into your local Java keystore. Read more
+<a class="reference external" href="https://docs.oracle.com/javase/tutorial/security/toolsign/rstep2.html">here</a>.</p>
+</div>
+</section>
+<section id="local-repository-configuration">
+<h2>Local repository configuration<a class="headerlink" href="#local-repository-configuration" title="Link to this heading">¶</a></h2>
+<p>Nextflow is also able to handle repositories stored in a local or shared file system. The repository
+must be created as a <a class="reference external" href="https://mijingo.com/blog/what-is-a-bare-git-repository">bare repository</a>.</p>
+<p>Having, for example. a bare repository store at path <code class="docutils literal notranslate"><span class="pre">/shared/projects/foo.git</span></code>, Nextflow is able
+to run it using the following syntax:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow run file:/shared/projects/foo.git
+</pre></div>
+</div>
+<p>See <a class="reference external" href="https://git-scm.com/book/en/v2/Git-on-the-Server-Getting-Git-on-a-Server">Git documentation</a> for
+more details about how create and manage bare repositories.</p>
+</section>
+<section id="publishing-your-pipeline">
+<h2>Publishing your pipeline<a class="headerlink" href="#publishing-your-pipeline" title="Link to this heading">¶</a></h2>
+<p>In order to publish your Nextflow pipeline to GitHub (or any other supported platform) and allow other people to use it,
+you only need to create a GitHub repository containing all your project script and data files. If you don’t know how to
+do it, follow this simple tutorial that explains how <a class="reference external" href="https://help.github.com/articles/create-a-repo">create a GitHub repository</a>.</p>
+<p>Nextflow only requires that the main script in your pipeline project is called <code class="docutils literal notranslate"><span class="pre">main.nf</span></code>. A different name can be
+used by specifying the <code class="docutils literal notranslate"><span class="pre">manifest.mainScript</span></code> attribute in the <code class="docutils literal notranslate"><span class="pre">nextflow.config</span></code> file that must be
+included in your project. For example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">manifest</span><span class="o">.</span><span class="n">mainScript</span> <span class="o">=</span> <span class="s1">&#39;my_very_long_script_name.nf&#39;</span>
+</pre></div>
+</div>
+<p>To learn more about this and other project metadata information, that can be defined in the Nextflow configuration file,
+read the <a class="reference internal" href="config.html#config-manifest"><span class="std std-ref">Manifest</span></a> section on the Nextflow configuration page.</p>
+<p>Once you have uploaded your pipeline project to GitHub other people can execute it simply
+using the project name or the repository URL.</p>
+<p>For if your GitHub account name is <code class="docutils literal notranslate"><span class="pre">foo</span></code> and you have uploaded a project into a repository named <code class="docutils literal notranslate"><span class="pre">bar</span></code> the
+repository URL will be <code class="docutils literal notranslate"><span class="pre">http://github.com/foo/bar</span></code> and people will able to download and run it by using either
+the command:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">nextflow</span> <span class="n">run</span> <span class="n">foo</span><span class="o">/</span><span class="n">bar</span>
+</pre></div>
+</div>
+<p>or</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">nextflow</span> <span class="n">run</span> <span class="n">http</span><span class="p">:</span><span class="o">//</span><span class="n">github</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">foo</span><span class="o">/</span><span class="n">bar</span>
+</pre></div>
+</div>
+<p>See the <a class="reference internal" href="#running-a-pipeline">Running a pipeline</a> section for more details on how to run Nextflow projects.</p>
+</section>
+<section id="manage-dependencies">
+<h2>Manage dependencies<a class="headerlink" href="#manage-dependencies" title="Link to this heading">¶</a></h2>
+<p>Computational pipelines are rarely composed by a single script. In real world applications they depend on dozens of other components.
+These can be other scripts, databases, or applications compiled for a platform native binary format.</p>
+<p>External dependencies are the most common source of problems when sharing a piece of software, because the
+users need to have an identical set of tools and the same configuration to be able to use it. In many cases this has proven to be
+a painful and error prone process, that can severely limit the ability to reproduce computational results on a system other than
+the one on which it was originally developed.</p>
+<p>Nextflow tackles this problem by integrating GitHub, BitBucket and GitLab sharing platforms and
+<a class="reference external" href="http://www.docker.com">Docker</a> containers technology.</p>
+<p>The use of a code management system is important to keep together all the dependencies of your
+pipeline project and allows you to track the changes of the source code in a consistent manner.</p>
+<p>Moreover to guarantee that a pipeline is reproducible it should be self-contained i.e. it should have ideally no
+dependencies on the hosting environment. By using Nextflow you can achieve this goal following these methods:</p>
+<section id="third-party-scripts">
+<h3>Third party scripts<a class="headerlink" href="#third-party-scripts" title="Link to this heading">¶</a></h3>
+<p>Any third party script that does not need to be compiled (Bash, Python, Perl, etc) can be included in the pipeline
+project repository, so that they are distributed with it.</p>
+<p>Grant the execute permission to these files and copy them into a folder named <code class="docutils literal notranslate"><span class="pre">bin/</span></code> in the root directory of your
+project repository. Nextflow will automatically add this folder to the <code class="docutils literal notranslate"><span class="pre">PATH</span></code> environment variable, and the scripts
+will automatically be accessible in your pipeline without the need to specify an absolute path to invoke them.</p>
+</section>
+<section id="system-environment">
+<h3>System environment<a class="headerlink" href="#system-environment" title="Link to this heading">¶</a></h3>
+<p>Any environment variable that may be required by the tools in your pipeline can be defined in the <code class="docutils literal notranslate"><span class="pre">nextflow.config</span></code> file
+by using the <code class="docutils literal notranslate"><span class="pre">env</span></code> scope and including it in the root directory of your project. For example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">env</span> <span class="p">{</span>
+  <span class="n">DELTA</span> <span class="o">=</span> <span class="s1">&#39;foo&#39;</span>
+  <span class="n">GAMMA</span> <span class="o">=</span> <span class="s1">&#39;bar&#39;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>See the <a class="reference internal" href="config.html#config-page"><span class="std std-ref">Configuration</span></a> page to learn more about the Nextflow configuration file.</p>
+</section>
+<section id="resource-manager">
+<h3>Resource manager<a class="headerlink" href="#resource-manager" title="Link to this heading">¶</a></h3>
+<p>When using Nextflow you don’t need to write the code to parallelize your pipeline for a specific grid engine/resource
+manager because the parallelization is defined implicitly and managed by the Nextflow runtime. The target execution
+environment is parametrized and defined in the configuration file, thus your code is free from this kind of dependency.</p>
+</section>
+<section id="bootstrap-data">
+<h3>Bootstrap data<a class="headerlink" href="#bootstrap-data" title="Link to this heading">¶</a></h3>
+<p>Whenever your pipeline requires some files or dataset to carry out any initialization step, you
+can include this data in the pipeline repository itself and distribute them together.</p>
+<p>To reference this data in your pipeline script in a portable manner (i.e. without the need to use a static absolute path)
+use the implicit variable <code class="docutils literal notranslate"><span class="pre">baseDir</span></code> which locates the base directory of your pipeline project.</p>
+<p>For example, you can create a folder named <code class="docutils literal notranslate"><span class="pre">dataset/</span></code> in your repository root directory and copy there the
+required data file(s) you may need, then you can access this data in your script by writing:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sequences</span> <span class="o">=</span> <span class="n">file</span><span class="p">(</span><span class="s2">&quot;$baseDir/dataset/sequences.fa&quot;</span><span class="p">)</span>
+<span class="n">sequences</span><span class="o">.</span><span class="n">splitFasta</span> <span class="p">{</span>
+     <span class="n">println</span> <span class="n">it</span>
+ <span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="user-inputs">
+<h3>User inputs<a class="headerlink" href="#user-inputs" title="Link to this heading">¶</a></h3>
+<p>Nextflow scripts can be easily parametrised to allow users to provide their own input data. Simply declare on the
+top of your script all the parameters it may require as shown below:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">params</span><span class="o">.</span><span class="n">my_input</span> <span class="o">=</span> <span class="s1">&#39;default input file&#39;</span>
+<span class="n">params</span><span class="o">.</span><span class="n">my_output</span> <span class="o">=</span> <span class="s1">&#39;default output path&#39;</span>
+<span class="n">params</span><span class="o">.</span><span class="n">my_flag</span> <span class="o">=</span> <span class="n">false</span>
+<span class="o">..</span>
+</pre></div>
+</div>
+<p>The actual parameter values can be provided when launching the script execution on the command line
+by prefixed the parameter name with a double minus character i.e. <code class="docutils literal notranslate"><span class="pre">--</span></code>, for example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">nextflow</span> <span class="n">run</span> <span class="o">&lt;</span><span class="n">your</span> <span class="n">pipeline</span><span class="o">&gt;</span> <span class="o">--</span><span class="n">my_input</span> <span class="o">/</span><span class="n">path</span><span class="o">/</span><span class="n">to</span><span class="o">/</span><span class="nb">input</span><span class="o">/</span><span class="n">file</span> <span class="o">--</span><span class="n">my_output</span> <span class="o">/</span><span class="n">other</span><span class="o">/</span><span class="n">path</span> <span class="o">--</span><span class="n">my_flag</span> <span class="n">true</span>
+</pre></div>
+</div>
+</section>
+<section id="binary-applications">
+<h3>Binary applications<a class="headerlink" href="#binary-applications" title="Link to this heading">¶</a></h3>
+<p>Docker allows you to ship any binary dependencies that you may have in your pipeline to a portable image
+that is downloaded on-demand and can be executed on any platform where a Docker engine is installed.</p>
+<p>In order to use it with Nextflow, create a Docker image containing the tools needed by your pipeline and make it available
+in the <a class="reference external" href="https://registry.hub.docker.com">Docker registry</a>.</p>
+<p>Then declare in the <code class="docutils literal notranslate"><span class="pre">nextflow.config</span></code> file, that you will include in your project, the name of the Docker image you
+have created. For example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">process</span><span class="o">.</span><span class="n">container</span> <span class="o">=</span> <span class="s1">&#39;my-docker-image&#39;</span>
+<span class="n">docker</span><span class="o">.</span><span class="n">enabled</span> <span class="o">=</span> <span class="n">true</span>
+</pre></div>
+</div>
+<p>In this way when you launch the pipeline execution, the Docker image will be automatically downloaded and used to run
+your tasks.</p>
+<p>Read the <a class="reference internal" href="docker.html#docker-page"><span class="std std-ref">Docker containers</span></a> page to lean more on how to use Docker containers with Nextflow.</p>
+<p>This mix of technologies makes it possible to write self-contained and truly reproducible pipelines which require
+zero configuration and can be reproduced in any system having a Java VM and a Docker engine installed.</p>
+<aside class="footnote-list brackets">
+<aside class="footnote brackets" id="id3" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id1">1</a><span class="fn-bracket">]</span></span>
+<p>BitBucket provides two types of version control system: <cite>Git</cite> and <cite>Mercurial</cite>. Nextflow supports only <cite>Git</cite> based repositories.</p>
+</aside>
+</aside>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="tracing.html" class="btn btn-neutral float-left" title="Tracing &amp; visualisation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="metadata.html" class="btn btn-neutral float-right" title="Workflow introspection" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2020, Seqera Labs. 2013-2019, Centre for Genomic Regulation (CRG)..</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+    <!-- Theme Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-364526-10"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'UA-364526-10', {
+          'anonymize_ip': false,
+      });
+    </script> 
+
+</body>
+</html>

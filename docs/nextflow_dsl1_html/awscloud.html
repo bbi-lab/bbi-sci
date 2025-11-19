@@ -1,0 +1,437 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Amazon Cloud &mdash; Nextflow 20.10.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+
+  
+    <link rel="shortcut icon" href="_static/favicon.ico"/>
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+      <script src="_static/documentation_options.js?v=a23069cb"></script>
+      <script src="_static/doctools.js?v=888ff710"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Amazon S3 storage" href="amazons3.html" />
+    <link rel="prev" title="Command line interface (CLI)" href="cli.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Nextflow
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="getstarted.html">Get started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="basic.html">Basic concepts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="script.html">Nextflow scripting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="process.html">Processes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="channel.html">Channels</a></li>
+<li class="toctree-l1"><a class="reference internal" href="operator.html">Operators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="executor.html">Executors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="config.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dsl2.html">DSL 2</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cli.html">Command line interface (CLI)</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Amazon Cloud</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#aws-credentials">AWS credentials</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#aws-batch">AWS Batch</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#configuration">Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#custom-ami">Custom AMI</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#aws-cli-installation">AWS CLI installation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#custom-job-definition">Custom job definition</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#pipeline-execution">Pipeline execution</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#hybrid-workloads">Hybrid workloads</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#volume-mounts">Volume mounts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#troubleshooting">Troubleshooting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#advanced-configuration">Advanced configuration</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="amazons3.html">Amazon S3 storage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="google.html">Google Cloud</a></li>
+<li class="toctree-l1"><a class="reference internal" href="conda.html">Conda environments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="docker.html">Docker containers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="shifter.html">Shifter Containers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="singularity.html">Singularity containers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="podman.html">Podman containers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ignite.html">Apache Ignite</a></li>
+<li class="toctree-l1"><a class="reference internal" href="kubernetes.html">Kubernetes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tracing.html">Tracing &amp; visualisation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sharing.html">Pipeline sharing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="metadata.html">Workflow introspection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mail.html">Mail &amp; Notifications</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Nextflow</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Amazon Cloud</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="amazon-cloud">
+<span id="awscloud-page"></span><h1>Amazon Cloud<a class="headerlink" href="#amazon-cloud" title="Link to this heading">¶</a></h1>
+<section id="aws-credentials">
+<h2>AWS credentials<a class="headerlink" href="#aws-credentials" title="Link to this heading">¶</a></h2>
+<p>Nextflow will use the AWS credentials defined in your environment, using the standard AWS variables shown below:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">AWS_ACCESS_KEY_ID</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">AWS_SECRET_ACCESS_KEY</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">AWS_DEFAULT_REGION</span></code></p></li>
+</ul>
+</div></blockquote>
+<p>If <code class="docutils literal notranslate"><span class="pre">AWS_ACCESS_KEY_ID</span></code> and <code class="docutils literal notranslate"><span class="pre">AWS_SECRET_ACCESS_KEY</span></code> are not defined in the environment, Nextflow will attempt to
+retrieve credentials from your <code class="docutils literal notranslate"><span class="pre">~/.aws/credentials</span></code> or <code class="docutils literal notranslate"><span class="pre">~/.aws/config</span></code> files. The <code class="docutils literal notranslate"><span class="pre">default</span></code> profile can be
+overridden via the environmental variable <code class="docutils literal notranslate"><span class="pre">AWS_PROFILE</span></code> (or <code class="docutils literal notranslate"><span class="pre">AWS_DEFAULT_PROFILE</span></code>).</p>
+<p>Alternatively AWS credentials can be specified in the Nextflow configuration file.
+See <a class="reference internal" href="config.html#config-aws"><span class="std std-ref">AWS configuration</span></a> for more details.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Credentials can also be provided by using an IAM Instance Role. The benefit of this approach is that
+it spares you from managing/distributing AWS keys explicitly.
+Read the <a class="reference external" href="http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html">IAM Roles</a> documentation
+and <a class="reference external" href="https://aws.amazon.com/blogs/security/granting-permission-to-launch-ec2-instances-with-iam-roles-passrole-permission/">this blog post</a> for more details.</p>
+</div>
+<section id="aws-batch">
+<span id="awscloud-batch"></span><h3>AWS Batch<a class="headerlink" href="#aws-batch" title="Link to this heading">¶</a></h3>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Requires Nextflow version <cite>0.26.0</cite> or later.</p>
+</div>
+<p><a class="reference external" href="https://aws.amazon.com/batch/">AWS Batch</a> is a managed computing service that allows the execution of containerised
+workloads in the Amazon cloud infrastructure.</p>
+<p>Nextflow provides a built-in support for AWS Batch which allows the seamless deployment of a Nextflow pipeline
+in the cloud offloading the process executions as Batch jobs.</p>
+</section>
+</section>
+<section id="configuration">
+<span id="awscloud-batch-config"></span><h2>Configuration<a class="headerlink" href="#configuration" title="Link to this heading">¶</a></h2>
+<p>1 - Make sure your pipeline processes specifies one or more Docker containers by using the <a class="reference internal" href="process.html#process-container"><span class="std std-ref">container</span></a> directive.</p>
+<p>2 - Container images need to be published in a Docker registry such as <a class="reference external" href="https://hub.docker.com/">Docker Hub</a>,
+<a class="reference external" href="https://quay.io/">Quay</a> or <a class="reference external" href="https://aws.amazon.com/ecr/">ECS Container Registry</a> that can be reached
+by ECS Batch.</p>
+<p>3 - Specify the AWS Batch <a class="reference internal" href="executor.html#awsbatch-executor"><span class="std std-ref">executor</span></a> in the pipeline configuration.</p>
+<p>4 - Specify one or more AWS Batch queues for the execution of your pipeline by using the <a class="reference internal" href="process.html#process-queue"><span class="std std-ref">queue</span></a> directive.
+Batch queues allow you to bind the execution of a process to a specific computing environment ie. number of CPUs,
+type of instances (On-demand or Spot), scaling ability, etc. See the <a class="reference external" href="http://docs.aws.amazon.com/batch/latest/userguide/create-job-queue.html">AWS Batch documentation</a> to learn
+how to setup Batch queues.</p>
+<p>5 - Make sure the container image includes the <a class="reference external" href="https://aws.amazon.com/cli">AWS CLI tool</a> i.e. <code class="docutils literal notranslate"><span class="pre">aws</span></code>.
+Alternatively, it can also be installed in a custom AMI image. See the note below for details.</p>
+<p>An example <code class="docutils literal notranslate"><span class="pre">nextflow.config</span></code> file is shown below:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">process</span><span class="o">.</span><span class="n">executor</span> <span class="o">=</span> <span class="s1">&#39;awsbatch&#39;</span>
+<span class="n">process</span><span class="o">.</span><span class="n">queue</span> <span class="o">=</span> <span class="s1">&#39;my-batch-queue&#39;</span>
+<span class="n">process</span><span class="o">.</span><span class="n">container</span> <span class="o">=</span> <span class="s1">&#39;quay.io/biocontainers/salmon&#39;</span>
+<span class="n">aws</span><span class="o">.</span><span class="n">region</span> <span class="o">=</span> <span class="s1">&#39;eu-west-1&#39;</span>
+
+<span class="o">//</span> <span class="n">NOTE</span><span class="p">:</span> <span class="n">this</span> <span class="n">setting</span> <span class="ow">is</span> <span class="n">only</span> <span class="n">required</span> <span class="k">if</span> <span class="n">the</span> <span class="n">AWS</span> <span class="n">CLI</span> <span class="n">tool</span> <span class="ow">is</span> <span class="n">installed</span> <span class="ow">in</span> <span class="n">a</span> <span class="n">custom</span> <span class="n">AMI</span>
+<span class="n">aws</span><span class="o">.</span><span class="n">batch</span><span class="o">.</span><span class="n">cliPath</span> <span class="o">=</span> <span class="s1">&#39;/home/ec2-user/miniconda/bin/aws&#39;</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Nextflow requires to access the AWS command line tool (<code class="docutils literal notranslate"><span class="pre">aws</span></code>) from the container in which the job runs
+in order to stage the required input files and to copy back the resulting output files in the
+<a class="reference external" href="https://aws.amazon.com/s3/">S3 storage</a>.</p>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">aws</span></code> tool can either be included in container image(s) used by your pipeline execution or
+installed in a custom AMI that needs to used in place of the default AMI when configuring the Batch
+<a class="reference external" href="http://docs.aws.amazon.com/batch/latest/userguide/compute_environments.html">Computing environment</a>.</p>
+<p>The latter approach is preferred  because it allows the use of existing Docker images without the need to add
+the AWS CLI tool to them. See the sections below to learn how create a custom AMI and install the AWS CLI tool
+to it.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>AWS Batch uses the default ECS instance AMI, which has only a 22 GB storage volume which may not
+be enough for real world data analysis pipelines.</p>
+</div>
+<p>See the section below to learn how to create a custom AWS Batch custom AMI with a larger storage.</p>
+</section>
+<section id="custom-ami">
+<h2>Custom AMI<a class="headerlink" href="#custom-ami" title="Link to this heading">¶</a></h2>
+<p>In the EC2 Dashboard, click the <cite>Launch Instance</cite> button, then choose <cite>AWS Marketplace</cite> in the left pane and enter
+<cite>ECS</cite> in the search box. In result list select <cite>Amazon ECS-Optimized Amazon Linux AMI</cite>, then continue as usual to
+configure and launch the instance.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The selected instance has a bootstrap volume of 8GB and a second EBS volume 22G for computation which is
+hardly enough for real world genomic workloads. Make sure to specify an amount of storage in the second volume
+large enough for the needs of your pipeline execution.</p>
+</div>
+<p>When the instance is running, SSH into it, install the AWS CLI tools as explained below or any other required tool
+that may be required.</p>
+<p>Also make sure the Docker configuration reflects the amount of storage you have specified when launching the instance
+as shown below:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ docker info | grep -i data
+ Data file:
+ Metadata file:
+ Data Space Used: 500.2 MB
+ Data Space Total: 1.061 TB
+ Data Space Available: 1.06 TB
+ Metadata Space Used: 733.2 kB
+ Metadata Space Total: 1.074 GB
+ Metadata Space Available: 1.073 GB
+</pre></div>
+</div>
+<p>The above example shows the Docker data configuration for a 1000GB EBS data volume. See the <a class="reference external" href="http://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs-ami-storage-config.html">ECS Storage documentation</a>
+for more details.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>The maximum storage size of a single Docker container is by default 10GB, independently the amount of data space available
+in the underlying volume (see <a class="reference external" href="https://docs.docker.com/engine/reference/commandline/dockerd/#dmbasesize">Base device size</a> for more details).</p>
+</div>
+<p>You can verify the current setting by using this command:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ docker info | grep -i base
+  Base Device Size: 10.74 GB
+</pre></div>
+</div>
+<p>If your pipeline needs more storage for a single task execution, you will need to specify the <code class="docutils literal notranslate"><span class="pre">dm.basesize</span></code> setting
+with a proper value in the <code class="docutils literal notranslate"><span class="pre">/etc/sysconfig/docker-storage</span></code> configuration file.
+See <a class="reference external" href="https://forums.aws.amazon.com/message.jspa?messageID=811761#811761">here</a>
+and <a class="reference external" href="https://www.projectatomic.io/blog/2016/03/daemon_option_basedevicesize/">here</a> for details.</p>
+<p>Once done that, create a new AMI by using the <em>Create Image</em> option in the EC2 Dashboard or the AWS command line tool.</p>
+<p>The new AMI ID needs to be specified when creating the Batch
+<a class="reference external" href="http://docs.aws.amazon.com/batch/latest/userguide/compute_environments.html">Computing environment</a>.</p>
+</section>
+<section id="aws-cli-installation">
+<span id="aws-cli"></span><h2>AWS CLI installation<a class="headerlink" href="#aws-cli-installation" title="Link to this heading">¶</a></h2>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>The <a class="reference external" href="https://aws.amazon.com/cli">AWS CLI tool</a> must to be installed in your custom AMI
+by using a self-contained package manager such as <a class="reference external" href="https://conda.io">Conda</a>.</p>
+</div>
+<p>The reason is that when the AWS CLI tool executes using Conda it will use the version of python supplied by Conda.
+If you don’t use Conda and install the AWS CLI using something like <a class="reference external" href="https://pypi.org/project/pip/">pip</a> the <code class="docutils literal notranslate"><span class="pre">aws</span></code>
+command will attempt to run using the version of python found in the running container which won’t be able to find
+the necessary dependencies.</p>
+<p>The following snippet shows how to install AWS CLI with <a class="reference external" href="https://conda.io/miniconda.html">Miniconda</a>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>sudo yum install -y bzip2 wget
+wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
+bash Miniconda3-latest-Linux-x86_64.sh -b -f -p $HOME/miniconda
+$HOME/miniconda/bin/conda install -c conda-forge -y awscli
+rm Miniconda3-latest-Linux-x86_64.sh
+</pre></div>
+</div>
+<p>When complete verifies that the AWS CLI package works correctly:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ ./miniconda/bin/aws --version
+aws-cli/1.11.120 Python/3.6.3 Linux/4.9.43-17.39.amzn1.x86_64 botocore/1.5.83
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">aws</span></code> tool will be placed in a directory named <code class="docutils literal notranslate"><span class="pre">bin</span></code> in the main installation folder.
+Modifying this directory structure, after the installation, will cause the tool to not work properly.</p>
+</div>
+<p>By default Nextflow will assume the AWS CLI tool is directly available in the container. To use an installation
+from the host image specify the <code class="docutils literal notranslate"><span class="pre">cliPath</span></code> parameter in the <a class="reference internal" href="config.html#config-aws-batch"><span class="std std-ref">AWS Batch</span></a>
+configuration as shown below:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">aws</span><span class="o">.</span><span class="n">batch</span><span class="o">.</span><span class="n">cliPath</span> <span class="o">=</span> <span class="s1">&#39;/home/ec2-user/miniconda/bin/aws&#39;</span>
+</pre></div>
+</div>
+<p>Replace the path above with the one matching the location where <code class="docutils literal notranslate"><span class="pre">aws</span></code> tool is installed in your AMI.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Using a version of Nextflow prior 19.07.x the config setting <cite>executor.awscli</cite> should be used
+instead of <cite>aws.batch.cliPath</cite>.</p>
+</div>
+</section>
+<section id="custom-job-definition">
+<h2>Custom job definition<a class="headerlink" href="#custom-job-definition" title="Link to this heading">¶</a></h2>
+<p>Nextflow automatically creates the Batch <a class="reference external" href="http://docs.aws.amazon.com/batch/latest/userguide/job_definitions.html">Job definitions</a>
+needed to execute your pipeline processes. Therefore it’s not required to define them before run your workflow.</p>
+<p>However you may still need to specify a custom <cite>Job Definition</cite> to fine control the configuration settings
+of a specific job e.g. to define custom mount paths or other Batch Job special settings.</p>
+<p>To do that first create a <em>Job Definition</em> in the AWS Console (or with other means). Note the name of the <em>Job Definition</em>
+you created. You can then associate a process execution with this <em>Job definition</em> by using the <a class="reference internal" href="process.html#process-container"><span class="std std-ref">container</span></a>
+directive and specifing, in place of the container image name, the Job definition name prefixed by the
+<code class="docutils literal notranslate"><span class="pre">job-definition://</span></code> string, as shown below:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">process</span><span class="o">.</span><span class="n">container</span> <span class="o">=</span> <span class="s1">&#39;job-definition://your-job-definition-name&#39;</span>
+</pre></div>
+</div>
+</section>
+<section id="pipeline-execution">
+<h2>Pipeline execution<a class="headerlink" href="#pipeline-execution" title="Link to this heading">¶</a></h2>
+<p>The pipeline can be launched either in a local computer or a EC2 instance. The latter is suggested for heavy or long
+running workloads.</p>
+<p>Pipeline input data can be stored either locally or in a <a class="reference external" href="https://aws.amazon.com/s3/">S3</a> bucket.
+The pipeline execution must specifies a AWS Storage bucket where jobs intermediate results are stored with the
+<code class="docutils literal notranslate"><span class="pre">-bucket-dir</span></code> command line options. For example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">nextflow</span> <span class="n">run</span> <span class="n">my</span><span class="o">-</span><span class="n">pipeline</span> <span class="o">-</span><span class="n">bucket</span><span class="o">-</span><span class="nb">dir</span> <span class="n">s3</span><span class="p">:</span><span class="o">//</span><span class="n">my</span><span class="o">-</span><span class="n">bucket</span><span class="o">/</span><span class="n">some</span><span class="o">/</span><span class="n">path</span>
+</pre></div>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>The bucket path should include at least a top level directory name e.g. use <code class="docutils literal notranslate"><span class="pre">s3://my-bucket/work</span></code>
+not just <code class="docutils literal notranslate"><span class="pre">s3://my-bucket</span></code>.</p>
+</div>
+</section>
+<section id="hybrid-workloads">
+<h2>Hybrid workloads<a class="headerlink" href="#hybrid-workloads" title="Link to this heading">¶</a></h2>
+<p>Nextflow allows the use of multiple executors in the same workflow application. This feature enables the deployment
+of hybrid workloads in which some jobs are execute in the local computer or local computing cluster and
+some jobs are offloaded to AWS Batch service.</p>
+<p>To enable this feature use one or more <a class="reference internal" href="config.html#config-process-selectors"><span class="std std-ref">Process selectors</span></a> in your Nextflow configuration file to apply
+the AWS Batch <a class="reference internal" href="#awscloud-batch-config"><span class="std std-ref">configuration</span></a> only to a subset of processes in your workflow.
+For example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">aws</span> <span class="p">{</span>
+    <span class="n">region</span> <span class="o">=</span> <span class="s1">&#39;eu-west-1&#39;</span>
+    <span class="n">batch</span> <span class="p">{</span>
+      <span class="n">cliPath</span> <span class="o">=</span> <span class="s1">&#39;/home/ec2-user/miniconda/bin/aws&#39;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="n">process</span> <span class="p">{</span>
+    <span class="n">withLabel</span><span class="p">:</span> <span class="n">bigTask</span> <span class="p">{</span>
+      <span class="n">executor</span> <span class="o">=</span> <span class="s1">&#39;awsbatch&#39;</span>
+      <span class="n">queue</span> <span class="o">=</span> <span class="s1">&#39;my-batch-queue&#39;</span>
+      <span class="n">container</span> <span class="o">=</span> <span class="s1">&#39;my/image:tag&#39;</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The above configuration snippet will deploy the execution with AWS Batch only for processes annotated
+with the <a class="reference internal" href="process.html#process-label"><span class="std std-ref">label</span></a> <code class="docutils literal notranslate"><span class="pre">bigTask</span></code>, the remaining process with run in the local computer.</p>
+</section>
+<section id="volume-mounts">
+<h2>Volume mounts<a class="headerlink" href="#volume-mounts" title="Link to this heading">¶</a></h2>
+<p>User provided container volume mounts can be provided as shown below:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">aws</span> <span class="p">{</span>
+  <span class="n">region</span> <span class="o">=</span> <span class="s1">&#39;eu-west-1&#39;</span>
+  <span class="n">batch</span> <span class="p">{</span>
+      <span class="n">volumes</span> <span class="o">=</span> <span class="s1">&#39;/tmp&#39;</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Multiple volumes can be specified using a comma separated paths. The usual Docker volume mount syntax
+can be used to specify complex volumes for which the container paths is different from the host paths
+or to specify <em>read-only</em> option. For example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">aws</span> <span class="p">{</span>
+  <span class="n">region</span> <span class="o">=</span> <span class="s1">&#39;eu-west-1&#39;</span>
+  <span class="n">batch</span> <span class="p">{</span>
+      <span class="n">volumes</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;/tmp&#39;</span><span class="p">,</span> <span class="s1">&#39;/host/path:/mnt/path:ro&#39;</span><span class="p">]</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The above snippet defines two volume mounts the jobs executed in your pipeline. The first mounting the
+host path <code class="docutils literal notranslate"><span class="pre">/tmp</span></code> in the same path in the container and using <em>read-write</em> access mode. The second
+mounts the path <code class="docutils literal notranslate"><span class="pre">/host/path</span></code> in the host environment to the <code class="docutils literal notranslate"><span class="pre">/mnt/path</span></code> in the container using the
+<em>read-only</em> access mode.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This feature requires Nextflow version 19.07.x or later.</p>
+</div>
+</section>
+<section id="troubleshooting">
+<h2>Troubleshooting<a class="headerlink" href="#troubleshooting" title="Link to this heading">¶</a></h2>
+<p><strong>Problem</strong>: The Pipeline execution terminates with an AWS error message similar to the one shown below:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">JobQueue</span> <span class="o">&lt;</span><span class="n">your</span> <span class="n">queue</span><span class="o">&gt;</span> <span class="ow">not</span> <span class="n">found</span>
+</pre></div>
+</div>
+<p>Make sure you have defined a AWS region in the Nextflow configuration file and it matches the region
+in which your Batch environment has been created.</p>
+<p><strong>Problem</strong>: A process execution fails reporting the following error message:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Process</span> <span class="o">&lt;</span><span class="n">your</span> <span class="n">task</span><span class="o">&gt;</span> <span class="n">terminated</span> <span class="k">for</span> <span class="n">an</span> <span class="n">unknown</span> <span class="n">reason</span> <span class="o">--</span> <span class="n">Likely</span> <span class="n">it</span> <span class="n">has</span> <span class="n">been</span> <span class="n">terminated</span> <span class="n">by</span> <span class="n">the</span> <span class="n">external</span> <span class="n">system</span>
+</pre></div>
+</div>
+<p>This may happen when Batch is unable to execute the process script. A common cause of this problem is that the
+Docker container image you have specified uses a non standard <a class="reference external" href="https://docs.docker.com/engine/reference/builder/#entrypoint">entrypoint</a>
+which does not allow the execution of the Bash launcher script required by Nextflow to run the job.</p>
+<p>This may also happen if the AWS CLI doesn’t run correctly.</p>
+<p>Other places to check for error information:</p>
+<ul class="simple">
+<li><p>The <code class="docutils literal notranslate"><span class="pre">.nextflow.log</span></code> file.</p></li>
+<li><p>The Job execution log in the AWS Batch dashboard.</p></li>
+<li><p>The <a class="reference external" href="https://aws.amazon.com/cloudwatch/">CloudWatch</a> logs found in the <code class="docutils literal notranslate"><span class="pre">/aws/batch/job</span></code> log group.</p></li>
+</ul>
+</section>
+<section id="advanced-configuration">
+<h2>Advanced configuration<a class="headerlink" href="#advanced-configuration" title="Link to this heading">¶</a></h2>
+<p>Read <a class="reference internal" href="config.html#config-aws-batch"><span class="std std-ref">AWS Batch configuration</span></a> section to learn more about advanced Batch configuration options.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="cli.html" class="btn btn-neutral float-left" title="Command line interface (CLI)" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="amazons3.html" class="btn btn-neutral float-right" title="Amazon S3 storage" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2020, Seqera Labs. 2013-2019, Centre for Genomic Regulation (CRG)..</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+    <!-- Theme Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-364526-10"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'UA-364526-10', {
+          'anonymize_ip': false,
+      });
+    </script> 
+
+</body>
+</html>

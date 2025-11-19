@@ -1,0 +1,209 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Examples &mdash; Nextflow 20.10.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+
+  
+    <link rel="shortcut icon" href="_static/favicon.ico"/>
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+      <script src="_static/documentation_options.js?v=a23069cb"></script>
+      <script src="_static/doctools.js?v=888ff710"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Nextflow
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="getstarted.html">Get started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="basic.html">Basic concepts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="script.html">Nextflow scripting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="process.html">Processes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="channel.html">Channels</a></li>
+<li class="toctree-l1"><a class="reference internal" href="operator.html">Operators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="executor.html">Executors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="config.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dsl2.html">DSL 2</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cli.html">Command line interface (CLI)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="awscloud.html">Amazon Cloud</a></li>
+<li class="toctree-l1"><a class="reference internal" href="amazons3.html">Amazon S3 storage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="google.html">Google Cloud</a></li>
+<li class="toctree-l1"><a class="reference internal" href="conda.html">Conda environments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="docker.html">Docker containers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="shifter.html">Shifter Containers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="singularity.html">Singularity containers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="podman.html">Podman containers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ignite.html">Apache Ignite</a></li>
+<li class="toctree-l1"><a class="reference internal" href="kubernetes.html">Kubernetes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tracing.html">Tracing &amp; visualisation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sharing.html">Pipeline sharing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="metadata.html">Workflow introspection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mail.html">Mail &amp; Notifications</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Nextflow</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Examples</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="examples">
+<span id="example-page"></span><h1>Examples<a class="headerlink" href="#examples" title="Link to this heading">¶</a></h1>
+<section id="basic-pipeline">
+<h2>Basic pipeline<a class="headerlink" href="#basic-pipeline" title="Link to this heading">¶</a></h2>
+<p>This example shows a pipeline that is made of two processes. The first process receives a
+<a class="reference external" href="http://en.wikipedia.org/wiki/FASTA_format">FASTA formatted</a> file and splits it into file chunks whose names start with
+the prefix <code class="docutils literal notranslate"><span class="pre">seq_</span></code>.</p>
+<p>The process that follows, receives these files and it simply <cite>reverses</cite> their content by using the <code class="docutils literal notranslate"><span class="pre">rev</span></code> command line tool.</p>
+<style type='text/css'>
+.gist {font-size:13px;line-height:18px;margin-bottom:20px;width:100%}
+.gist pre {font-family:Menlo,Monaco,'Bitstream Vera Sans Mono','Courier New',monospace !important}
+.gist-meta {font-family:Helvetica,Arial,sans-serif;font-size:13px !important}
+.gist-meta a {color:#26a !important;text-decoration:none}
+.gist-meta a:hover{color:#0e4071 !important}
+.gist .file-data { background-color: white; }
+</style>
+<script src="https://gist.github.com/pditommaso/92fea4525cd66c286904.js"></script><p>In more detail:</p>
+<ul class="simple">
+<li><p>line 1: The script starts with a <a class="reference external" href="http://en.wikipedia.org/wiki/Shebang_(Unix)">shebang</a> declaration. This allows you
+to launch your pipeline, as any other Bash script</p></li>
+<li><p>line 3: Declares a pipeline parameter named <code class="docutils literal notranslate"><span class="pre">params.in</span></code> that is initialized with the value <code class="docutils literal notranslate"><span class="pre">$HOME/sample.fa</span></code>.This value
+can be overridden when launching the pipeline, by simply adding the option <code class="docutils literal notranslate"><span class="pre">--in</span> <span class="pre">&lt;value&gt;</span></code> to the script command line</p></li>
+<li><p>line 5: Defines a variable <code class="docutils literal notranslate"><span class="pre">sequences</span></code> holding a reference for the file whose name is specified by the <code class="docutils literal notranslate"><span class="pre">params.in</span></code>
+parameter</p></li>
+<li><p>line 6: Defines a variable <code class="docutils literal notranslate"><span class="pre">SPLIT</span></code> whose value is <code class="docutils literal notranslate"><span class="pre">gcsplit</span></code> when the script is executed on a Mac OSX or <code class="docutils literal notranslate"><span class="pre">csplit</span></code>
+when it runs on Linux. This is the name of the tool that is used to split the file.</p></li>
+<li><p>lines 8-20: The process that splits the provided file.</p></li>
+<li><p>line 10: Opens the <cite>input</cite> declaration block. The lines following this clause are interpreted as input definitions.</p></li>
+<li><p>line 11: Defines the process input file. This file is received from the variable <code class="docutils literal notranslate"><span class="pre">sequences</span></code> and will be named <code class="docutils literal notranslate"><span class="pre">input.fa</span></code>.</p></li>
+<li><p>line 13: Opens the <cite>output</cite> declaration block. Lines following this clause are interpreted as output definitions.</p></li>
+<li><p>line 14: Defines that the process output files whose names match the pattern <code class="docutils literal notranslate"><span class="pre">seq_*</span></code>. These files are sent over the
+channel <code class="docutils literal notranslate"><span class="pre">records</span></code>.</p></li>
+<li><p>lines 16-18: The actual script executed by the process to split the provided file.</p></li>
+<li><p>lines 22-33: Defines the second process, that receives the splits produced by the previous process and reverses their
+content.</p></li>
+<li><p>line 24: Opens the <cite>input</cite> declaration block. Lines following this clause are interpreted as input definitions.</p></li>
+<li><p>line 25: Defines the process input file. This file is received through the channel <code class="docutils literal notranslate"><span class="pre">records</span></code>.</p></li>
+<li><p>line 27: Opens the <cite>output</cite> declaration block. Lines following this clause are interpreted as output definitions.</p></li>
+<li><p>line 28: The <cite>standard output</cite> of the executed script is declared as the process output. This output is sent over the
+channel <code class="docutils literal notranslate"><span class="pre">result</span></code>.</p></li>
+<li><p>lines 30-32: The actual script executed by the process to <cite>reverse</cite> the content of the received files.</p></li>
+<li><p>line 35: Prints a <cite>result</cite> each time a new item is received on the <code class="docutils literal notranslate"><span class="pre">result</span></code> channel.</p></li>
+</ul>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>The above example can manage only a single file at a time. If you want to execute it for two (or more) different files
+you will need to launch it several times.</p>
+<p>It is possible to modify it in such a way that it can handle any number of input files, as shown below.</p>
+</div>
+<p>In order to make the above script able to handle any number of files simply replace <cite>line 3</cite> with the following line:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sequences</span> <span class="o">=</span> <span class="n">Channel</span><span class="o">.</span><span class="n">fromPath</span><span class="p">(</span><span class="n">params</span><span class="o">.</span><span class="ow">in</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>By doing this the <code class="docutils literal notranslate"><span class="pre">sequences</span></code> variable is assigned to the channel created by the <a class="reference internal" href="channel.html#channel-path"><span class="std std-ref">fromPath</span></a> method. This
+channel emits all the files that match the pattern specified by the parameter <code class="docutils literal notranslate"><span class="pre">params.in</span></code>.</p>
+<p>Given that you saved the script to a file named <code class="docutils literal notranslate"><span class="pre">example.nf</span></code> and you have a list of <cite>FASTA</cite> files in a folder
+named <code class="docutils literal notranslate"><span class="pre">dataset/</span></code>, you can execute it by entering this command:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">nextflow</span> <span class="n">example</span><span class="o">.</span><span class="n">nf</span> <span class="o">--</span><span class="ow">in</span> <span class="s1">&#39;dataset/*.fa&#39;</span>
+</pre></div>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Make sure you enclose the <code class="docutils literal notranslate"><span class="pre">dataset/*.fa</span></code> parameter value in single-quotation characters,
+otherwise the Bash environment will expand the <code class="docutils literal notranslate"><span class="pre">*</span></code> symbol to the actual file names and the example won’t work.</p>
+</div>
+</section>
+<section id="more-examples">
+<h2>More examples<a class="headerlink" href="#more-examples" title="Link to this heading">¶</a></h2>
+<p>You can find at <a class="reference external" href="https://github.com/nextflow-io/examples">this link</a> a collection of examples introducing Nextflow
+scripting.</p>
+<p>Check also <a class="reference external" href="https://github.com/nextflow-io/awesome-nextflow/">Awesome Nextflow</a> for a list
+of pipelines developed by the Nextflow community.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2020, Seqera Labs. 2013-2019, Centre for Genomic Regulation (CRG)..</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+    <!-- Theme Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-364526-10"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'UA-364526-10', {
+          'anonymize_ip': false,
+      });
+    </script> 
+
+</body>
+</html>

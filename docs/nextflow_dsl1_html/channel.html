@@ -1,0 +1,758 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Channels &mdash; Nextflow 20.10.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+
+  
+    <link rel="shortcut icon" href="_static/favicon.ico"/>
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+      <script src="_static/documentation_options.js?v=a23069cb"></script>
+      <script src="_static/doctools.js?v=888ff710"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Operators" href="operator.html" />
+    <link rel="prev" title="Processes" href="process.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Nextflow
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="getstarted.html">Get started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="basic.html">Basic concepts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="script.html">Nextflow scripting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="process.html">Processes</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Channels</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#channel-types">Channel types</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#queue-channel">Queue channel</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#value-channel">Value channel</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#channel-factory">Channel factory</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#create">create</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#of">of</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#from">from</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#value">value</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#fromlist">fromList</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#frompath">fromPath</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#fromfilepairs">fromFilePairs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#fromsra">fromSRA</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#watchpath">watchPath</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#empty">empty</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#binding-values">Binding values</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#bind">bind</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#operator">operator &lt;&lt;</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#observing-events">Observing events</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#subscribe">subscribe</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#onnext-oncomplete-and-onerror">onNext, onComplete, and onError</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="operator.html">Operators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="executor.html">Executors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="config.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dsl2.html">DSL 2</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cli.html">Command line interface (CLI)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="awscloud.html">Amazon Cloud</a></li>
+<li class="toctree-l1"><a class="reference internal" href="amazons3.html">Amazon S3 storage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="google.html">Google Cloud</a></li>
+<li class="toctree-l1"><a class="reference internal" href="conda.html">Conda environments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="docker.html">Docker containers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="shifter.html">Shifter Containers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="singularity.html">Singularity containers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="podman.html">Podman containers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ignite.html">Apache Ignite</a></li>
+<li class="toctree-l1"><a class="reference internal" href="kubernetes.html">Kubernetes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tracing.html">Tracing &amp; visualisation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sharing.html">Pipeline sharing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="metadata.html">Workflow introspection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mail.html">Mail &amp; Notifications</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Nextflow</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Channels</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="channels">
+<span id="channel-page"></span><h1>Channels<a class="headerlink" href="#channels" title="Link to this heading">¶</a></h1>
+<p>Nextflow is based on the Dataflow programming model in which processes communicate through channels.</p>
+<p>A channel has two major properties:</p>
+<ol class="arabic simple">
+<li><p>Sending a message is an <cite>asynchronous</cite> operation which completes immediately,
+without having to wait for the receiving process.</p></li>
+<li><p>Receiving data is a blocking operation which stops the receiving process until the message has arrived.</p></li>
+</ol>
+<section id="channel-types">
+<span id="id1"></span><h2>Channel types<a class="headerlink" href="#channel-types" title="Link to this heading">¶</a></h2>
+<p>Nextflow distinguish two different kinds of channels: <cite>queue channels</cite> and <cite>value channels</cite>.</p>
+<section id="queue-channel">
+<span id="channel-type-queue"></span><h3>Queue channel<a class="headerlink" href="#queue-channel" title="Link to this heading">¶</a></h3>
+<p>A <cite>queue channel</cite> is a non-blocking unidirectional FIFO queue which connects two processes or operators.</p>
+<p>A queue channel is usually created using a factory method such as a <a class="reference internal" href="#from">from</a>, <a class="reference internal" href="#frompath">fromPath</a>, etc.
+or chaining it with a channel operator such as <a class="reference internal" href="operator.html#operator-map"><span class="std std-ref">map</span></a>, <a class="reference internal" href="operator.html#operator-flatmap"><span class="std std-ref">flatMap</span></a>, etc.</p>
+<p>Queue channels are also created by process output declarations using the <code class="docutils literal notranslate"><span class="pre">into</span></code> clause.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The definition implies that the same queue channel cannot be used more than one time as process
+output and more than one time as process input.</p>
+</div>
+<p>In you need to connect a process output channel to more than one process or operator use the
+<a class="reference internal" href="operator.html#operator-into"><span class="std std-ref">into</span></a> operator to create two (or more) copies of the same channel and use each
+of them to connect a separate process.</p>
+</section>
+<section id="value-channel">
+<span id="channel-type-value"></span><h3>Value channel<a class="headerlink" href="#value-channel" title="Link to this heading">¶</a></h3>
+<p>A <cite>value channel</cite> a.k.a. <em>singleton channel</em> by definition is bound to a single value and it can be read
+unlimited times without consuming its content.</p>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>For this reason a value channel can be used as input by more than one process.</p>
+</div>
+<p>A value channel is created using the <a class="reference internal" href="#value">value</a> factory method or by operators returning
+a single value, such us <a class="reference internal" href="operator.html#operator-first"><span class="std std-ref">first</span></a>, <a class="reference internal" href="operator.html#operator-last"><span class="std std-ref">last</span></a>, <a class="reference internal" href="operator.html#operator-collect"><span class="std std-ref">collect</span></a>,
+<a class="reference internal" href="operator.html#operator-count"><span class="std std-ref">count</span></a>, <a class="reference internal" href="operator.html#operator-min"><span class="std std-ref">min</span></a>, <a class="reference internal" href="operator.html#operator-max"><span class="std std-ref">max</span></a>, <a class="reference internal" href="operator.html#operator-reduce"><span class="std std-ref">reduce</span></a>, <a class="reference internal" href="operator.html#operator-sum"><span class="std std-ref">sum</span></a>.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>A value channel is implicitly created by a process when an input specifies a simple value
+in the <code class="docutils literal notranslate"><span class="pre">from</span></code> clause.
+Moreover, a value channel is also implicitly created as output for a process whose
+inputs are only value channels.</p>
+</div>
+<p>For example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">process</span> <span class="n">foo</span> <span class="p">{</span>
+  <span class="nb">input</span><span class="p">:</span>
+  <span class="n">val</span> <span class="n">x</span> <span class="kn">from</span> <span class="mi">1</span>
+  <span class="n">output</span><span class="p">:</span>
+  <span class="n">file</span> <span class="s1">&#39;x.txt&#39;</span> <span class="n">into</span> <span class="n">result</span>
+
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">  echo $x &gt; x.txt</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The process in the above snippet declares a single input which implicitly is a value channel.
+Therefore also the <code class="docutils literal notranslate"><span class="pre">result</span></code> output is a value channel that can be read by more than one process.</p>
+<p>See also: <a class="reference internal" href="process.html#process-understand-how-multiple-input-channels-work"><span class="std std-ref">Understand how multiple input channels work</span></a>.</p>
+</section>
+</section>
+<section id="channel-factory">
+<span id="id2"></span><h2>Channel factory<a class="headerlink" href="#channel-factory" title="Link to this heading">¶</a></h2>
+<p>Channels may be created implicitly by the process output(s) declaration or explicitly using the following channel
+factory methods.</p>
+<p>The available factory methods are:</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#create">create</a></p></li>
+<li><p><a class="reference internal" href="#empty">empty</a></p></li>
+<li><p><a class="reference internal" href="#from">from</a></p></li>
+<li><p><a class="reference internal" href="#frompath">fromPath</a></p></li>
+<li><p><a class="reference internal" href="#fromfilepairs">fromFilePairs</a></p></li>
+<li><p><a class="reference internal" href="#fromsra">fromSRA</a></p></li>
+<li><p><a class="reference internal" href="#value">value</a></p></li>
+<li><p><a class="reference internal" href="#watchpath">watchPath</a></p></li>
+</ul>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>As of version 20.07.0 the prefix <code class="docutils literal notranslate"><span class="pre">channel.</span></code> has been introduced as an alias of <code class="docutils literal notranslate"><span class="pre">Channel.</span></code>, therefore factory
+methods can be used either with the syntaxes <code class="docutils literal notranslate"><span class="pre">channel.from()</span></code> and <code class="docutils literal notranslate"><span class="pre">Channel.from()</span></code>, and so on.</p>
+</div>
+<section id="create">
+<span id="channel-create"></span><h3>create<a class="headerlink" href="#create" title="Link to this heading">¶</a></h3>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>This method is deprecated and won’t be available in DSL2 syntax.</p>
+</div>
+<p>Creates a new <cite>channel</cite> by using the <code class="docutils literal notranslate"><span class="pre">create</span></code> method, as shown below:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">channelObj</span> <span class="o">=</span> <span class="n">Channel</span><span class="o">.</span><span class="n">create</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+<section id="of">
+<span id="channel-of"></span><h3>of<a class="headerlink" href="#of" title="Link to this heading">¶</a></h3>
+<p>The <code class="docutils literal notranslate"><span class="pre">of</span></code> method allows you to create a channel emitting any sequence of values that are specified as the method argument,
+for example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">ch</span> <span class="o">=</span> <span class="n">Channel</span><span class="o">.</span><span class="n">of</span><span class="p">(</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">7</span> <span class="p">)</span>
+<span class="n">ch</span><span class="o">.</span><span class="n">view</span> <span class="p">{</span> <span class="s2">&quot;value: $it&quot;</span> <span class="p">}</span>
+</pre></div>
+</div>
+<p>The first line in this example creates a variable <code class="docutils literal notranslate"><span class="pre">ch</span></code> which holds a channel object. This channel emits the values
+specified as a parameter in the <code class="docutils literal notranslate"><span class="pre">of</span></code> method. Thus the second line prints the following:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">value</span><span class="p">:</span> <span class="mi">1</span>
+<span class="n">value</span><span class="p">:</span> <span class="mi">3</span>
+<span class="n">value</span><span class="p">:</span> <span class="mi">5</span>
+<span class="n">value</span><span class="p">:</span> <span class="mi">7</span>
+</pre></div>
+</div>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>Range of values are expanded accordingly.</p>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Channel</span>
+    <span class="o">.</span><span class="n">of</span><span class="p">(</span><span class="mf">1..23</span><span class="p">,</span> <span class="s1">&#39;X&#39;</span><span class="p">,</span> <span class="s1">&#39;Y&#39;</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">view</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>Prints:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="mi">1</span>
+<span class="mi">2</span>
+<span class="mi">3</span>
+<span class="mi">4</span>
+<span class="p">:</span>
+<span class="mi">23</span>
+<span class="n">X</span>
+<span class="n">Y</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This feature requires Nextflow version 19.10.0 of later.</p>
+</div>
+<p>See also: <a class="reference internal" href="#fromlist">fromList</a> factory method.</p>
+</section>
+<section id="from">
+<span id="channel-from"></span><h3>from<a class="headerlink" href="#from" title="Link to this heading">¶</a></h3>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>This method is deprecated and should only be used for backward compatibility in legacy code.
+Use <a class="reference internal" href="#of">of</a> or <a class="reference internal" href="#fromlist">fromList</a> instead.</p>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">from</span></code> method allows you to create a channel emitting any sequence of values that are specified as the method argument,
+for example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">ch</span> <span class="o">=</span> <span class="n">Channel</span><span class="o">.</span><span class="n">from</span><span class="p">(</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">7</span> <span class="p">)</span>
+<span class="n">ch</span><span class="o">.</span><span class="n">subscribe</span> <span class="p">{</span> <span class="n">println</span> <span class="s2">&quot;value: $it&quot;</span> <span class="p">}</span>
+</pre></div>
+</div>
+<p>The first line in this example creates a variable <code class="docutils literal notranslate"><span class="pre">ch</span></code> which holds a channel object. This channel emits the values
+specified as a parameter in the <code class="docutils literal notranslate"><span class="pre">from</span></code> method. Thus the second line will print the following:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">value</span><span class="p">:</span> <span class="mi">1</span>
+<span class="n">value</span><span class="p">:</span> <span class="mi">3</span>
+<span class="n">value</span><span class="p">:</span> <span class="mi">5</span>
+<span class="n">value</span><span class="p">:</span> <span class="mi">7</span>
+</pre></div>
+</div>
+<p>The following example shows how to create a channel from a <cite>range</cite> of numbers or strings:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">zeroToNine</span> <span class="o">=</span> <span class="n">Channel</span><span class="o">.</span><span class="n">from</span><span class="p">(</span> <span class="mf">0..9</span> <span class="p">)</span>
+<span class="n">strings</span> <span class="o">=</span> <span class="n">Channel</span><span class="o">.</span><span class="n">from</span><span class="p">(</span> <span class="s1">&#39;A&#39;</span><span class="o">..</span><span class="s1">&#39;Z&#39;</span> <span class="p">)</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Note that when the <code class="docutils literal notranslate"><span class="pre">from</span></code> argument is an object implementing the (Java)
+<a class="reference external" href="http://docs.oracle.com/javase/7/docs/api/java/util/Collection.html">Collection</a> interface, the resulting channel
+emits the collection entries as individual emissions.</p>
+</div>
+<p>Thus the following two declarations produce an identical result even tough in the first case the items are specified
+as multiple arguments while in the second case as a single list object argument:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Channel</span><span class="o">.</span><span class="n">from</span><span class="p">(</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">9</span> <span class="p">)</span>
+<span class="n">Channel</span><span class="o">.</span><span class="n">from</span><span class="p">(</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">9</span><span class="p">]</span> <span class="p">)</span>
+</pre></div>
+</div>
+<p>But when more than one argument is provided, they are always managed as <cite>single</cite> emissions. Thus, the following example
+creates a channel emitting three entries each of which is a list containing two elements:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Channel</span><span class="o">.</span><span class="n">from</span><span class="p">(</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="p">[</span><span class="mi">5</span><span class="p">,</span><span class="mi">6</span><span class="p">],</span> <span class="p">[</span><span class="mi">7</span><span class="p">,</span><span class="mi">9</span><span class="p">]</span> <span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="value">
+<span id="channel-value"></span><h3>value<a class="headerlink" href="#value" title="Link to this heading">¶</a></h3>
+<p>The <cite>value</cite> factory method is used to create a <em>value</em> channel. An optional not <code class="docutils literal notranslate"><span class="pre">null</span></code> argument
+can be specified to bind the channel to a specific value. For example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">expl1</span> <span class="o">=</span> <span class="n">Channel</span><span class="o">.</span><span class="n">value</span><span class="p">()</span>
+<span class="n">expl2</span> <span class="o">=</span> <span class="n">Channel</span><span class="o">.</span><span class="n">value</span><span class="p">(</span> <span class="s1">&#39;Hello there&#39;</span> <span class="p">)</span>
+<span class="n">expl3</span> <span class="o">=</span> <span class="n">Channel</span><span class="o">.</span><span class="n">value</span><span class="p">(</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">]</span> <span class="p">)</span>
+</pre></div>
+</div>
+<p>The first line in the example creates an ‘empty’ variable. The second line creates a channel and binds a string to it.
+Finally the last one creates a channel and binds a list object to it that will be emitted as a sole emission.</p>
+</section>
+<section id="fromlist">
+<span id="channel-fromlist"></span><h3>fromList<a class="headerlink" href="#fromlist" title="Link to this heading">¶</a></h3>
+<p>The <code class="docutils literal notranslate"><span class="pre">fromList</span></code> method allows you to create a channel emitting the values provided as a list of elements,
+for example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Channel</span>
+    <span class="o">.</span><span class="n">fromList</span><span class="p">(</span> <span class="p">[</span><span class="s1">&#39;a&#39;</span><span class="p">,</span> <span class="s1">&#39;b&#39;</span><span class="p">,</span> <span class="s1">&#39;c&#39;</span><span class="p">,</span> <span class="s1">&#39;d&#39;</span><span class="p">]</span> <span class="p">)</span>
+    <span class="o">.</span><span class="n">view</span> <span class="p">{</span> <span class="s2">&quot;value: $it&quot;</span> <span class="p">}</span>
+</pre></div>
+</div>
+<p>Prints:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">value</span><span class="p">:</span> <span class="n">a</span>
+<span class="n">value</span><span class="p">:</span> <span class="n">b</span>
+<span class="n">value</span><span class="p">:</span> <span class="n">c</span>
+<span class="n">value</span><span class="p">:</span> <span class="n">d</span>
+</pre></div>
+</div>
+<p>See also: <a class="reference internal" href="#of">of</a> factory method.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This feature requires Nextflow version 19.10.0 of later.</p>
+</div>
+</section>
+<section id="frompath">
+<span id="channel-path"></span><h3>fromPath<a class="headerlink" href="#frompath" title="Link to this heading">¶</a></h3>
+<p>You can create a channel emitting one or more file paths by using the <code class="docutils literal notranslate"><span class="pre">fromPath</span></code> method and specifying a path string
+as an argument. For example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">myFileChannel</span> <span class="o">=</span> <span class="n">Channel</span><span class="o">.</span><span class="n">fromPath</span><span class="p">(</span> <span class="s1">&#39;/data/some/bigfile.txt&#39;</span> <span class="p">)</span>
+</pre></div>
+</div>
+<p>The above line creates a channel and binds to it a <a class="reference external" href="http://docs.oracle.com/javase/7/docs/api/java/nio/file/Path.html">Path</a>
+item referring the specified file.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>It does not check the file existence.</p>
+</div>
+<p>Whenever the <code class="docutils literal notranslate"><span class="pre">fromPath</span></code> argument contains a <code class="docutils literal notranslate"><span class="pre">*</span></code> or <code class="docutils literal notranslate"><span class="pre">?</span></code> wildcard character it is interpreted as a <a class="reference external" href="http://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob">glob</a> path matcher.
+For example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">myFileChannel</span> <span class="o">=</span> <span class="n">Channel</span><span class="o">.</span><span class="n">fromPath</span><span class="p">(</span> <span class="s1">&#39;/data/big/*.txt&#39;</span> <span class="p">)</span>
+</pre></div>
+</div>
+<p>This example creates a channel and emits as many <code class="docutils literal notranslate"><span class="pre">Path</span></code> items as there are files with <code class="docutils literal notranslate"><span class="pre">txt</span></code> extension in the <code class="docutils literal notranslate"><span class="pre">/data/big</span></code> folder.</p>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>Two asterisks, i.e. <code class="docutils literal notranslate"><span class="pre">**</span></code>, works like <code class="docutils literal notranslate"><span class="pre">*</span></code> but crosses directory boundaries.
+This syntax is generally used for matching complete paths. Curly brackets specify a collection of sub-patterns.</p>
+</div>
+<p>For example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">files</span> <span class="o">=</span> <span class="n">Channel</span><span class="o">.</span><span class="n">fromPath</span><span class="p">(</span> <span class="s1">&#39;data/**.fa&#39;</span> <span class="p">)</span>
+<span class="n">moreFiles</span> <span class="o">=</span> <span class="n">Channel</span><span class="o">.</span><span class="n">fromPath</span><span class="p">(</span> <span class="s1">&#39;data/**/*.fa&#39;</span> <span class="p">)</span>
+<span class="n">pairFiles</span> <span class="o">=</span> <span class="n">Channel</span><span class="o">.</span><span class="n">fromPath</span><span class="p">(</span> <span class="s1">&#39;data/file_{1,2}.fq&#39;</span> <span class="p">)</span>
+</pre></div>
+</div>
+<p>The first line returns a channel emitting the files ending with the suffix <code class="docutils literal notranslate"><span class="pre">.fa</span></code> in the <code class="docutils literal notranslate"><span class="pre">data</span></code> folder <cite>and</cite> recursively
+in all its sub-folders. While the second one only emits the files which have the same suffix in <cite>any</cite> sub-folder in the <code class="docutils literal notranslate"><span class="pre">data</span></code> path.
+Finally the last example emits two files: <code class="docutils literal notranslate"><span class="pre">data/file_1.fq</span></code> and <code class="docutils literal notranslate"><span class="pre">data/file_2.fq</span></code>.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>As in Linux Bash the <code class="docutils literal notranslate"><span class="pre">*</span></code> wildcard does not match against hidden files (i.e. files whose name start with a <code class="docutils literal notranslate"><span class="pre">.</span></code> character).</p>
+</div>
+<p>In order to include hidden files, you need to start your pattern with a period character or specify the <code class="docutils literal notranslate"><span class="pre">hidden:</span> <span class="pre">true</span></code> option. For example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">expl1</span> <span class="o">=</span> <span class="n">Channel</span><span class="o">.</span><span class="n">fromPath</span><span class="p">(</span> <span class="s1">&#39;/path/.*&#39;</span> <span class="p">)</span>
+<span class="n">expl2</span> <span class="o">=</span> <span class="n">Channel</span><span class="o">.</span><span class="n">fromPath</span><span class="p">(</span> <span class="s1">&#39;/path/.*.fa&#39;</span> <span class="p">)</span>
+<span class="n">expl3</span> <span class="o">=</span> <span class="n">Channel</span><span class="o">.</span><span class="n">fromPath</span><span class="p">(</span> <span class="s1">&#39;/path/*&#39;</span><span class="p">,</span> <span class="n">hidden</span><span class="p">:</span> <span class="n">true</span> <span class="p">)</span>
+</pre></div>
+</div>
+<p>The first example returns all hidden files in the specified path. The second one returns all hidden files
+ending with the <code class="docutils literal notranslate"><span class="pre">.fa</span></code> suffix. Finally the last example returns all files (hidden and non-hidden) in that path.</p>
+<p>By default a <a class="reference external" href="http://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob">glob</a> pattern only looks for <cite>regular file</cite> paths that match the specified criteria, i.e.
+it won’t return directory paths.</p>
+<p>You may use the parameter <code class="docutils literal notranslate"><span class="pre">type</span></code> specifying the value <code class="docutils literal notranslate"><span class="pre">file</span></code>, <code class="docutils literal notranslate"><span class="pre">dir</span></code> or <code class="docutils literal notranslate"><span class="pre">any</span></code> in order to define what kind of paths
+you want. For example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">myFileChannel</span> <span class="o">=</span> <span class="n">Channel</span><span class="o">.</span><span class="n">fromPath</span><span class="p">(</span> <span class="s1">&#39;/path/*b&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="p">:</span> <span class="s1">&#39;dir&#39;</span> <span class="p">)</span>
+<span class="n">myFileChannel</span> <span class="o">=</span> <span class="n">Channel</span><span class="o">.</span><span class="n">fromPath</span><span class="p">(</span> <span class="s1">&#39;/path/a*&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="p">:</span> <span class="s1">&#39;any&#39;</span> <span class="p">)</span>
+</pre></div>
+</div>
+<p>The first example will return all <cite>directory</cite> paths ending with the <code class="docutils literal notranslate"><span class="pre">b</span></code> suffix, while the second will return any file
+and directory starting with a <code class="docutils literal notranslate"><span class="pre">a</span></code> prefix.</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Name</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>glob</p></td>
+<td><p>When <code class="docutils literal notranslate"><span class="pre">true</span></code> interprets characters <code class="docutils literal notranslate"><span class="pre">*</span></code>, <code class="docutils literal notranslate"><span class="pre">?</span></code>, <code class="docutils literal notranslate"><span class="pre">[]</span></code> and <code class="docutils literal notranslate"><span class="pre">{}</span></code> as glob wildcards, otherwise handles them as normal characters (default: <code class="docutils literal notranslate"><span class="pre">true</span></code>)</p></td>
+</tr>
+<tr class="row-odd"><td><p>type</p></td>
+<td><p>Type of paths returned, either <code class="docutils literal notranslate"><span class="pre">file</span></code>, <code class="docutils literal notranslate"><span class="pre">dir</span></code> or <code class="docutils literal notranslate"><span class="pre">any</span></code> (default: <code class="docutils literal notranslate"><span class="pre">file</span></code>)</p></td>
+</tr>
+<tr class="row-even"><td><p>hidden</p></td>
+<td><p>When <code class="docutils literal notranslate"><span class="pre">true</span></code> includes hidden files in the resulting paths (default: <code class="docutils literal notranslate"><span class="pre">false</span></code>)</p></td>
+</tr>
+<tr class="row-odd"><td><p>maxDepth</p></td>
+<td><p>Maximum number of directory levels to visit (default: <cite>no limit</cite>)</p></td>
+</tr>
+<tr class="row-even"><td><p>followLinks</p></td>
+<td><p>When <code class="docutils literal notranslate"><span class="pre">true</span></code> it follows symbolic links during directories tree traversal, otherwise they are managed as files (default: <code class="docutils literal notranslate"><span class="pre">true</span></code>)</p></td>
+</tr>
+<tr class="row-odd"><td><p>relative</p></td>
+<td><p>When <code class="docutils literal notranslate"><span class="pre">true</span></code> returned paths are relative to the top-most common directory (default: <code class="docutils literal notranslate"><span class="pre">false</span></code>)</p></td>
+</tr>
+<tr class="row-even"><td><p>checkIfExists</p></td>
+<td><p>When <code class="docutils literal notranslate"><span class="pre">true</span></code> throws an exception of the specified path do not exist in the file system (default: <code class="docutils literal notranslate"><span class="pre">false</span></code>)</p></td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>More than one path or glob pattern can be specified using a list as argument:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Channel</span><span class="o">.</span><span class="n">fromPath</span><span class="p">(</span> <span class="p">[</span><span class="s1">&#39;/some/path/*.fq&#39;</span><span class="p">,</span> <span class="s1">&#39;/other/path/*.fastq&#39;</span><span class="p">]</span> <span class="p">)</span>
+</pre></div>
+</div>
+<p>(requires version 0.31.x or later)</p>
+</div>
+</section>
+<section id="fromfilepairs">
+<span id="channel-filepairs"></span><h3>fromFilePairs<a class="headerlink" href="#fromfilepairs" title="Link to this heading">¶</a></h3>
+<p>The <code class="docutils literal notranslate"><span class="pre">fromFilePairs</span></code> method creates a channel emitting the file pairs matching a <a class="reference external" href="http://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob">glob</a> pattern provided by the user.
+The matching files are emitted as tuples in which the first element is the grouping key of the matching
+pair and the second element is the list of files (sorted in lexicographical order). For example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Channel</span>
+    <span class="o">.</span><span class="n">fromFilePairs</span><span class="p">(</span><span class="s1">&#39;/my/data/SRR*_{1,2}.fastq&#39;</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">view</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>It will produce an output similar to the following:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">[</span><span class="n">SRR493366</span><span class="p">,</span> <span class="p">[</span><span class="o">/</span><span class="n">my</span><span class="o">/</span><span class="n">data</span><span class="o">/</span><span class="n">SRR493366_1</span><span class="o">.</span><span class="n">fastq</span><span class="p">,</span> <span class="o">/</span><span class="n">my</span><span class="o">/</span><span class="n">data</span><span class="o">/</span><span class="n">SRR493366_2</span><span class="o">.</span><span class="n">fastq</span><span class="p">]]</span>
+<span class="p">[</span><span class="n">SRR493367</span><span class="p">,</span> <span class="p">[</span><span class="o">/</span><span class="n">my</span><span class="o">/</span><span class="n">data</span><span class="o">/</span><span class="n">SRR493367_1</span><span class="o">.</span><span class="n">fastq</span><span class="p">,</span> <span class="o">/</span><span class="n">my</span><span class="o">/</span><span class="n">data</span><span class="o">/</span><span class="n">SRR493367_2</span><span class="o">.</span><span class="n">fastq</span><span class="p">]]</span>
+<span class="p">[</span><span class="n">SRR493368</span><span class="p">,</span> <span class="p">[</span><span class="o">/</span><span class="n">my</span><span class="o">/</span><span class="n">data</span><span class="o">/</span><span class="n">SRR493368_1</span><span class="o">.</span><span class="n">fastq</span><span class="p">,</span> <span class="o">/</span><span class="n">my</span><span class="o">/</span><span class="n">data</span><span class="o">/</span><span class="n">SRR493368_2</span><span class="o">.</span><span class="n">fastq</span><span class="p">]]</span>
+<span class="p">[</span><span class="n">SRR493369</span><span class="p">,</span> <span class="p">[</span><span class="o">/</span><span class="n">my</span><span class="o">/</span><span class="n">data</span><span class="o">/</span><span class="n">SRR493369_1</span><span class="o">.</span><span class="n">fastq</span><span class="p">,</span> <span class="o">/</span><span class="n">my</span><span class="o">/</span><span class="n">data</span><span class="o">/</span><span class="n">SRR493369_2</span><span class="o">.</span><span class="n">fastq</span><span class="p">]]</span>
+<span class="p">[</span><span class="n">SRR493370</span><span class="p">,</span> <span class="p">[</span><span class="o">/</span><span class="n">my</span><span class="o">/</span><span class="n">data</span><span class="o">/</span><span class="n">SRR493370_1</span><span class="o">.</span><span class="n">fastq</span><span class="p">,</span> <span class="o">/</span><span class="n">my</span><span class="o">/</span><span class="n">data</span><span class="o">/</span><span class="n">SRR493370_2</span><span class="o">.</span><span class="n">fastq</span><span class="p">]]</span>
+<span class="p">[</span><span class="n">SRR493371</span><span class="p">,</span> <span class="p">[</span><span class="o">/</span><span class="n">my</span><span class="o">/</span><span class="n">data</span><span class="o">/</span><span class="n">SRR493371_1</span><span class="o">.</span><span class="n">fastq</span><span class="p">,</span> <span class="o">/</span><span class="n">my</span><span class="o">/</span><span class="n">data</span><span class="o">/</span><span class="n">SRR493371_2</span><span class="o">.</span><span class="n">fastq</span><span class="p">]]</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The glob pattern must contain at least a star wildcard character.</p>
+</div>
+<p>Alternatively it is possible to implement a custom file pair grouping strategy providing a closure which,
+given the current file as parameter, returns the grouping key.
+For example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Channel</span>
+    <span class="o">.</span><span class="n">fromFilePairs</span><span class="p">(</span><span class="s1">&#39;/some/data/*&#39;</span><span class="p">,</span> <span class="n">size</span><span class="p">:</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span> <span class="n">file</span> <span class="o">-&gt;</span> <span class="n">file</span><span class="o">.</span><span class="n">extension</span> <span class="p">}</span>
+    <span class="o">.</span><span class="n">view</span> <span class="p">{</span> <span class="n">ext</span><span class="p">,</span> <span class="n">files</span> <span class="o">-&gt;</span> <span class="s2">&quot;Files with the extension $ext are $files&quot;</span> <span class="p">}</span>
+</pre></div>
+</div>
+<p>Table of optional parameters available:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Name</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>type</p></td>
+<td><p>Type of paths returned, either <code class="docutils literal notranslate"><span class="pre">file</span></code>, <code class="docutils literal notranslate"><span class="pre">dir</span></code> or <code class="docutils literal notranslate"><span class="pre">any</span></code> (default: <code class="docutils literal notranslate"><span class="pre">file</span></code>)</p></td>
+</tr>
+<tr class="row-odd"><td><p>hidden</p></td>
+<td><p>When <code class="docutils literal notranslate"><span class="pre">true</span></code> includes hidden files in the resulting paths (default: <code class="docutils literal notranslate"><span class="pre">false</span></code>)</p></td>
+</tr>
+<tr class="row-even"><td><p>maxDepth</p></td>
+<td><p>Maximum number of directory levels to visit (default: <cite>no limit</cite>)</p></td>
+</tr>
+<tr class="row-odd"><td><p>followLinks</p></td>
+<td><p>When <code class="docutils literal notranslate"><span class="pre">true</span></code> it follows symbolic links during directories tree traversal, otherwise they are managed as files (default: <code class="docutils literal notranslate"><span class="pre">true</span></code>)</p></td>
+</tr>
+<tr class="row-even"><td><p>size</p></td>
+<td><p>Defines the number of files each emitted item is expected to hold (default: 2). Set to <code class="docutils literal notranslate"><span class="pre">-1</span></code> for any.</p></td>
+</tr>
+<tr class="row-odd"><td><p>flat</p></td>
+<td><p>When <code class="docutils literal notranslate"><span class="pre">true</span></code> the matching files are produced as sole elements in the emitted tuples (default: <code class="docutils literal notranslate"><span class="pre">false</span></code>).</p></td>
+</tr>
+<tr class="row-even"><td><p>checkIfExists</p></td>
+<td><p>When <code class="docutils literal notranslate"><span class="pre">true</span></code> throws an exception of the specified path do not exist in the file system (default: <code class="docutils literal notranslate"><span class="pre">false</span></code>)</p></td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>More than one glob pattern can be specified using a list as argument:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Channel</span><span class="o">.</span><span class="n">fromFilePairs</span><span class="p">(</span> <span class="p">[</span><span class="s1">&#39;/some/data/SRR*_{1,2}.fastq&#39;</span><span class="p">,</span> <span class="s1">&#39;/other/data/QFF*_{1,2}.fastq&#39;</span><span class="p">]</span> <span class="p">)</span>
+</pre></div>
+</div>
+<p>(requires version 0.31.x or later)</p>
+</div>
+</section>
+<section id="fromsra">
+<span id="channel-fromsra"></span><h3>fromSRA<a class="headerlink" href="#fromsra" title="Link to this heading">¶</a></h3>
+<p>The <code class="docutils literal notranslate"><span class="pre">fromSRA</span></code> method queries the <a class="reference external" href="https://www.ncbi.nlm.nih.gov/sra">NCBI SRA</a> database and returns a channel emitting
+the FASTQ files matching the specified criteria i.e project or accession number(s). For example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Channel</span>
+    <span class="o">.</span><span class="n">fromSRA</span><span class="p">(</span><span class="s1">&#39;SRP043510&#39;</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">view</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>It returns:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">[</span><span class="n">SRR1448794</span><span class="p">,</span> <span class="n">ftp</span><span class="p">:</span><span class="o">//</span><span class="n">ftp</span><span class="o">.</span><span class="n">sra</span><span class="o">.</span><span class="n">ebi</span><span class="o">.</span><span class="n">ac</span><span class="o">.</span><span class="n">uk</span><span class="o">/</span><span class="n">vol1</span><span class="o">/</span><span class="n">fastq</span><span class="o">/</span><span class="n">SRR144</span><span class="o">/</span><span class="mi">004</span><span class="o">/</span><span class="n">SRR1448794</span><span class="o">/</span><span class="n">SRR1448794</span><span class="o">.</span><span class="n">fastq</span><span class="o">.</span><span class="n">gz</span><span class="p">]</span>
+<span class="p">[</span><span class="n">SRR1448795</span><span class="p">,</span> <span class="n">ftp</span><span class="p">:</span><span class="o">//</span><span class="n">ftp</span><span class="o">.</span><span class="n">sra</span><span class="o">.</span><span class="n">ebi</span><span class="o">.</span><span class="n">ac</span><span class="o">.</span><span class="n">uk</span><span class="o">/</span><span class="n">vol1</span><span class="o">/</span><span class="n">fastq</span><span class="o">/</span><span class="n">SRR144</span><span class="o">/</span><span class="mi">005</span><span class="o">/</span><span class="n">SRR1448795</span><span class="o">/</span><span class="n">SRR1448795</span><span class="o">.</span><span class="n">fastq</span><span class="o">.</span><span class="n">gz</span><span class="p">]</span>
+<span class="p">[</span><span class="n">SRR1448792</span><span class="p">,</span> <span class="n">ftp</span><span class="p">:</span><span class="o">//</span><span class="n">ftp</span><span class="o">.</span><span class="n">sra</span><span class="o">.</span><span class="n">ebi</span><span class="o">.</span><span class="n">ac</span><span class="o">.</span><span class="n">uk</span><span class="o">/</span><span class="n">vol1</span><span class="o">/</span><span class="n">fastq</span><span class="o">/</span><span class="n">SRR144</span><span class="o">/</span><span class="mi">002</span><span class="o">/</span><span class="n">SRR1448792</span><span class="o">/</span><span class="n">SRR1448792</span><span class="o">.</span><span class="n">fastq</span><span class="o">.</span><span class="n">gz</span><span class="p">]</span>
+<span class="p">[</span><span class="n">SRR1448793</span><span class="p">,</span> <span class="n">ftp</span><span class="p">:</span><span class="o">//</span><span class="n">ftp</span><span class="o">.</span><span class="n">sra</span><span class="o">.</span><span class="n">ebi</span><span class="o">.</span><span class="n">ac</span><span class="o">.</span><span class="n">uk</span><span class="o">/</span><span class="n">vol1</span><span class="o">/</span><span class="n">fastq</span><span class="o">/</span><span class="n">SRR144</span><span class="o">/</span><span class="mi">003</span><span class="o">/</span><span class="n">SRR1448793</span><span class="o">/</span><span class="n">SRR1448793</span><span class="o">.</span><span class="n">fastq</span><span class="o">.</span><span class="n">gz</span><span class="p">]</span>
+<span class="p">[</span><span class="n">SRR1910483</span><span class="p">,</span> <span class="n">ftp</span><span class="p">:</span><span class="o">//</span><span class="n">ftp</span><span class="o">.</span><span class="n">sra</span><span class="o">.</span><span class="n">ebi</span><span class="o">.</span><span class="n">ac</span><span class="o">.</span><span class="n">uk</span><span class="o">/</span><span class="n">vol1</span><span class="o">/</span><span class="n">fastq</span><span class="o">/</span><span class="n">SRR191</span><span class="o">/</span><span class="mi">003</span><span class="o">/</span><span class="n">SRR1910483</span><span class="o">/</span><span class="n">SRR1910483</span><span class="o">.</span><span class="n">fastq</span><span class="o">.</span><span class="n">gz</span><span class="p">]</span>
+<span class="p">[</span><span class="n">SRR1910482</span><span class="p">,</span> <span class="n">ftp</span><span class="p">:</span><span class="o">//</span><span class="n">ftp</span><span class="o">.</span><span class="n">sra</span><span class="o">.</span><span class="n">ebi</span><span class="o">.</span><span class="n">ac</span><span class="o">.</span><span class="n">uk</span><span class="o">/</span><span class="n">vol1</span><span class="o">/</span><span class="n">fastq</span><span class="o">/</span><span class="n">SRR191</span><span class="o">/</span><span class="mi">002</span><span class="o">/</span><span class="n">SRR1910482</span><span class="o">/</span><span class="n">SRR1910482</span><span class="o">.</span><span class="n">fastq</span><span class="o">.</span><span class="n">gz</span><span class="p">]</span>
+<span class="p">(</span><span class="n">remaining</span> <span class="n">omitted</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Multiple accession IDs can be specified using a list object:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">ids</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;ERR908507&#39;</span><span class="p">,</span> <span class="s1">&#39;ERR908506&#39;</span><span class="p">,</span> <span class="s1">&#39;ERR908505&#39;</span><span class="p">]</span>
+<span class="n">Channel</span>
+    <span class="o">.</span><span class="n">fromSRA</span><span class="p">(</span><span class="n">ids</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">view</span><span class="p">()</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">[</span><span class="n">ERR908507</span><span class="p">,</span> <span class="p">[</span><span class="n">ftp</span><span class="p">:</span><span class="o">//</span><span class="n">ftp</span><span class="o">.</span><span class="n">sra</span><span class="o">.</span><span class="n">ebi</span><span class="o">.</span><span class="n">ac</span><span class="o">.</span><span class="n">uk</span><span class="o">/</span><span class="n">vol1</span><span class="o">/</span><span class="n">fastq</span><span class="o">/</span><span class="n">ERR908</span><span class="o">/</span><span class="n">ERR908507</span><span class="o">/</span><span class="n">ERR908507_1</span><span class="o">.</span><span class="n">fastq</span><span class="o">.</span><span class="n">gz</span><span class="p">,</span> <span class="n">ftp</span><span class="p">:</span><span class="o">//</span><span class="n">ftp</span><span class="o">.</span><span class="n">sra</span><span class="o">.</span><span class="n">ebi</span><span class="o">.</span><span class="n">ac</span><span class="o">.</span><span class="n">uk</span><span class="o">/</span><span class="n">vol1</span><span class="o">/</span><span class="n">fastq</span><span class="o">/</span><span class="n">ERR908</span><span class="o">/</span><span class="n">ERR908507</span><span class="o">/</span><span class="n">ERR908507_2</span><span class="o">.</span><span class="n">fastq</span><span class="o">.</span><span class="n">gz</span><span class="p">]]</span>
+<span class="p">[</span><span class="n">ERR908506</span><span class="p">,</span> <span class="p">[</span><span class="n">ftp</span><span class="p">:</span><span class="o">//</span><span class="n">ftp</span><span class="o">.</span><span class="n">sra</span><span class="o">.</span><span class="n">ebi</span><span class="o">.</span><span class="n">ac</span><span class="o">.</span><span class="n">uk</span><span class="o">/</span><span class="n">vol1</span><span class="o">/</span><span class="n">fastq</span><span class="o">/</span><span class="n">ERR908</span><span class="o">/</span><span class="n">ERR908506</span><span class="o">/</span><span class="n">ERR908506_1</span><span class="o">.</span><span class="n">fastq</span><span class="o">.</span><span class="n">gz</span><span class="p">,</span> <span class="n">ftp</span><span class="p">:</span><span class="o">//</span><span class="n">ftp</span><span class="o">.</span><span class="n">sra</span><span class="o">.</span><span class="n">ebi</span><span class="o">.</span><span class="n">ac</span><span class="o">.</span><span class="n">uk</span><span class="o">/</span><span class="n">vol1</span><span class="o">/</span><span class="n">fastq</span><span class="o">/</span><span class="n">ERR908</span><span class="o">/</span><span class="n">ERR908506</span><span class="o">/</span><span class="n">ERR908506_2</span><span class="o">.</span><span class="n">fastq</span><span class="o">.</span><span class="n">gz</span><span class="p">]]</span>
+<span class="p">[</span><span class="n">ERR908505</span><span class="p">,</span> <span class="p">[</span><span class="n">ftp</span><span class="p">:</span><span class="o">//</span><span class="n">ftp</span><span class="o">.</span><span class="n">sra</span><span class="o">.</span><span class="n">ebi</span><span class="o">.</span><span class="n">ac</span><span class="o">.</span><span class="n">uk</span><span class="o">/</span><span class="n">vol1</span><span class="o">/</span><span class="n">fastq</span><span class="o">/</span><span class="n">ERR908</span><span class="o">/</span><span class="n">ERR908505</span><span class="o">/</span><span class="n">ERR908505_1</span><span class="o">.</span><span class="n">fastq</span><span class="o">.</span><span class="n">gz</span><span class="p">,</span> <span class="n">ftp</span><span class="p">:</span><span class="o">//</span><span class="n">ftp</span><span class="o">.</span><span class="n">sra</span><span class="o">.</span><span class="n">ebi</span><span class="o">.</span><span class="n">ac</span><span class="o">.</span><span class="n">uk</span><span class="o">/</span><span class="n">vol1</span><span class="o">/</span><span class="n">fastq</span><span class="o">/</span><span class="n">ERR908</span><span class="o">/</span><span class="n">ERR908505</span><span class="o">/</span><span class="n">ERR908505_2</span><span class="o">.</span><span class="n">fastq</span><span class="o">.</span><span class="n">gz</span><span class="p">]]</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Read pairs are implicitly managed are returned as a list of files.</p>
+</div>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>Behind the scene it’s uses the NCBI <a class="reference external" href="https://www.ncbi.nlm.nih.gov/books/NBK25499/#chapter4.ESearch">ESearch</a>
+API, therefore the <code class="docutils literal notranslate"><span class="pre">fromSRA</span></code> method allow the usage of any query term supported by this API.</p>
+</div>
+<p>Table of optional parameters available:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Name</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>apiKey</p></td>
+<td><p>NCBI user API key.</p></td>
+</tr>
+<tr class="row-odd"><td><p>cache</p></td>
+<td><p>Enable/disable the caching API requests (default: <code class="docutils literal notranslate"><span class="pre">true</span></code>).</p></td>
+</tr>
+<tr class="row-even"><td><p>max</p></td>
+<td><p>Maximum number of entries that can be retried (default: unlimited) .</p></td>
+</tr>
+</tbody>
+</table>
+<p>To access the NCBI search service the <a class="reference external" href="https://ncbiinsights.ncbi.nlm.nih.gov/2017/11/02/new-api-keys-for-the-e-utilities">NCBI API keys</a>
+should be provided either:</p>
+<ul class="simple">
+<li><p>Using the <code class="docutils literal notranslate"><span class="pre">apiKey</span></code> optional parameter e.g. <code class="docutils literal notranslate"><span class="pre">Channel.fromSRA(ids,</span> <span class="pre">apiKey:'0123456789abcdef')</span></code>.</p></li>
+<li><p>Exporting the <code class="docutils literal notranslate"><span class="pre">NCBI_API_KEY</span></code> variable in your environment e.g. <code class="docutils literal notranslate"><span class="pre">export</span> <span class="pre">NCBI_API_KEY=0123456789abcdef</span></code>.</p></li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This feature requires Nextflow version 19.04.0 or later.</p>
+</div>
+</section>
+<section id="watchpath">
+<span id="channel-watch"></span><h3>watchPath<a class="headerlink" href="#watchpath" title="Link to this heading">¶</a></h3>
+<p>The <code class="docutils literal notranslate"><span class="pre">watchPath</span></code> method watches a folder for one or more files matching a specified pattern. As soon as
+there is a file that meets the specified condition, it is emitted over the channel that is returned by the <code class="docutils literal notranslate"><span class="pre">watchPath</span></code>
+method. The condition on files to watch can be specified by using <code class="docutils literal notranslate"><span class="pre">*</span></code> or <code class="docutils literal notranslate"><span class="pre">?</span></code> wildcard characters i.e. by specifying
+a <a class="reference external" href="http://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob">glob</a> path matching criteria.</p>
+<p>For example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Channel</span>
+   <span class="o">.</span><span class="n">watchPath</span><span class="p">(</span> <span class="s1">&#39;/path/*.fa&#39;</span> <span class="p">)</span>
+   <span class="o">.</span><span class="n">subscribe</span> <span class="p">{</span> <span class="n">println</span> <span class="s2">&quot;Fasta file: $it&quot;</span> <span class="p">}</span>
+</pre></div>
+</div>
+<p>By default it watches only for new files created in the specified folder. Optionally, it is possible to provide a
+second argument that specifies what event(s) to watch. The supported events are:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Name</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">create</span></code></p></td>
+<td><p>A new file is created (default)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">modify</span></code></p></td>
+<td><p>A file is modified</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">delete</span></code></p></td>
+<td><p>A file is deleted</p></td>
+</tr>
+</tbody>
+</table>
+<p>You can specified more than one of these events by using a comma separated string as shown below:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Channel</span>
+   <span class="o">.</span><span class="n">watchPath</span><span class="p">(</span> <span class="s1">&#39;/path/*.fa&#39;</span><span class="p">,</span> <span class="s1">&#39;create,modify&#39;</span> <span class="p">)</span>
+   <span class="o">.</span><span class="n">subscribe</span> <span class="p">{</span> <span class="n">println</span> <span class="s2">&quot;File created or modified: $it&quot;</span> <span class="p">}</span>
+</pre></div>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">watchPath</span></code> factory waits endlessly for files that match the specified pattern and event(s).
+Thus, whenever you use it in your script, the resulting pipeline will never finish.</p>
+</div>
+<p>See also: <a class="reference internal" href="#frompath">fromPath</a> factory method.</p>
+</section>
+<section id="empty">
+<span id="channel-empty"></span><h3>empty<a class="headerlink" href="#empty" title="Link to this heading">¶</a></h3>
+<p>The <code class="docutils literal notranslate"><span class="pre">empty</span></code> factory method, by definition, creates a channel that doesn’t emit any value.</p>
+<p>See also: <a class="reference internal" href="operator.html#operator-ifempty"><span class="std std-ref">ifEmpty</span></a> and <a class="reference internal" href="operator.html#operator-close"><span class="std std-ref">close</span></a> operators.</p>
+</section>
+</section>
+<section id="binding-values">
+<h2>Binding values<a class="headerlink" href="#binding-values" title="Link to this heading">¶</a></h2>
+<p>Since in <cite>Nextflow</cite> channels are implemented using <cite>dataflow</cite> variables or queues. Thus sending a message
+is equivalent to <cite>bind</cite> a value to object representing the communication channel.</p>
+<section id="bind">
+<span id="channel-bind1"></span><h3>bind<a class="headerlink" href="#bind" title="Link to this heading">¶</a></h3>
+<p>Channel objects provide a <cite>bind( )</cite> method which is the basic operation to send a message over the channel.
+For example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">myChannel</span> <span class="o">=</span> <span class="n">Channel</span><span class="o">.</span><span class="n">create</span><span class="p">()</span>
+<span class="n">myChannel</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span> <span class="s1">&#39;Hello world&#39;</span> <span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="operator">
+<span id="channel-bind2"></span><h3>operator &lt;&lt;<a class="headerlink" href="#operator" title="Link to this heading">¶</a></h3>
+<p>The operator <code class="docutils literal notranslate"><span class="pre">&lt;&lt;</span></code> is just a syntax sugar for the <cite>bind</cite> method. Thus, the following example produce
+an identical result as the previous one:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">myChannel</span> <span class="o">=</span> <span class="n">Channel</span><span class="o">.</span><span class="n">create</span><span class="p">()</span>
+<span class="n">myChannel</span> <span class="o">&lt;&lt;</span> <span class="s1">&#39;Hello world&#39;</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="observing-events">
+<h2>Observing events<a class="headerlink" href="#observing-events" title="Link to this heading">¶</a></h2>
+<section id="subscribe">
+<span id="channel-subscribe"></span><h3>subscribe<a class="headerlink" href="#subscribe" title="Link to this heading">¶</a></h3>
+<p>The <code class="docutils literal notranslate"><span class="pre">subscribe</span></code> method allows you to execute a user defined function each time a new value is emitted by the source channel.</p>
+<p>The emitted value is passed implicitly to the specified function. For example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">//</span> <span class="n">define</span> <span class="n">a</span> <span class="n">channel</span> <span class="n">emitting</span> <span class="n">three</span> <span class="n">values</span>
+<span class="n">source</span> <span class="o">=</span> <span class="n">Channel</span><span class="o">.</span><span class="kn">from</span> <span class="p">(</span> <span class="s1">&#39;alpha&#39;</span><span class="p">,</span> <span class="s1">&#39;beta&#39;</span><span class="p">,</span> <span class="s1">&#39;delta&#39;</span> <span class="p">)</span>
+
+<span class="o">//</span> <span class="n">subscribe</span> <span class="n">a</span> <span class="n">function</span> <span class="n">to</span> <span class="n">the</span> <span class="n">channel</span> <span class="n">printing</span> <span class="n">the</span> <span class="n">emitted</span> <span class="n">values</span>
+<span class="n">source</span><span class="o">.</span><span class="n">subscribe</span> <span class="p">{</span>  <span class="n">println</span> <span class="s2">&quot;Got: $it&quot;</span>  <span class="p">}</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Got</span><span class="p">:</span> <span class="n">alpha</span>
+<span class="n">Got</span><span class="p">:</span> <span class="n">beta</span>
+<span class="n">Got</span><span class="p">:</span> <span class="n">delta</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Formally the user defined function is a <code class="docutils literal notranslate"><span class="pre">Closure</span></code> as defined by the Groovy programming language on which
+the <cite>Nextflow</cite> scripts are based.</p>
+</div>
+<p>If needed the closure parameter can be defined explicitly, using a name other than <code class="docutils literal notranslate"><span class="pre">it</span></code> and, optionally,
+specifying the expected value type, as shown in the following example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Channel</span>
+    <span class="o">.</span><span class="n">from</span><span class="p">(</span> <span class="s1">&#39;alpha&#39;</span><span class="p">,</span> <span class="s1">&#39;beta&#39;</span><span class="p">,</span> <span class="s1">&#39;lambda&#39;</span> <span class="p">)</span>
+    <span class="o">.</span><span class="n">subscribe</span> <span class="p">{</span> <span class="n">String</span> <span class="nb">str</span> <span class="o">-&gt;</span>
+        <span class="n">println</span> <span class="s2">&quot;Got: $</span><span class="si">{str}</span><span class="s2">; len: ${str.size()}&quot;</span>
+     <span class="p">}</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Got</span><span class="p">:</span> <span class="n">alpha</span><span class="p">;</span> <span class="nb">len</span><span class="p">:</span> <span class="mi">5</span>
+<span class="n">Got</span><span class="p">:</span> <span class="n">beta</span><span class="p">;</span> <span class="nb">len</span><span class="p">:</span> <span class="mi">4</span>
+<span class="n">Got</span><span class="p">:</span> <span class="k">lambda</span><span class="p">;</span> <span class="nb">len</span><span class="p">:</span> <span class="mi">6</span>
+</pre></div>
+</div>
+<p>Read <a class="reference internal" href="script.html#script-closure"><span class="std std-ref">Closures</span></a> paragraph to learn more about <cite>closure</cite> feature.</p>
+</section>
+<section id="onnext-oncomplete-and-onerror">
+<h3>onNext, onComplete, and onError<a class="headerlink" href="#onnext-oncomplete-and-onerror" title="Link to this heading">¶</a></h3>
+<p>The <code class="docutils literal notranslate"><span class="pre">subscribe</span></code> method may accept one or more of the following event handlers:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">onNext</span></code>: registers a function that is invoked whenever the channel emits a value.
+This is the same as using the <code class="docutils literal notranslate"><span class="pre">subscribe</span></code> with a <cite>plain</cite> closure as describe in the examples above.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">onComplete</span></code>: registers a function that is invoked after the <cite>last</cite> value is emitted by the channel.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">onError</span></code>: registers a function that it is invoked when an exception is raised while handling the
+<code class="docutils literal notranslate"><span class="pre">onNext</span></code> event. It will not make further calls to <code class="docutils literal notranslate"><span class="pre">onNext</span></code> or <code class="docutils literal notranslate"><span class="pre">onComplete</span></code>.
+The <code class="docutils literal notranslate"><span class="pre">onError</span></code> method takes as its parameter the <code class="docutils literal notranslate"><span class="pre">Throwable</span></code> that caused the error.</p></li>
+</ul>
+<p>For example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Channel</span>
+    <span class="o">.</span><span class="n">from</span><span class="p">(</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span> <span class="p">)</span>
+    <span class="o">.</span><span class="n">subscribe</span> <span class="n">onNext</span><span class="p">:</span> <span class="p">{</span> <span class="n">println</span> <span class="n">it</span> <span class="p">},</span> <span class="n">onComplete</span><span class="p">:</span> <span class="p">{</span> <span class="n">println</span> <span class="s1">&#39;Done&#39;</span> <span class="p">}</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="mi">1</span>
+<span class="mi">2</span>
+<span class="mi">3</span>
+<span class="n">Done</span>
+</pre></div>
+</div>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="process.html" class="btn btn-neutral float-left" title="Processes" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="operator.html" class="btn btn-neutral float-right" title="Operators" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2020, Seqera Labs. 2013-2019, Centre for Genomic Regulation (CRG)..</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+    <!-- Theme Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-364526-10"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'UA-364526-10', {
+          'anonymize_ip': false,
+      });
+    </script> 
+
+</body>
+</html>

@@ -1,0 +1,347 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mail &amp; Notifications &mdash; Nextflow 20.10.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+
+  
+    <link rel="shortcut icon" href="_static/favicon.ico"/>
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+      <script src="_static/documentation_options.js?v=a23069cb"></script>
+      <script src="_static/doctools.js?v=888ff710"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Workflow introspection" href="metadata.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Nextflow
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="getstarted.html">Get started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="basic.html">Basic concepts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="script.html">Nextflow scripting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="process.html">Processes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="channel.html">Channels</a></li>
+<li class="toctree-l1"><a class="reference internal" href="operator.html">Operators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="executor.html">Executors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="config.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dsl2.html">DSL 2</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cli.html">Command line interface (CLI)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="awscloud.html">Amazon Cloud</a></li>
+<li class="toctree-l1"><a class="reference internal" href="amazons3.html">Amazon S3 storage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="google.html">Google Cloud</a></li>
+<li class="toctree-l1"><a class="reference internal" href="conda.html">Conda environments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="docker.html">Docker containers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="shifter.html">Shifter Containers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="singularity.html">Singularity containers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="podman.html">Podman containers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ignite.html">Apache Ignite</a></li>
+<li class="toctree-l1"><a class="reference internal" href="kubernetes.html">Kubernetes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tracing.html">Tracing &amp; visualisation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sharing.html">Pipeline sharing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="metadata.html">Workflow introspection</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Mail &amp; Notifications</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#mail-message">Mail message</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#basic-mail">Basic mail</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#advanced-mail">Advanced mail</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mail-attachments">Mail attachments</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mail-configuration">Mail configuration</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#mail-notification">Mail notification</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#workflow-notification">Workflow notification</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Nextflow</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Mail &amp; Notifications</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="mail-notifications">
+<span id="mail-page"></span><h1>Mail &amp; Notifications<a class="headerlink" href="#mail-notifications" title="Link to this heading">¶</a></h1>
+<section id="mail-message">
+<h2>Mail message<a class="headerlink" href="#mail-message" title="Link to this heading">¶</a></h2>
+<p>The built-in function <code class="docutils literal notranslate"><span class="pre">sendMail</span></code> allows you to send a mail message from a workflow script.</p>
+<section id="basic-mail">
+<span id="mail-basic"></span><h3>Basic mail<a class="headerlink" href="#basic-mail" title="Link to this heading">¶</a></h3>
+<p>The mail attributes are specified as named parameters or providing an equivalent associative array as argument.
+For example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sendMail</span><span class="p">(</span> <span class="n">to</span><span class="p">:</span> <span class="s1">&#39;you@gmail.com&#39;</span><span class="p">,</span>
+          <span class="n">subject</span><span class="p">:</span> <span class="s1">&#39;Catch up&#39;</span><span class="p">,</span>
+          <span class="n">body</span><span class="p">:</span> <span class="s1">&#39;Hi, how are you!&#39;</span><span class="p">,</span>
+          <span class="n">attach</span><span class="p">:</span> <span class="s1">&#39;/some/path/attachment/file.txt&#39;</span> <span class="p">)</span>
+</pre></div>
+</div>
+<p>therefore this is equivalent to write:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">mail</span> <span class="o">=</span> <span class="p">[</span> <span class="n">to</span><span class="p">:</span> <span class="s1">&#39;you@gmail.com&#39;</span><span class="p">,</span>
+         <span class="n">subject</span><span class="p">:</span> <span class="s1">&#39;Catch up&#39;</span><span class="p">,</span>
+         <span class="n">body</span><span class="p">:</span> <span class="s1">&#39;Hi, how are you!&#39;</span><span class="p">,</span>
+         <span class="n">attach</span><span class="p">:</span> <span class="s1">&#39;/some/path/attachment/file.txt&#39;</span> <span class="p">]</span>
+
+<span class="n">sendMail</span><span class="p">(</span><span class="n">mail</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The following parameters can be specified:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Name</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>to <sup>*</sup></p></td>
+<td><p>The mail target recipients.</p></td>
+</tr>
+<tr class="row-odd"><td><p>cc <sup>*</sup></p></td>
+<td><p>The mail CC recipients.</p></td>
+</tr>
+<tr class="row-even"><td><p>bcc <sup>*</sup></p></td>
+<td><p>The mail BCC recipients.</p></td>
+</tr>
+<tr class="row-odd"><td><p>from <sup>*</sup></p></td>
+<td><p>The mail sender address.</p></td>
+</tr>
+<tr class="row-even"><td><p>subject</p></td>
+<td><p>The mail subject.</p></td>
+</tr>
+<tr class="row-odd"><td><p>charset</p></td>
+<td><p>The mail content charset (default: <code class="docutils literal notranslate"><span class="pre">UTF-8</span></code>).</p></td>
+</tr>
+<tr class="row-even"><td><p>text</p></td>
+<td><p>The mail plain text content.</p></td>
+</tr>
+<tr class="row-odd"><td><p>body</p></td>
+<td><p>The mail body content. It can be either plain text or HTML content.</p></td>
+</tr>
+<tr class="row-even"><td><p>type</p></td>
+<td><p>The mail body mime type. If not specified it’s automatically detected.</p></td>
+</tr>
+<tr class="row-odd"><td><p>attach</p></td>
+<td><p>Single file or a list of files to be included as mail attachments.</p></td>
+</tr>
+</tbody>
+</table>
+<p><cite>*</cite> Multiple email addresses can be specified separating them with a comma.</p>
+</section>
+<section id="advanced-mail">
+<span id="mail-advanced"></span><h3>Advanced mail<a class="headerlink" href="#advanced-mail" title="Link to this heading">¶</a></h3>
+<p>An second version of the <code class="docutils literal notranslate"><span class="pre">sendMail</span></code> allows a more idiomatic syntax:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sendMail</span> <span class="p">{</span>
+    <span class="n">to</span> <span class="s1">&#39;you@gmail.com&#39;</span>
+    <span class="kn">from</span> <span class="s1">&#39;me@gmail.com&#39;</span>
+    <span class="n">attach</span> <span class="s1">&#39;/some/path/attachment/file.txt&#39;</span>
+    <span class="n">attach</span> <span class="s1">&#39;/other/path/image.png&#39;</span>
+    <span class="n">subject</span> <span class="s1">&#39;Catch up&#39;</span>
+
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Hi there,</span>
+<span class="sd">    Look! Multi-lines</span>
+<span class="sd">    mail content!</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The same attributes listed in the table in the previous section are allowed.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>When it terminates with a string expression it’s implicitly interpreted as the mail body content, therefore
+the <code class="docutils literal notranslate"><span class="pre">body</span></code> parameter can be omitted as shown above.</p>
+</div>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>To send an <cite>alternative</cite> mail message that includes either text and HTML content use both the <code class="docutils literal notranslate"><span class="pre">text</span></code> and <code class="docutils literal notranslate"><span class="pre">body</span></code> attributes.
+The first must be used for the plain text content, while the second for the rich HTML message.</p>
+</div>
+</section>
+<section id="mail-attachments">
+<span id="id1"></span><h3>Mail attachments<a class="headerlink" href="#mail-attachments" title="Link to this heading">¶</a></h3>
+<p>When using the curly brackets syntax, the <code class="docutils literal notranslate"><span class="pre">attach</span></code> parameter can be repeated two or more times to include
+multiple attachments in the mail message.</p>
+<p>Moreover for each attachment it’s possible to specify one or more of the following optional attributes:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Name</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>contentId</p></td>
+<td><p>Defines the <cite>Content-ID</cite> header field for the attachment.</p></td>
+</tr>
+<tr class="row-odd"><td><p>disposition</p></td>
+<td><p>Defines the <cite>Content-Disposition</cite> header field for the attachment.</p></td>
+</tr>
+<tr class="row-even"><td><p>fileName</p></td>
+<td><p>Defines the <cite>filename</cite> parameter of the “Content-Disposition” header field.</p></td>
+</tr>
+<tr class="row-odd"><td><p>description</p></td>
+<td><p>Defines the <cite>Content-Description</cite> header field for the attachment.</p></td>
+</tr>
+</tbody>
+</table>
+<p>For example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sendMail</span> <span class="p">{</span>
+    <span class="n">to</span> <span class="s1">&#39;you@dot.com&#39;</span>
+    <span class="n">attach</span> <span class="s1">&#39;/some/file.txt&#39;</span><span class="p">,</span> <span class="n">fileName</span><span class="p">:</span> <span class="s1">&#39;manuscript.txt&#39;</span>
+    <span class="n">attach</span> <span class="s1">&#39;/other/image.png&#39;</span><span class="p">,</span> <span class="n">disposition</span><span class="p">:</span> <span class="s1">&#39;inline&#39;</span>
+    <span class="n">subject</span> <span class="s1">&#39;Sending documents&#39;</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    the mail body</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="mail-configuration">
+<span id="mail-config"></span><h3>Mail configuration<a class="headerlink" href="#mail-configuration" title="Link to this heading">¶</a></h3>
+<p>If no mail server configuration is provided, Nextflow tries to send the email by using the external mail command
+eventually provided by the underlying system (eg. <code class="docutils literal notranslate"><span class="pre">sendmail</span></code> or <code class="docutils literal notranslate"><span class="pre">mail</span></code>).</p>
+<p>If your system does not provide access to none of the above you can configure a SMTP server in the <code class="docutils literal notranslate"><span class="pre">nextflow.config</span></code> file.
+For example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">mail</span> <span class="p">{</span>
+    <span class="n">smtp</span><span class="o">.</span><span class="n">host</span> <span class="o">=</span> <span class="s1">&#39;your.smtp-server.com&#39;</span>
+    <span class="n">smtp</span><span class="o">.</span><span class="n">port</span> <span class="o">=</span> <span class="mi">475</span>
+    <span class="n">smtp</span><span class="o">.</span><span class="n">user</span> <span class="o">=</span> <span class="s1">&#39;my-user&#39;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>See the <a class="reference internal" href="config.html#config-mail"><span class="std std-ref">mail scope</span></a> section to learn more the mail server configuration options.</p>
+</section>
+</section>
+<section id="mail-notification">
+<h2>Mail notification<a class="headerlink" href="#mail-notification" title="Link to this heading">¶</a></h2>
+<p>You can use the <code class="docutils literal notranslate"><span class="pre">sendMail</span></code> function with a <a class="reference internal" href="metadata.html#metadata-completion-handler"><span class="std std-ref">workflow completion handler</span></a>
+to notify the completion of a workflow completion. For example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">workflow</span><span class="o">.</span><span class="n">onComplete</span> <span class="p">{</span>
+
+    <span class="k">def</span> <span class="nf">msg</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span><span class="se">\</span>
+<span class="s2">        Pipeline execution summary</span>
+<span class="s2">        ---------------------------</span>
+<span class="s2">        Completed at: $</span><span class="si">{workflow.complete}</span>
+<span class="s2">        Duration    : $</span><span class="si">{workflow.duration}</span>
+<span class="s2">        Success     : $</span><span class="si">{workflow.success}</span>
+<span class="s2">        workDir     : $</span><span class="si">{workflow.workDir}</span>
+<span class="s2">        exit status : $</span><span class="si">{workflow.exitStatus}</span>
+<span class="s2">        &quot;&quot;&quot;</span>
+        <span class="o">.</span><span class="n">stripIndent</span><span class="p">()</span>
+
+    <span class="n">sendMail</span><span class="p">(</span><span class="n">to</span><span class="p">:</span> <span class="s1">&#39;you@gmail.com&#39;</span><span class="p">,</span> <span class="n">subject</span><span class="p">:</span> <span class="s1">&#39;My pipeline execution&#39;</span><span class="p">,</span> <span class="n">body</span><span class="p">:</span> <span class="n">msg</span><span class="p">)</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>This is useful to send a custom notification message. Note however that Nextflow includes a built-in notification mechanism
+which is the most convenient way to notify the completion of a workflow execution in most cases. Read the following
+section to learn about it.</p>
+</section>
+<section id="workflow-notification">
+<h2>Workflow notification<a class="headerlink" href="#workflow-notification" title="Link to this heading">¶</a></h2>
+<p>Nextflow includes a built-in workflow notification features that automatically sends a notification message
+when a workflow execution terminates.</p>
+<p>To enable simply specify the <code class="docutils literal notranslate"><span class="pre">-N</span></code> option when launching the pipeline execution. For example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">nextflow</span> <span class="n">run</span> <span class="o">&lt;</span><span class="n">pipeline</span> <span class="n">name</span><span class="o">&gt;</span> <span class="o">-</span><span class="n">N</span> <span class="o">&lt;</span><span class="n">recipient</span> <span class="n">address</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<p>It will send a notification mail when the execution completes similar to the one shown below:</p>
+<img alt="_images/workflow-notification-min.png" src="_images/workflow-notification-min.png" />
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>By default the notification message is sent by using the <code class="docutils literal notranslate"><span class="pre">sendmail</span></code> system tool which is assumed to be
+available in the computer where Nextflow is running. Make sure it’s properly installed and configured.
+Alternatively provide the SMTP server configuration settings to use the Nextflow
+built-in mail support, which doesn’t require any external system tool.</p>
+</div>
+<p>See the <a class="reference internal" href="#mail-configuration">Mail configuration</a> section to learn about the available mail delivery options and configuration settings.</p>
+<p>Read <a class="reference internal" href="config.html#config-notification"><span class="std std-ref">Notification scope</span></a> section to learn more about the workflow notification
+configuration details.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="metadata.html" class="btn btn-neutral float-left" title="Workflow introspection" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2020, Seqera Labs. 2013-2019, Centre for Genomic Regulation (CRG)..</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+    <!-- Theme Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-364526-10"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'UA-364526-10', {
+          'anonymize_ip': false,
+      });
+    </script> 
+
+</body>
+</html>
