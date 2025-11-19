@@ -1854,7 +1854,7 @@ combine_cds_input = for_combine_cds
     .map { file ->
         def fname = file.getName() // e.g. "GENE3.P1.A02_cds.RDS"
         def base = fname.replaceFirst(/_cds\.mobs$/, '') // "GENE3.P1.A02"
-        def sample_name = base.split(/\.P[0-9]\.[A-H][0-9]{2}/)[0] // "GENE3"
+        def sample_name = base.split(/\.P[0-9]{1,2}\.[A-H][0-9]{1,2}/)[0]
         tuple(sample_name, file)
     }
     .groupTuple()
@@ -2186,7 +2186,7 @@ combine_eds_input = for_combine_eds
     .map { file ->
         def fname = file.getName() // e.g. "GENE3.P1.A02_cds.RDS"
         def base = fname.replaceFirst(/_emptyDrops\.RDS$/, '') // "GENE3.P1.A02"
-        def sample_name = base.split(/\.P[0-9]\.[A-H][0-9]{2}/)[0] // "GENE3"
+        def sample_name = base.split(/\.P[0-9]{1,2}\.[A-H][0-9]{1,2}/)[0]
         tuple(sample_name, file)
     }
     .groupTuple()

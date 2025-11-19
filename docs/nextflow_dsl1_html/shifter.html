@@ -1,0 +1,209 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Shifter Containers &mdash; Nextflow 20.10.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+
+  
+    <link rel="shortcut icon" href="_static/favicon.ico"/>
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+      <script src="_static/documentation_options.js?v=a23069cb"></script>
+      <script src="_static/doctools.js?v=888ff710"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Singularity containers" href="singularity.html" />
+    <link rel="prev" title="Docker containers" href="docker.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Nextflow
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="getstarted.html">Get started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="basic.html">Basic concepts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="script.html">Nextflow scripting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="process.html">Processes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="channel.html">Channels</a></li>
+<li class="toctree-l1"><a class="reference internal" href="operator.html">Operators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="executor.html">Executors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="config.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dsl2.html">DSL 2</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cli.html">Command line interface (CLI)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="awscloud.html">Amazon Cloud</a></li>
+<li class="toctree-l1"><a class="reference internal" href="amazons3.html">Amazon S3 storage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="google.html">Google Cloud</a></li>
+<li class="toctree-l1"><a class="reference internal" href="conda.html">Conda environments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="docker.html">Docker containers</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Shifter Containers</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#prerequisites">Prerequisites</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#images">Images</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#how-it-works">How it works</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#multiple-containers">Multiple Containers</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="singularity.html">Singularity containers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="podman.html">Podman containers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ignite.html">Apache Ignite</a></li>
+<li class="toctree-l1"><a class="reference internal" href="kubernetes.html">Kubernetes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tracing.html">Tracing &amp; visualisation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sharing.html">Pipeline sharing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="metadata.html">Workflow introspection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mail.html">Mail &amp; Notifications</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Nextflow</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Shifter Containers</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="shifter-containers">
+<span id="shifter-page"></span><h1>Shifter Containers<a class="headerlink" href="#shifter-containers" title="Link to this heading">¶</a></h1>
+<p><a class="reference external" href="https://docs.nersc.gov/programming/shifter/overview/">Shifter</a> is container engine alternative to
+<a class="reference external" href="https://www.docker.com">Docker</a>. Shifter works by converting Docker images to a common format that can then be
+distributed and launched on HPC systems. The user interface to Shifter enables a user to select an image
+from the <a class="reference external" href="https://hub.docker.com/">dockerhub registry</a> and then submit jobs which run entirely within the container.</p>
+<p>Nextflow provides built-in support for Shifter. This allows you to control the execution environment of the processes
+in your pipeline by running them in isolated containers along-side their dependencies.</p>
+<p>Moreover the support provided by Nextflow for different container technologies, allows the same pipeline to be
+transparently executed both with <span class="xref std std-ref">Docker</span>, <span class="xref std std-ref">Singularity</span> or
+<span class="xref std std-ref">Shifter</span> containers, depending on the available engine in target execution platforms.</p>
+<section id="prerequisites">
+<h2>Prerequisites<a class="headerlink" href="#prerequisites" title="Link to this heading">¶</a></h2>
+<p>You need Shifter and Shifter image gateway installed in your execution environment, i.e: your personal computed or the
+entry node of a distributed cluster. In the case of the distributed cluster case, you should have Shifter installed on
+all of the compute nodes and the <code class="docutils literal notranslate"><span class="pre">shifterimg</span></code> command should also be available and Shifter properly setup to access the
+Image gateway, for more information see the
+<a class="reference external" href="https://github.com/NERSC/shifter/tree/master/doc">official documentation</a>.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This feature requires Shifter version 18.03 (or later) and Nextflow 19.10.0 (or later).</p>
+</div>
+</section>
+<section id="images">
+<h2>Images<a class="headerlink" href="#images" title="Link to this heading">¶</a></h2>
+<p>Shifter converts a docker image to squashfs layers which are distributed and launched in the cluster. For more info on
+how to Build Shifter images see the
+<a class="reference external" href="https://docs.nersc.gov/programming/shifter/how-to-use/#building-shifter-images">official documentation</a>.</p>
+</section>
+<section id="how-it-works">
+<h2>How it works<a class="headerlink" href="#how-it-works" title="Link to this heading">¶</a></h2>
+<p>The integration for Shifter, at this time, requires you to set up the following parameters in your config file:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">process</span><span class="o">.</span><span class="n">container</span> <span class="o">=</span> <span class="s2">&quot;dockerhub_user/image_name:image_tag&quot;</span>
+<span class="n">shifter</span><span class="o">.</span><span class="n">enabled</span> <span class="o">=</span> <span class="n">true</span>
+</pre></div>
+</div>
+<p>and it will always try to search the Docker Hub registry for the images.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>if you do not specify an image tag it will fetch the ‘latest’ tag by default.</p>
+</div>
+</section>
+<section id="multiple-containers">
+<h2>Multiple Containers<a class="headerlink" href="#multiple-containers" title="Link to this heading">¶</a></h2>
+<p>It is possible to specify a different Shifter image for each process definition in your pipeline script. For example,
+let’s suppose you have two processes named <code class="docutils literal notranslate"><span class="pre">foo</span></code> and <code class="docutils literal notranslate"><span class="pre">bar</span></code>. You can specify two different Shifter images
+specifying them in the <code class="docutils literal notranslate"><span class="pre">nextflow.config</span></code> file as shown below:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">process</span> <span class="p">{</span>
+    <span class="n">withName</span><span class="p">:</span><span class="n">foo</span> <span class="p">{</span>
+        <span class="n">container</span> <span class="o">=</span> <span class="s1">&#39;image_name_1&#39;</span>
+    <span class="p">}</span>
+    <span class="n">withName</span><span class="p">:</span><span class="n">bar</span> <span class="p">{</span>
+        <span class="n">container</span> <span class="o">=</span> <span class="s1">&#39;image_name_2&#39;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+<span class="n">shifter</span> <span class="p">{</span>
+    <span class="n">enabled</span> <span class="o">=</span> <span class="n">true</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Read the <a class="reference internal" href="config.html#config-process"><span class="std std-ref">Process scope</span></a> section to learn more about processes configuration.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="docker.html" class="btn btn-neutral float-left" title="Docker containers" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="singularity.html" class="btn btn-neutral float-right" title="Singularity containers" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2020, Seqera Labs. 2013-2019, Centre for Genomic Regulation (CRG)..</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+    <!-- Theme Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-364526-10"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'UA-364526-10', {
+          'anonymize_ip': false,
+      });
+    </script> 
+
+</body>
+</html>

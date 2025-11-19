@@ -1,0 +1,293 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Conda environments &mdash; Nextflow 20.10.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+
+  
+    <link rel="shortcut icon" href="_static/favicon.ico"/>
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+      <script src="_static/documentation_options.js?v=a23069cb"></script>
+      <script src="_static/doctools.js?v=888ff710"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Docker containers" href="docker.html" />
+    <link rel="prev" title="Google Cloud" href="google.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Nextflow
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="getstarted.html">Get started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="basic.html">Basic concepts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="script.html">Nextflow scripting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="process.html">Processes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="channel.html">Channels</a></li>
+<li class="toctree-l1"><a class="reference internal" href="operator.html">Operators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="executor.html">Executors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="config.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dsl2.html">DSL 2</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cli.html">Command line interface (CLI)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="awscloud.html">Amazon Cloud</a></li>
+<li class="toctree-l1"><a class="reference internal" href="amazons3.html">Amazon S3 storage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="google.html">Google Cloud</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Conda environments</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#prerequisites">Prerequisites</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#how-it-works">How it works</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#use-conda-package-names">Use Conda package names</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#use-conda-environment-files">Use Conda environment files</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#use-existing-conda-environments">Use existing Conda environments</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#best-practices">Best practices</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#advanced-settings">Advanced settings</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="docker.html">Docker containers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="shifter.html">Shifter Containers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="singularity.html">Singularity containers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="podman.html">Podman containers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ignite.html">Apache Ignite</a></li>
+<li class="toctree-l1"><a class="reference internal" href="kubernetes.html">Kubernetes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tracing.html">Tracing &amp; visualisation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sharing.html">Pipeline sharing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="metadata.html">Workflow introspection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mail.html">Mail &amp; Notifications</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Nextflow</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Conda environments</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="conda-environments">
+<span id="conda-page"></span><h1>Conda environments<a class="headerlink" href="#conda-environments" title="Link to this heading">¶</a></h1>
+<p><a class="reference external" href="https://conda.io/">Conda</a> is an open source package and environment management
+system that simplifies the installation and the configuration of complex software packages
+in a platform agnostic manner.</p>
+<p>Nextflow has built-in support for Conda that allows the configuration of workflow dependencies
+using Conda recipes and environment files.</p>
+<p>This allows Nextflow applications to use popular tool collections
+such as <a class="reference external" href="https://bioconda.github.io">Bioconda</a> whilst taking advantage of the configuration
+flexibility provided by Nextflow.</p>
+<section id="prerequisites">
+<h2>Prerequisites<a class="headerlink" href="#prerequisites" title="Link to this heading">¶</a></h2>
+<p>This feature requires Nextflow version 0.30.x or higher and the Conda or
+<a class="reference external" href="https://conda.io/miniconda.html">Miniconda</a> package manager installed on your system.</p>
+</section>
+<section id="how-it-works">
+<h2>How it works<a class="headerlink" href="#how-it-works" title="Link to this heading">¶</a></h2>
+<p>Nextflow  automatically creates and activates the Conda environment(s) given the dependencies
+specified by each process.</p>
+<p>Dependencies are specified by using the <a class="reference internal" href="process.html#process-conda"><span class="std std-ref">conda</span></a> directive, providing either
+the names of the required Conda packages, the path of a Conda environment yaml file or
+the path of an existing Conda environment directory.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Conda environments are stored on the file system. By default Nextflow instructs Conda to save
+the required environments in the pipeline work directory. Therefore the same environment can be created/saved
+multiple times across multiple executions when using a different work directory.</p>
+</div>
+<p>You can specify the directory where the Conda environments are stored using the <code class="docutils literal notranslate"><span class="pre">conda.cacheDir</span></code>
+configuration property (see the <a class="reference internal" href="config.html#config-conda"><span class="std std-ref">configuration page</span></a> for details).
+When using a computing cluster, make sure to use a shared file system path
+accessible from all computing nodes.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>The Conda environment feature is not supported by executors which use
+a remote object storage as a work directory eg. AWS Batch.</p>
+</div>
+<section id="use-conda-package-names">
+<h3>Use Conda package names<a class="headerlink" href="#use-conda-package-names" title="Link to this heading">¶</a></h3>
+<p>Conda package names can specified using the <code class="docutils literal notranslate"><span class="pre">conda</span></code> directive. Multiple package names can be specified
+by separating them with a blank space.
+For example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">process</span> <span class="n">foo</span> <span class="p">{</span>
+  <span class="n">conda</span> <span class="s1">&#39;bwa samtools multiqc&#39;</span>
+
+<span class="w">  </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">  your_command --here</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Using the above definition a Conda environment that includes BWA, Samtools and MultiQC tools is created and
+activated when the process is executed.</p>
+<p>The usual Conda package syntax and naming conventions can be used. The version of a package can be
+specified after the package name as shown here <code class="docutils literal notranslate"><span class="pre">bwa=0.7.15</span></code>.</p>
+<p>The name of the channel where a package is located can be specified prefixing the package with
+the channel name as shown here <code class="docutils literal notranslate"><span class="pre">bioconda::bwa=0.7.15</span></code>.</p>
+</section>
+<section id="use-conda-environment-files">
+<h3>Use Conda environment files<a class="headerlink" href="#use-conda-environment-files" title="Link to this heading">¶</a></h3>
+<p>Conda environments can also be defined using one or more Conda environment files. This is a file that
+lists the required packages and channels structured using the YAML format. For example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">name</span><span class="p">:</span> <span class="n">my</span><span class="o">-</span><span class="n">env</span>
+<span class="n">channels</span><span class="p">:</span>
+  <span class="o">-</span> <span class="n">conda</span><span class="o">-</span><span class="n">forge</span>
+  <span class="o">-</span> <span class="n">bioconda</span>
+  <span class="o">-</span> <span class="n">defaults</span>
+<span class="n">dependencies</span><span class="p">:</span>
+  <span class="o">-</span> <span class="n">star</span><span class="o">=</span><span class="mf">2.5.4</span><span class="n">a</span>
+  <span class="o">-</span> <span class="n">bwa</span><span class="o">=</span><span class="mf">0.7.15</span>
+</pre></div>
+</div>
+<p>Read the Conda documentation for more details about how to create <a class="reference external" href="https://conda.io/docs/user-guide/tasks/manage-environments.html#creating-an-environment-file-manually">environment files</a>.</p>
+<p>The path of an environment file can be specified using the <code class="docutils literal notranslate"><span class="pre">conda</span></code> directive:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">process</span> <span class="n">foo</span> <span class="p">{</span>
+  <span class="n">conda</span> <span class="s1">&#39;/some/path/my-env.yaml&#39;</span>
+
+<span class="w">  </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">  your_command --here</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>The environment file name <strong>must</strong> end with a <code class="docutils literal notranslate"><span class="pre">.yml</span></code> or <code class="docutils literal notranslate"><span class="pre">.yaml</span></code> suffix otherwise
+it won’t be properly recognised.</p>
+</div>
+<p>Alternatively it is also possible to provide the dependencies using a plain text file,
+just listing each package name as a separate line. For example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">bioconda</span><span class="p">::</span><span class="n">star</span><span class="o">=</span><span class="mf">2.5.4</span><span class="n">a</span>
+<span class="n">bioconda</span><span class="p">::</span><span class="n">bwa</span><span class="o">=</span><span class="mf">0.7.15</span>
+<span class="n">bioconda</span><span class="p">::</span><span class="n">multiqc</span><span class="o">=</span><span class="mf">1.4</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Like before the extension matter, make sure such file ends with the <code class="docutils literal notranslate"><span class="pre">.txt</span></code> extension.</p>
+</div>
+</section>
+<section id="use-existing-conda-environments">
+<h3>Use existing Conda environments<a class="headerlink" href="#use-existing-conda-environments" title="Link to this heading">¶</a></h3>
+<p>If you already have a local Conda environment, you can use it in your workflow specifying the
+installation directory of such environment by using the <code class="docutils literal notranslate"><span class="pre">conda</span></code> directive:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">process</span> <span class="n">foo</span> <span class="p">{</span>
+  <span class="n">conda</span> <span class="s1">&#39;/path/to/an/existing/env/directory&#39;</span>
+
+<span class="w">  </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">  your_command --here</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="best-practices">
+<h2>Best practices<a class="headerlink" href="#best-practices" title="Link to this heading">¶</a></h2>
+<p>When a <code class="docutils literal notranslate"><span class="pre">conda</span></code> directive is used in any <code class="docutils literal notranslate"><span class="pre">process</span></code> definition within the workflow script, Conda tool is required for
+the workflow execution.</p>
+<p>Specifying the Conda environments in a separate configuration <a class="reference internal" href="config.html#config-profiles"><span class="std std-ref">profile</span></a> is therefore
+recommended to allow the execution via a command line option and to enhance the workflow portability. For example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">profiles</span> <span class="p">{</span>
+  <span class="n">conda</span> <span class="p">{</span>
+    <span class="n">process</span><span class="o">.</span><span class="n">conda</span> <span class="o">=</span> <span class="s1">&#39;samtools&#39;</span>
+  <span class="p">}</span>
+
+  <span class="n">docker</span> <span class="p">{</span>
+    <span class="n">process</span><span class="o">.</span><span class="n">container</span> <span class="o">=</span> <span class="s1">&#39;biocontainers/samtools&#39;</span>
+    <span class="n">docker</span><span class="o">.</span><span class="n">enabled</span> <span class="o">=</span> <span class="n">true</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The above configuration snippet allows the execution either with Conda or Docker specifying <code class="docutils literal notranslate"><span class="pre">-profile</span> <span class="pre">conda</span></code> or
+<code class="docutils literal notranslate"><span class="pre">-profile</span> <span class="pre">docker</span></code> when running the workflow script.</p>
+</section>
+<section id="advanced-settings">
+<h2>Advanced settings<a class="headerlink" href="#advanced-settings" title="Link to this heading">¶</a></h2>
+<p>Conda advanced configuration settings are described in the <a class="reference internal" href="config.html#config-conda"><span class="std std-ref">Conda</span></a> section on the Nextflow
+configuration page.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="google.html" class="btn btn-neutral float-left" title="Google Cloud" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="docker.html" class="btn btn-neutral float-right" title="Docker containers" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2020, Seqera Labs. 2013-2019, Centre for Genomic Regulation (CRG)..</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+    <!-- Theme Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-364526-10"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'UA-364526-10', {
+          'anonymize_ip': false,
+      });
+    </script> 
+
+</body>
+</html>

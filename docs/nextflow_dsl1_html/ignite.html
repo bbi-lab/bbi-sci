@@ -1,0 +1,375 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Apache Ignite &mdash; Nextflow 20.10.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+
+  
+    <link rel="shortcut icon" href="_static/favicon.ico"/>
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+      <script src="_static/documentation_options.js?v=a23069cb"></script>
+      <script src="_static/doctools.js?v=888ff710"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Kubernetes" href="kubernetes.html" />
+    <link rel="prev" title="Podman containers" href="podman.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Nextflow
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="getstarted.html">Get started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="basic.html">Basic concepts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="script.html">Nextflow scripting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="process.html">Processes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="channel.html">Channels</a></li>
+<li class="toctree-l1"><a class="reference internal" href="operator.html">Operators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="executor.html">Executors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="config.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dsl2.html">DSL 2</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cli.html">Command line interface (CLI)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="awscloud.html">Amazon Cloud</a></li>
+<li class="toctree-l1"><a class="reference internal" href="amazons3.html">Amazon S3 storage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="google.html">Google Cloud</a></li>
+<li class="toctree-l1"><a class="reference internal" href="conda.html">Conda environments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="docker.html">Docker containers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="shifter.html">Shifter Containers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="singularity.html">Singularity containers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="podman.html">Podman containers</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Apache Ignite</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#cluster-daemon">Cluster daemon</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#multicast-discovery">Multicast discovery</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#shared-file-system">Shared file system</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#ip-addresses">IP addresses</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#advanced-options">Advanced options</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#pipeline-execution">Pipeline execution</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#execution-with-mpi">Execution with MPI</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#platform-lsf-launcher">Platform LSF launcher</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#univa-grid-engine-launcher">Univa Grid Engine launcher</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#linux-slurm-launcher">Linux SLURM launcher</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="kubernetes.html">Kubernetes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tracing.html">Tracing &amp; visualisation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sharing.html">Pipeline sharing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="metadata.html">Workflow introspection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mail.html">Mail &amp; Notifications</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Nextflow</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Apache Ignite</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="apache-ignite">
+<span id="ignite-page"></span><h1>Apache Ignite<a class="headerlink" href="#apache-ignite" title="Link to this heading">¶</a></h1>
+<p>Nextflow can be be deployed in a <em>cluster</em> mode by using <a class="reference external" href="https://ignite.apache.org/">Apache Ignite</a>, an in-memory data-grid
+and clustering platform.</p>
+<p>Apache Ignite is packaged with Nextflow itself, so you won’t need to install it separately or configure other third party
+software.</p>
+<section id="cluster-daemon">
+<span id="ignite-daemon"></span><h2>Cluster daemon<a class="headerlink" href="#cluster-daemon" title="Link to this heading">¶</a></h2>
+<p>In order to setup a cluster you will need to run a cluster daemon on each node within your cluster.
+If you want to support the <a class="reference internal" href="docker.html#docker-page"><span class="std std-ref">Docker integration</span></a> feature provided by Nextflow, the Docker engine has
+to be installed and must run in each node.</p>
+<p>In its simplest form just launch the Nextflow daemon in each cluster node as shown below:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">nextflow</span> <span class="n">node</span> <span class="o">-</span><span class="n">bg</span>
+</pre></div>
+</div>
+<p>The command line option <code class="docutils literal notranslate"><span class="pre">-bg</span></code> launches the node daemon in the background. The output is stored in the log file <code class="docutils literal notranslate"><span class="pre">.node-nextflow.log</span></code>. The daemon
+process <code class="docutils literal notranslate"><span class="pre">PID</span></code> is saved in the file <code class="docutils literal notranslate"><span class="pre">.nextflow.pid</span></code> in the same folder.</p>
+<section id="multicast-discovery">
+<h3>Multicast discovery<a class="headerlink" href="#multicast-discovery" title="Link to this heading">¶</a></h3>
+<p>By default, the Ignite daemon tries to automatically discover all members in the cluster by using the network <em>multicast</em> discovery.
+Note that NOT all networks support this feature (for example Amazon AWS does not).</p>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>To check if multicast is available in your network, use the <a class="reference external" href="http://sourceforge.net/projects/iperf/">iperf</a> tool.
+To test multicast, open a terminal on two machines within the network and run the following command in the first one
+<code class="docutils literal notranslate"><span class="pre">iperf</span> <span class="pre">-s</span> <span class="pre">-u</span> <span class="pre">-B</span> <span class="pre">228.1.2.4</span> <span class="pre">-i</span> <span class="pre">1</span></code> and <code class="docutils literal notranslate"><span class="pre">iperf</span> <span class="pre">-c</span> <span class="pre">228.1.2.4</span> <span class="pre">-u</span> <span class="pre">-T</span> <span class="pre">32</span> <span class="pre">-t</span> <span class="pre">3</span> <span class="pre">-i</span> <span class="pre">1</span></code> on the second.
+If data is being transferred then multicast is working.</p>
+</div>
+<p>Ignite uses the multicast group <code class="docutils literal notranslate"><span class="pre">228.1.2.4</span></code> and port <code class="docutils literal notranslate"><span class="pre">47400</span></code> by default. You can change these values, by using the
+<code class="docutils literal notranslate"><span class="pre">cluster.join</span></code> command line option, as shown below:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">nextflow</span> <span class="n">node</span> <span class="o">-</span><span class="n">cluster</span><span class="o">.</span><span class="n">join</span> <span class="n">multicast</span><span class="p">:</span><span class="mf">224.2.2.3</span><span class="p">:</span><span class="mi">55701</span>
+</pre></div>
+</div>
+<p>In case multicast discovery is not available in your network, you can try one of the following alternative methods:</p>
+</section>
+<section id="shared-file-system">
+<h3>Shared file system<a class="headerlink" href="#shared-file-system" title="Link to this heading">¶</a></h3>
+<p>Simply provide a path shared across the cluster by a network file system, as shown below:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">nextflow</span> <span class="n">node</span> <span class="o">-</span><span class="n">bg</span> <span class="o">-</span><span class="n">cluster</span><span class="o">.</span><span class="n">join</span> <span class="n">path</span><span class="p">:</span><span class="o">/</span><span class="n">net</span><span class="o">/</span><span class="n">shared</span><span class="o">/</span><span class="n">cluster</span>
+</pre></div>
+</div>
+<p>The cluster members will use that path to discover each other.</p>
+</section>
+<section id="ip-addresses">
+<h3>IP addresses<a class="headerlink" href="#ip-addresses" title="Link to this heading">¶</a></h3>
+<p>Provide a list of pre-configured IP addresses on the daemon launch command line, for example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">nextflow</span> <span class="n">node</span> <span class="o">-</span><span class="n">cluster</span><span class="o">.</span><span class="n">join</span> <span class="n">ip</span><span class="p">:</span><span class="mf">10.0.2.1</span><span class="p">,</span><span class="mf">10.0.2.2</span><span class="p">,</span><span class="mf">10.0.2.4</span>
+</pre></div>
+</div>
+</section>
+<section id="advanced-options">
+<h3>Advanced options<a class="headerlink" href="#advanced-options" title="Link to this heading">¶</a></h3>
+<p>The following cluster node configuration options can be used.</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Name</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>join</p></td>
+<td><p>IP address(es) of one or more cluster nodes to which the daemon will join.</p></td>
+</tr>
+<tr class="row-odd"><td><p>group</p></td>
+<td><p>The name of the cluster to which this node join. It allows the creation of separate cluster instances. Default: <code class="docutils literal notranslate"><span class="pre">nextflow</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>maxCpus</p></td>
+<td><p>Max number of CPUs that can be used by the daemon to run user tasks. By default it is equal to the number of CPU cores.</p></td>
+</tr>
+<tr class="row-odd"><td><p>maxDisk</p></td>
+<td><p>Max amount of disk storage that can be used by user tasks eg. <code class="docutils literal notranslate"><span class="pre">500</span> <span class="pre">GB</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p>maxMemory</p></td>
+<td><p>Max amount of memory that can be used by user tasks eg. <code class="docutils literal notranslate"><span class="pre">64</span> <span class="pre">GB</span></code>. Default total available memory.</p></td>
+</tr>
+<tr class="row-odd"><td><p>interface</p></td>
+<td><p>Network interfaces that Ignite will use. It can be the interface IP address or name.</p></td>
+</tr>
+<tr class="row-even"><td><p>failureDetectionTimeout</p></td>
+<td><p>Failure detection timeout is used to determine how long the communication or discovery SPIs should wait before considering a remote connection failed.</p></td>
+</tr>
+<tr class="row-odd"><td><p>clientFailureDetectionTimeout</p></td>
+<td><p>Failure detection timeout is used to determine how long the communication or discovery SPIs should wait before considering a remote connection failed.</p></td>
+</tr>
+<tr class="row-even"><td><p>tcp.localAddress</p></td>
+<td><p>Defines the local host IP address.</p></td>
+</tr>
+<tr class="row-odd"><td><p>tcp.localPort</p></td>
+<td><p>Defines the local port to listen to.</p></td>
+</tr>
+<tr class="row-even"><td><p>tcp.localPortRange</p></td>
+<td><p>Range for local ports.</p></td>
+</tr>
+<tr class="row-odd"><td><p>tcp.reconnectCount</p></td>
+<td><p>Number of times the node tries to (re)establish connection to another node.</p></td>
+</tr>
+<tr class="row-even"><td><p>tcp.networkTimeout</p></td>
+<td><p>Defines the network timeout.</p></td>
+</tr>
+<tr class="row-odd"><td><p>tcp.socketTimeout</p></td>
+<td><p>Defines the socket operations timeout. This timeout is used to limit connection time and write-to-socket time. Note that when running Ignite on Amazon EC2, socket timeout must be set to a value significantly greater than the default (e.g. to 30000).</p></td>
+</tr>
+<tr class="row-even"><td><p>tcp.ackTimeout</p></td>
+<td><p>Defines the timeout for receiving acknowledgement for sent message.</p></td>
+</tr>
+<tr class="row-odd"><td><p>tcp.maxAckTimeout</p></td>
+<td><p>Defines the maximum timeout for receiving acknowledgement for sent message.</p></td>
+</tr>
+<tr class="row-even"><td><p>tcp.joinTimeout</p></td>
+<td><p>Defines the join timeout.</p></td>
+</tr>
+</tbody>
+</table>
+<p>These options can be specified as command line parameters by adding the prefix <code class="docutils literal notranslate"><span class="pre">-cluster.</span></code> to them, as shown below:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">nextflow</span> <span class="n">node</span> <span class="o">-</span><span class="n">bg</span> <span class="o">-</span><span class="n">cluster</span><span class="o">.</span><span class="n">maxCpus</span> <span class="mi">4</span> <span class="o">-</span><span class="n">cluster</span><span class="o">.</span><span class="n">interface</span> <span class="n">eth0</span>
+</pre></div>
+</div>
+<p>The same options can be entered into the Nextflow <a class="reference internal" href="config.html#config-page"><span class="std std-ref">configuration file</span></a>, as shown below:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">cluster</span> <span class="p">{</span>
+    <span class="n">join</span> <span class="o">=</span> <span class="s1">&#39;ip:192.168.1.104&#39;</span>
+    <span class="n">interface</span> <span class="o">=</span> <span class="s1">&#39;eth0&#39;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Finally daemon options can be provided also as environment variables having the name in upper-case and by adding
+the prefix <code class="docutils literal notranslate"><span class="pre">NXF_CLUSTER_</span></code> to them, for example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">export</span> <span class="n">NXF_CLUSTER_JOIN</span><span class="o">=</span><span class="s1">&#39;ip:192.168.1.104&#39;</span>
+<span class="n">export</span> <span class="n">NXF_CLUSTER_INTERFACE</span><span class="o">=</span><span class="s1">&#39;eth0&#39;</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="pipeline-execution">
+<h2>Pipeline execution<a class="headerlink" href="#pipeline-execution" title="Link to this heading">¶</a></h2>
+<p>The pipeline execution needs to be launched in a <cite>head</cite> node i.e. a cluster node where the Nextflow node daemon
+is <strong>not</strong> running. In order to execute your pipeline in the Ignite cluster you will need to use the Ignite executor,
+as shown below:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">nextflow</span> <span class="n">run</span> <span class="o">&lt;</span><span class="n">your</span> <span class="n">pipeline</span><span class="o">&gt;</span> <span class="o">-</span><span class="n">process</span><span class="o">.</span><span class="n">executor</span> <span class="n">ignite</span>
+</pre></div>
+</div>
+<p>If your network does no support multicast discovery, you will need to specify the <cite>joining</cite> strategy as you did for the
+cluster daemons. For example, using a shared path:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">nextflow</span> <span class="n">run</span> <span class="o">&lt;</span><span class="n">your</span> <span class="n">pipeline</span><span class="o">&gt;</span> <span class="o">-</span><span class="n">process</span><span class="o">.</span><span class="n">executor</span> <span class="n">ignite</span> <span class="o">-</span><span class="n">cluster</span><span class="o">.</span><span class="n">join</span> <span class="n">path</span><span class="p">:</span><span class="o">/</span><span class="n">net</span><span class="o">/</span><span class="n">shared</span><span class="o">/</span><span class="n">path</span>
+</pre></div>
+</div>
+</section>
+<section id="execution-with-mpi">
+<h2>Execution with MPI<a class="headerlink" href="#execution-with-mpi" title="Link to this heading">¶</a></h2>
+<p>Nextflow is able to deploy and self-configure an Ignite cluster on demand, taking advantage of the Open <a class="reference external" href="https://en.wikipedia.org/wiki/Message_Passing_Interface">MPI</a>
+standard that is commonly available in grid and supercomputer facilities.</p>
+<p>In this scenario a Nextflow workflow needs to be executed as an MPI job. Under the hood Nextflow will launch a <cite>driver</cite>
+process in the first of the nodes, allocated by your job request, and an Ignite daemon in the remaining nodes.</p>
+<p>In practice you will need a launcher script to submit an MPI job request to your batch scheduler/resource manager.
+The batch scheduler must reserve the computing nodes in an exclusive manner to avoid having multiple Ignite daemons
+running on the same node. Nextflow must be launched using the <code class="docutils literal notranslate"><span class="pre">mpirun</span></code> utility, as if it were an MPI application,
+specifying the <code class="docutils literal notranslate"><span class="pre">--pernode</span></code> option.</p>
+<section id="platform-lsf-launcher">
+<h3>Platform LSF launcher<a class="headerlink" href="#platform-lsf-launcher" title="Link to this heading">¶</a></h3>
+<p>The following example shows a launcher script for the <a class="reference external" href="https://en.wikipedia.org/wiki/Platform_LSF/">Platform LSF</a> resource manager:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>#!/bin/bash
+#BSUB -oo output_%J.out
+#BSUB -eo output_%J.err
+#BSUB -J &lt;job name&gt;
+#BSUB -q &lt;queue name&gt;
+#BSUB -W 02:00
+#BSUB -x
+#BSUB -n 80
+#BSUB -M 10240
+#BSUB -R &quot;span[ptile=16]&quot;
+export NXF_CLUSTER_SEED=$(shuf -i 0-16777216 -n 1)
+mpirun --pernode nextflow run &lt;your-project-name&gt; -with-mpi [pipeline parameters]
+</pre></div>
+</div>
+<p>It requests 5 nodes (80 processes, with 16 cpus per node). The <code class="docutils literal notranslate"><span class="pre">-x</span></code> directive allocates the node in an exclusive manner.
+Nextflow needs to be executed using the <code class="docutils literal notranslate"><span class="pre">-with-mpi</span></code> command line option. It will automatically use <code class="docutils literal notranslate"><span class="pre">ignite</span></code> as the executor.</p>
+<p>The variable <code class="docutils literal notranslate"><span class="pre">NXF_CLUSTER_SEED</span></code> must contain an integer value (in the range 0-16777216) that will unequivocally identify
+your cluster instance. In the above example it is randomly generated by using the <a class="reference external" href="http://linux.die.net/man/1/shuf">shuf</a> Linux tool.</p>
+</section>
+<section id="univa-grid-engine-launcher">
+<h3>Univa Grid Engine launcher<a class="headerlink" href="#univa-grid-engine-launcher" title="Link to this heading">¶</a></h3>
+<p>The following example shows a launcher script for the <a class="reference external" href="https://en.wikipedia.org/wiki/Univa_Grid_Engine">Univa Grid Engine</a> (aka SGE):</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>#!/bin/bash
+#$ -cwd
+#$ -j y
+#$ -o &lt;output file name&gt;
+#$ -l virtual_free=10G
+#$ -q &lt;queue name&gt;
+#$ -N &lt;job name&gt;
+#$ -pe ompi 5
+export NXF_CLUSTER_SEED=$(shuf -i 0-16777216 -n 1)
+mpirun --pernode nextflow run &lt;your-project-name&gt; -with-mpi [pipeline parameters]
+</pre></div>
+</div>
+<p>As in the previous script it allocates 5 processing nodes. UGE/SGE does not have an option to reserve a node in an exclusive
+manner. A common workaround is to request the maximum amount of memory or cpus available in the nodes of your cluster.</p>
+</section>
+<section id="linux-slurm-launcher">
+<h3>Linux SLURM launcher<a class="headerlink" href="#linux-slurm-launcher" title="Link to this heading">¶</a></h3>
+<p>When using Linux SLURM you will need to use <code class="docutils literal notranslate"><span class="pre">srun</span></code> instead <code class="docutils literal notranslate"><span class="pre">mpirun</span></code> in your launcher script. For example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>#!/bin/bash
+#SBATCH --job-name=&lt;job name&gt;
+#SBATCH --output=&lt;log file %j&gt;
+#SBATCH --ntasks=5
+#SBATCH --cpus-per-task=16
+#SBATCH --tasks-per-node=1
+export NXF_CLUSTER_SEED=$(shuf -i 0-16777216 -n 1)
+srun nextflow run hello.nf -with-mpi
+</pre></div>
+</div>
+<p>As before, this allocates 5 processing nodes (<code class="docutils literal notranslate"><span class="pre">--ntasks=5</span></code>) and each node will be able to use up to 16 cpus
+(<code class="docutils literal notranslate"><span class="pre">--cpus-per-task=16</span></code>). When using SLURM it’s not necessary to allocate computing nodes in an exclusive manner.
+It’s even possible to launch more than one Nextflow daemon instance per node, though not suggested.</p>
+<p>To submit the pipeline execution create a file like the above, then use the following command:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sbatch</span> <span class="o">&lt;</span><span class="n">launcher</span> <span class="n">script</span> <span class="n">name</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="podman.html" class="btn btn-neutral float-left" title="Podman containers" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="kubernetes.html" class="btn btn-neutral float-right" title="Kubernetes" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2020, Seqera Labs. 2013-2019, Centre for Genomic Regulation (CRG)..</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+    <!-- Theme Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-364526-10"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'UA-364526-10', {
+          'anonymize_ip': false,
+      });
+    </script> 
+
+</body>
+</html>

@@ -1,0 +1,400 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Metrics &mdash; Nextflow 20.10.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+
+  
+    <link rel="shortcut icon" href="_static/favicon.ico"/>
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+      <script src="_static/documentation_options.js?v=a23069cb"></script>
+      <script src="_static/doctools.js?v=888ff710"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Nextflow
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="getstarted.html">Get started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="basic.html">Basic concepts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="script.html">Nextflow scripting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="process.html">Processes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="channel.html">Channels</a></li>
+<li class="toctree-l1"><a class="reference internal" href="operator.html">Operators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="executor.html">Executors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="config.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dsl2.html">DSL 2</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cli.html">Command line interface (CLI)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="awscloud.html">Amazon Cloud</a></li>
+<li class="toctree-l1"><a class="reference internal" href="amazons3.html">Amazon S3 storage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="google.html">Google Cloud</a></li>
+<li class="toctree-l1"><a class="reference internal" href="conda.html">Conda environments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="docker.html">Docker containers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="shifter.html">Shifter Containers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="singularity.html">Singularity containers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="podman.html">Podman containers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ignite.html">Apache Ignite</a></li>
+<li class="toctree-l1"><a class="reference internal" href="kubernetes.html">Kubernetes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tracing.html">Tracing &amp; visualisation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sharing.html">Pipeline sharing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="metadata.html">Workflow introspection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mail.html">Mail &amp; Notifications</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Nextflow</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Metrics</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="metrics">
+<span id="metrics-page"></span><h1>Metrics<a class="headerlink" href="#metrics" title="Link to this heading">¶</a></h1>
+<p>This section details how the resource usage from the <a class="reference internal" href="tracing.html#execution-report"><span class="std std-ref">Execution report</span></a> are computed.</p>
+<section id="cpu-usage">
+<h2>CPU Usage<a class="headerlink" href="#cpu-usage" title="Link to this heading">¶</a></h2>
+<p>The plot reports how much CPU resources were used by each process.</p>
+<img alt="_images/report-resource-cpu.png" src="_images/report-resource-cpu.png" />
+<p>Let’s illustrate how this plot behaves with several examples.</p>
+<p>In the first example, let’s consider the simple use case in which a process performs one task of pure computation using one CPU. Then, you expect the <cite>Raw Usage</cite> tab to report 100%. If the task is distributed over, 2, 3, 4, <cite>etc.</cite> CPUs, then the <cite>Raw Usage</cite> will be 200%, 300%, 400%, <cite>etc.</cite> respectively. The <cite>% Allocated</cite> tab just rescales the raw value usage with respect to the number of CPUs set with the <code class="docutils literal notranslate"><span class="pre">cpus</span></code> directive (if not set with the directive, the number of CPUs is set to 1, thus showing the same values as in the <cite>Raw Usage</cite> tab). Using the program <a class="reference external" href="https://people.seas.harvard.edu/~apw/stress/">stress</a>  as follows would report 100% in the <cite>Raw Usage</cite> tab  and 50% in the <cite>% Allocated</cite> tab since the process asked twice the number of CPUs needed by the process:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="ch">#!/usr/bin/env nextflow</span>
+
+<span class="n">process</span> <span class="n">CpuUsageEx1</span> <span class="p">{</span>
+
+  <span class="n">cpus</span> <span class="mi">2</span>
+
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">  stress -c 1 -t 10 # compute square-root of random numbers during 10s using 1 CPU</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>In the second example, some time will be spent performing pure computation and some time just waiting. Using the program <a class="reference external" href="https://people.seas.harvard.edu/~apw/stress/">stress</a>  and <cite>sleep</cite> as follows would report 75% in the <cite>Raw Usage</cite> tab:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="ch">#!/usr/bin/env nextflow</span>
+
+<span class="n">process</span> <span class="n">CpuUsageEx2</span> <span class="p">{</span>
+
+  <span class="n">cpus</span> <span class="mi">1</span>
+
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">  stress -c 1 -t 10 # compute square-root of random numbers during 10s using 1 CPU</span>
+<span class="sd">  stress -c 1 -t 5 # compute square-root of random numbers during 5s using 1 CPU</span>
+<span class="sd">  sleep 5 # use no CPU during 5s</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Indeed, the percentage of the CPU that this process got is a weighted average taking into account the percentage of the CPU and duration of each individual program over the job duration (a.k.a. elapsed real time, real time or wall time ) as follows:</p>
+<div class="math notranslate nohighlight">
+\[\frac{ 100\% \times 10s + 100\% \times 5s + 0\% \times 5s }{10s+5s+5s} = 75\%\]</div>
+<p>The third example is similar to the second one except that the pure computation stage is performed in a single step forked on 2 CPUs:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="ch">#!/usr/bin/env nextflow</span>
+
+<span class="n">process</span> <span class="n">CpuUsageEx3</span> <span class="p">{</span>
+
+  <span class="n">cpus</span> <span class="mi">2</span>
+
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">  stress -c 2 -t 10 # compute square-root of random numbers during 10s using 2 CPUs</span>
+<span class="sd">  sleep 10 # use no CPU during 10s</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The <cite>Raw Usage</cite> tab would report 100% in the <cite>Raw Usage</cite> tab:</p>
+<div class="math notranslate nohighlight">
+\[\frac{ 200\% \times 10s }{10s+10s} = 100\%\]</div>
+<p>The <cite>% Allocated</cite> tab would report 50%, however, it would not be relevant to change the <code class="docutils literal notranslate"><span class="pre">cpus</span></code> directive from 2 to 1 as the process really uses 2 CPUs at it peak load.</p>
+<div class="admonition hint">
+<p class="admonition-title">Hint</p>
+<p>The <a class="reference external" href="https://people.seas.harvard.edu/~apw/stress/">stress</a> program can be installed with <code class="docutils literal notranslate"><span class="pre">sudo</span> <span class="pre">apt-get</span> <span class="pre">install</span> <span class="pre">stress</span></code> or <code class="docutils literal notranslate"><span class="pre">sudo</span> <span class="pre">yum</span> <span class="pre">install</span> <span class="pre">stress</span></code> depending on your linux distribution.</p>
+</div>
+</section>
+<section id="memory-usage">
+<h2>Memory Usage<a class="headerlink" href="#memory-usage" title="Link to this heading">¶</a></h2>
+<p>The plot has three tabs showing the usage of the physical memory (RAM), the virtual memory (vmem) and the percentage of RAM used by the process with respect to what was set in the <code class="docutils literal notranslate"><span class="pre">memory</span></code> directive. The peak usage during the execution of the process is reported for both physical and virtual memories.</p>
+<div class="admonition hint">
+<p class="admonition-title">Hint</p>
+<p>To better understand the memory usage plot, it is important to know that:</p>
+<ul class="simple">
+<li><p>the total amount of memory used be a processs is the <cite>virtual memory (vmem)</cite>. The <cite>vmem</cite> contains all memory areas whether they are in the physical memory (RAM), in the Swap space, on the disk or shared with other processes,</p></li>
+<li><p>the <cite>resident set size (RSS)</cite> is the amount of space of <cite>physical memory (RAM)</cite> held by a process,</p></li>
+<li><p>the relationship is: vmem <span class="math notranslate nohighlight">\(\geq\)</span> RSS + Swap,</p></li>
+<li><p>the <code class="docutils literal notranslate"><span class="pre">memory</span></code> directive sets the RAM requested by the process.</p></li>
+</ul>
+</div>
+<p>Let’s illustrate how this plot behaves with one example which relies on two C programs.</p>
+<p>The first program just allocates a variable of 1 GiB:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span><span class="w"> </span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+<span class="linenos"> 2</span><span class="w"> </span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdlib.h&gt;</span>
+<span class="linenos"> 3</span><span class="w"> </span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;sys/resource.h&gt;</span>
+<span class="linenos"> 4</span><span class="w"> </span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;sys/time.h&gt;</span>
+<span class="linenos"> 5</span><span class="w"> </span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;sys/types.h&gt;</span>
+<span class="linenos"> 6</span><span class="w"> </span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;unistd.h&gt;</span>
+<span class="linenos"> 7</span><span class="w"> </span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;time.h&gt;</span>
+<span class="linenos"> 8</span>
+<span class="linenos"> 9</span><span class="w"> </span><span class="cm">/* Get vmem and rss usage from /proc/&lt;pid&gt;/statm */</span>
+<span class="linenos">10</span><span class="w"> </span><span class="k">static</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="nf">mem_used</span><span class="p">(</span><span class="kt">pid_t</span><span class="w"> </span><span class="n">pid</span><span class="p">,</span><span class="w"> </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">long</span><span class="o">*</span><span class="w"> </span><span class="n">vmem</span><span class="p">,</span><span class="w"> </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">long</span><span class="o">*</span><span class="w"> </span><span class="n">rss</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="linenos">11</span><span class="w">     </span><span class="kt">FILE</span><span class="o">*</span><span class="w"> </span><span class="n">file</span><span class="p">;</span>
+<span class="linenos">12</span><span class="w">     </span><span class="kt">char</span><span class="w"> </span><span class="n">path</span><span class="p">[</span><span class="mi">40</span><span class="p">];</span>
+<span class="linenos">13</span><span class="w">     </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">page_size</span><span class="p">;</span>
+<span class="linenos">14</span>
+<span class="linenos">15</span><span class="w">     </span><span class="n">snprintf</span><span class="p">(</span><span class="n">path</span><span class="p">,</span><span class="w"> </span><span class="mi">40</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/proc/%ld/statm&quot;</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="kt">long</span><span class="p">)</span><span class="w"> </span><span class="n">pid</span><span class="p">);</span>
+<span class="linenos">16</span><span class="w">     </span><span class="n">file</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">fopen</span><span class="p">(</span><span class="n">path</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;r&quot;</span><span class="p">);</span>
+<span class="linenos">17</span><span class="w">     </span><span class="c1">// vmem and rss are the first values in the file</span>
+<span class="linenos">18</span><span class="w">     </span><span class="n">fscanf</span><span class="p">(</span><span class="n">file</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;%lu %lu&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">vmem</span><span class="p">,</span><span class="w"> </span><span class="n">rss</span><span class="p">);</span>
+<span class="linenos">19</span><span class="w">     </span><span class="c1">// values in statm are in pages so to get bytes we need to know page size</span>
+<span class="linenos">20</span><span class="w">     </span><span class="n">page_size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="kt">unsigned</span><span class="p">)</span><span class="w"> </span><span class="n">getpagesize</span><span class="p">();</span>
+<span class="linenos">21</span><span class="w">     </span><span class="o">*</span><span class="n">vmem</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">*</span><span class="n">vmem</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">page_size</span><span class="p">;</span>
+<span class="linenos">22</span><span class="w">     </span><span class="o">*</span><span class="n">rss</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">*</span><span class="n">rss</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">page_size</span><span class="p">;</span>
+<span class="linenos">23</span>
+<span class="linenos">24</span><span class="w">     </span><span class="n">fclose</span><span class="p">(</span><span class="n">file</span><span class="p">);</span>
+<span class="linenos">25</span><span class="w">     </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="linenos">26</span><span class="w"> </span><span class="p">}</span>
+<span class="linenos">27</span>
+<span class="linenos">28</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">argc</span><span class="p">,</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="o">**</span><span class="n">argv</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="linenos">29</span><span class="w">     </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">address</span><span class="p">;</span>
+<span class="linenos">30</span><span class="w">     </span><span class="kt">char</span><span class="w"> </span><span class="n">input</span><span class="p">;</span>
+<span class="hll"><span class="linenos">31</span><span class="w">     </span><span class="kt">size_t</span><span class="w"> </span><span class="n">size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1024</span><span class="o">*</span><span class="mi">1024</span><span class="o">*</span><span class="mi">1024</span><span class="p">;</span><span class="w">  </span><span class="c1">// 1 GiB</span>
+</span><span class="linenos">32</span><span class="w">     </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">i</span><span class="p">;</span>
+<span class="linenos">33</span><span class="w">     </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">vmem</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="linenos">34</span><span class="w">     </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">rss</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="linenos">35</span><span class="w">     </span><span class="kt">pid_t</span><span class="w"> </span><span class="n">pid</span><span class="p">;</span>
+<span class="linenos">36</span>
+<span class="linenos">37</span><span class="w">     </span><span class="n">pid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">getpid</span><span class="p">();</span>
+<span class="linenos">38</span><span class="w">     </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;Pid: %ld</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="kt">long</span><span class="p">)</span><span class="w"> </span><span class="n">pid</span><span class="p">);</span>
+<span class="linenos">39</span>
+<span class="linenos">40</span><span class="w">     </span><span class="n">mem_used</span><span class="p">(</span><span class="n">pid</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">vmem</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">rss</span><span class="p">);</span>
+<span class="linenos">41</span><span class="w">     </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;VMEM: %lu RSS: %lu</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">vmem</span><span class="p">,</span><span class="w"> </span><span class="n">rss</span><span class="p">);</span>
+<span class="linenos">42</span>
+<span class="hll"><span class="linenos">43</span><span class="w">     </span><span class="n">address</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">malloc</span><span class="p">(</span><span class="n">size</span><span class="p">);</span>
+</span><span class="linenos">44</span><span class="w">     </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;Allocated %d Bytes of memory</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="p">)</span><span class="w"> </span><span class="n">size</span><span class="p">);</span>
+<span class="linenos">45</span>
+<span class="linenos">46</span><span class="w">     </span><span class="n">mem_used</span><span class="p">(</span><span class="n">pid</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">vmem</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">rss</span><span class="p">);</span>
+<span class="linenos">47</span><span class="w">     </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;VMEM: %lu RSS: %lu</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">vmem</span><span class="p">,</span><span class="w"> </span><span class="n">rss</span><span class="p">);</span>
+<span class="linenos">48</span>
+<span class="linenos">49</span><span class="w">     </span><span class="c1">// Leave time for nextflow to get information</span>
+<span class="linenos">50</span><span class="w">     </span><span class="n">sleep</span><span class="p">(</span><span class="mi">15</span><span class="p">);</span>
+<span class="linenos">51</span>
+<span class="linenos">52</span><span class="w">     </span><span class="n">free</span><span class="p">(</span><span class="n">address</span><span class="p">);</span>
+<span class="linenos">53</span><span class="w">     </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="linenos">54</span><span class="w"> </span><span class="p">}</span>
+</pre></div>
+</div>
+<p>The second program allocates a variable of 1 GiB and fills it with data:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span><span class="w"> </span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+<span class="linenos"> 2</span><span class="w"> </span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdlib.h&gt;</span>
+<span class="linenos"> 3</span><span class="w"> </span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;sys/resource.h&gt;</span>
+<span class="linenos"> 4</span><span class="w"> </span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;sys/time.h&gt;</span>
+<span class="linenos"> 5</span><span class="w"> </span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;sys/types.h&gt;</span>
+<span class="linenos"> 6</span><span class="w"> </span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;unistd.h&gt;</span>
+<span class="linenos"> 7</span><span class="w"> </span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;time.h&gt;</span>
+<span class="linenos"> 8</span>
+<span class="linenos"> 9</span><span class="w"> </span><span class="cm">/* Get vmem and rss usage from /proc/&lt;pid&gt;/statm */</span>
+<span class="linenos">10</span><span class="w"> </span><span class="k">static</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="nf">mem_used</span><span class="p">(</span><span class="kt">pid_t</span><span class="w"> </span><span class="n">pid</span><span class="p">,</span><span class="w"> </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">long</span><span class="o">*</span><span class="w"> </span><span class="n">vmem</span><span class="p">,</span><span class="w"> </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">long</span><span class="o">*</span><span class="w"> </span><span class="n">rss</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="linenos">11</span><span class="w">     </span><span class="kt">FILE</span><span class="o">*</span><span class="w"> </span><span class="n">file</span><span class="p">;</span>
+<span class="linenos">12</span><span class="w">     </span><span class="kt">char</span><span class="w"> </span><span class="n">path</span><span class="p">[</span><span class="mi">40</span><span class="p">];</span>
+<span class="linenos">13</span><span class="w">     </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">page_size</span><span class="p">;</span>
+<span class="linenos">14</span>
+<span class="linenos">15</span><span class="w">     </span><span class="n">snprintf</span><span class="p">(</span><span class="n">path</span><span class="p">,</span><span class="w"> </span><span class="mi">40</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;/proc/%ld/statm&quot;</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="kt">long</span><span class="p">)</span><span class="w"> </span><span class="n">pid</span><span class="p">);</span>
+<span class="linenos">16</span><span class="w">     </span><span class="n">file</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">fopen</span><span class="p">(</span><span class="n">path</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;r&quot;</span><span class="p">);</span>
+<span class="linenos">17</span><span class="w">     </span><span class="c1">// vmem and rss are the first values in the file</span>
+<span class="linenos">18</span><span class="w">     </span><span class="n">fscanf</span><span class="p">(</span><span class="n">file</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;%lu %lu&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">vmem</span><span class="p">,</span><span class="w"> </span><span class="n">rss</span><span class="p">);</span>
+<span class="linenos">19</span><span class="w">     </span><span class="c1">// values in statm are in pages so to get bytes we need to know page size</span>
+<span class="linenos">20</span><span class="w">     </span><span class="n">page_size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="kt">unsigned</span><span class="p">)</span><span class="w"> </span><span class="n">getpagesize</span><span class="p">();</span>
+<span class="linenos">21</span><span class="w">     </span><span class="o">*</span><span class="n">vmem</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">*</span><span class="n">vmem</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">page_size</span><span class="p">;</span>
+<span class="linenos">22</span><span class="w">     </span><span class="o">*</span><span class="n">rss</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">*</span><span class="n">rss</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">page_size</span><span class="p">;</span>
+<span class="linenos">23</span>
+<span class="linenos">24</span><span class="w">     </span><span class="n">fclose</span><span class="p">(</span><span class="n">file</span><span class="p">);</span>
+<span class="linenos">25</span><span class="w">     </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="linenos">26</span><span class="w"> </span><span class="p">}</span>
+<span class="linenos">27</span>
+<span class="linenos">28</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">argc</span><span class="p">,</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="o">**</span><span class="n">argv</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="linenos">29</span><span class="w">     </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">address</span><span class="p">;</span>
+<span class="linenos">30</span><span class="w">     </span><span class="kt">char</span><span class="w"> </span><span class="n">input</span><span class="p">;</span>
+<span class="hll"><span class="linenos">31</span><span class="w">     </span><span class="kt">size_t</span><span class="w"> </span><span class="n">size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1024</span><span class="o">*</span><span class="mi">1024</span><span class="o">*</span><span class="mi">1024</span><span class="p">;</span><span class="w">  </span><span class="c1">// 1 GiB</span>
+</span><span class="linenos">32</span><span class="w">     </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">i</span><span class="p">;</span>
+<span class="linenos">33</span><span class="w">     </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">vmem</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="linenos">34</span><span class="w">     </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">rss</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="linenos">35</span><span class="w">     </span><span class="kt">pid_t</span><span class="w"> </span><span class="n">pid</span><span class="p">;</span>
+<span class="linenos">36</span>
+<span class="linenos">37</span><span class="w">     </span><span class="n">pid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">getpid</span><span class="p">();</span>
+<span class="linenos">38</span><span class="w">     </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;Pid: %ld</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="kt">long</span><span class="p">)</span><span class="w"> </span><span class="n">pid</span><span class="p">);</span>
+<span class="linenos">39</span>
+<span class="linenos">40</span><span class="w">     </span><span class="n">mem_used</span><span class="p">(</span><span class="n">pid</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">vmem</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">rss</span><span class="p">);</span>
+<span class="linenos">41</span><span class="w">     </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;VMEM: %lu RSS: %lu</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">vmem</span><span class="p">,</span><span class="w"> </span><span class="n">rss</span><span class="p">);</span>
+<span class="linenos">42</span>
+<span class="hll"><span class="linenos">43</span><span class="w">     </span><span class="n">address</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">malloc</span><span class="p">(</span><span class="n">size</span><span class="p">);</span>
+</span><span class="linenos">44</span><span class="w">     </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;Allocated %d Bytes of memory</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="p">)</span><span class="w"> </span><span class="n">size</span><span class="p">);</span>
+<span class="linenos">45</span>
+<span class="linenos">46</span><span class="w">     </span><span class="n">mem_used</span><span class="p">(</span><span class="n">pid</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">vmem</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">rss</span><span class="p">);</span>
+<span class="linenos">47</span><span class="w">     </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;VMEM: %lu RSS: %lu</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">vmem</span><span class="p">,</span><span class="w"> </span><span class="n">rss</span><span class="p">);</span>
+<span class="linenos">48</span>
+<span class="hll"><span class="linenos">49</span><span class="w">     </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;Filling memory with data...&quot;</span><span class="p">);</span>
+</span><span class="hll"><span class="linenos">50</span><span class="w">     </span><span class="n">fflush</span><span class="p">(</span><span class="n">stdout</span><span class="p">);</span>
+</span><span class="hll"><span class="linenos">51</span><span class="w">     </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">size</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span class="hll"><span class="linenos">52</span><span class="w">         </span><span class="o">*</span><span class="p">(</span><span class="n">address</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">i</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">123</span><span class="p">;</span>
+</span><span class="hll"><span class="linenos">53</span><span class="w">     </span><span class="p">}</span>
+</span><span class="linenos">54</span>
+<span class="linenos">55</span><span class="w">     </span><span class="n">mem_used</span><span class="p">(</span><span class="n">pid</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">vmem</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">rss</span><span class="p">);</span>
+<span class="linenos">56</span><span class="w">     </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">VMEM: %lu RSS: %lu</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">vmem</span><span class="p">,</span><span class="w"> </span><span class="n">rss</span><span class="p">);</span>
+<span class="linenos">57</span>
+<span class="linenos">58</span><span class="w">     </span><span class="c1">// Leave time for nextflow to get information</span>
+<span class="linenos">59</span><span class="w">     </span><span class="n">sleep</span><span class="p">(</span><span class="mi">15</span><span class="p">);</span>
+<span class="linenos">60</span>
+<span class="linenos">61</span><span class="w">     </span><span class="n">free</span><span class="p">(</span><span class="n">address</span><span class="p">);</span>
+<span class="linenos">62</span><span class="w">     </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="linenos">63</span><span class="w"> </span><span class="p">}</span>
+</pre></div>
+</div>
+<p>The first and second programs are executed in <code class="docutils literal notranslate"><span class="pre">foo</span></code> and <code class="docutils literal notranslate"><span class="pre">bar</span></code> processes respectively as follows:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="ch">#!/usr/bin/env nextflow</span>
+
+<span class="n">process</span> <span class="n">foo</span> <span class="p">{</span>
+
+    <span class="n">memory</span> <span class="s1">&#39;1.5 GB&#39;</span>
+
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    memory_vmem_1GiB_ram_0Gib</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<span class="p">}</span>
+
+<span class="n">process</span> <span class="n">bar</span> <span class="p">{</span>
+
+    <span class="n">memory</span> <span class="s1">&#39;1.5 GB&#39;</span>
+
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    memory_vmem_1GiB_ram_1Gib</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The <cite>Virtual (RAM + Disk swap)</cite> tab shows that both <code class="docutils literal notranslate"><span class="pre">foo</span></code> and <code class="docutils literal notranslate"><span class="pre">bar</span></code> processes use the same amount of virtual memory (~1 GiB):</p>
+<img alt="_images/report-resource-memory-vmem.png" src="_images/report-resource-memory-vmem.png" />
+<p>However, the <cite>Physical (RAM)</cite> tab shows that only the <code class="docutils literal notranslate"><span class="pre">bar</span></code> process uses ~1 GiB of RAM while <code class="docutils literal notranslate"><span class="pre">foo</span></code> process uses  ~0 GiB:</p>
+<img alt="_images/report-resource-memory-ram.png" src="_images/report-resource-memory-ram.png" />
+<p>As expected, the <cite>% RAM Allocated</cite> tab shows that 0% of the resource set in the <code class="docutils literal notranslate"><span class="pre">memory</span></code> directive was used for <code class="docutils literal notranslate"><span class="pre">foo</span></code> process while 67% (= 1 / 1.5) of the resource were used for <code class="docutils literal notranslate"><span class="pre">bar</span></code> process:</p>
+<img alt="_images/report-resource-memory-pctram.png" src="_images/report-resource-memory-pctram.png" />
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Binary unit are used to report memory raw values. This means that 1KB = <span class="math notranslate nohighlight">\(1024\)</span> bytes, 1 MB = <span class="math notranslate nohighlight">\(1024^2\)</span> bytes, 1 GB = <span class="math notranslate nohighlight">\(1024^3\)</span> bytes, <cite>etc.</cite></p>
+</div>
+</section>
+<section id="job-duration">
+<h2>Job Duration<a class="headerlink" href="#job-duration" title="Link to this heading">¶</a></h2>
+<p>The plot has two tabs the job duration (a.k.a. elapsed real time, real time or wall time ) in the <cite>Raw Usage</cite> tag and the percentage  of requested time used in the <cite>% Allocated</cite> tab with respect to the duration set in the <code class="docutils literal notranslate"><span class="pre">time</span></code> directive of the process.</p>
+<img alt="_images/report-resource-job-duration.png" src="_images/report-resource-job-duration.png" />
+</section>
+<section id="i-o-usage">
+<h2>I/O Usage<a class="headerlink" href="#i-o-usage" title="Link to this heading">¶</a></h2>
+<p>The plot has two tabs showing how many data were read and/or written each process. For example, the following processes read and write 1GB and 256MB of data respectively:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="ch">#!/usr/bin/env nextflow</span>
+
+  <span class="n">process</span> <span class="n">io_read_write_1G</span> <span class="p">{</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    dd if=/dev/zero of=/dev/null bs=1G count=1</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+  <span class="p">}</span>
+
+
+  <span class="n">process</span> <span class="n">io_read_write_256M</span> <span class="p">{</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    dd if=/dev/zero of=/dev/null bs=256M count=1</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+  <span class="p">}</span>
+</pre></div>
+</div>
+<p><cite>Read</cite> tab:</p>
+<img alt="_images/report-resource-io-read.png" src="_images/report-resource-io-read.png" />
+<p><cite>Write</cite> tab:</p>
+<img alt="_images/report-resource-io-write.png" src="_images/report-resource-io-write.png" />
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2020, Seqera Labs. 2013-2019, Centre for Genomic Regulation (CRG)..</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+    <!-- Theme Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-364526-10"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'UA-364526-10', {
+          'anonymize_ip': false,
+      });
+    </script> 
+
+</body>
+</html>

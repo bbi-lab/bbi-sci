@@ -1,0 +1,1596 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Command line interface (CLI) &mdash; Nextflow 20.10.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+
+  
+    <link rel="shortcut icon" href="_static/favicon.ico"/>
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+      <script src="_static/documentation_options.js?v=a23069cb"></script>
+      <script src="_static/doctools.js?v=888ff710"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Amazon Cloud" href="awscloud.html" />
+    <link rel="prev" title="DSL 2" href="dsl2.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Nextflow
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="getstarted.html">Get started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="basic.html">Basic concepts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="script.html">Nextflow scripting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="process.html">Processes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="channel.html">Channels</a></li>
+<li class="toctree-l1"><a class="reference internal" href="operator.html">Operators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="executor.html">Executors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="config.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dsl2.html">DSL 2</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Command line interface (CLI)</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#options">Options</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#hard-configuration-override">Hard configuration override</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#jvm-properties">JVM properties</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#execution-as-a-background-job">Execution as a background job</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#soft-configuration-override">Soft configuration override</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#docker-driven-execution">Docker driven execution</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#help">Help</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#execution-logs">Execution logs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#quiet-execution">Quiet execution</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#logging-to-a-syslog-server">Logging to a syslog server</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#version">Version</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#commands">Commands</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#clean">clean</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#clone">clone</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#config">config</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#console">console</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#drop">drop</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id1">help</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#info">info</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#kuberun">kuberun</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#list">list</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#log">log</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pull">pull</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#run">run</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#self-update">self-update</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#view">view</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="awscloud.html">Amazon Cloud</a></li>
+<li class="toctree-l1"><a class="reference internal" href="amazons3.html">Amazon S3 storage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="google.html">Google Cloud</a></li>
+<li class="toctree-l1"><a class="reference internal" href="conda.html">Conda environments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="docker.html">Docker containers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="shifter.html">Shifter Containers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="singularity.html">Singularity containers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="podman.html">Podman containers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ignite.html">Apache Ignite</a></li>
+<li class="toctree-l1"><a class="reference internal" href="kubernetes.html">Kubernetes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tracing.html">Tracing &amp; visualisation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sharing.html">Pipeline sharing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="metadata.html">Workflow introspection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mail.html">Mail &amp; Notifications</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Nextflow</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Command line interface (CLI)</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="command-line-interface-cli">
+<span id="cli-page"></span><h1>Command line interface (CLI)<a class="headerlink" href="#command-line-interface-cli" title="Link to this heading">¶</a></h1>
+<p><cite>Nextflow</cite> provides a robust command line interface for the management and
+execution pipelines. The top-level interface consists of two aspects,
+<em>options</em> and <em>commands</em>.</p>
+<p>Here’s what you’ll see at the top-level upon invoking the Nextflow CLI.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow
+Usage: nextflow [options] COMMAND [arg...]
+</pre></div>
+</div>
+<section id="options">
+<span id="cli-options"></span><h2>Options<a class="headerlink" href="#options" title="Link to this heading">¶</a></h2>
+<p>The top-level options are meant to be invoked in relation to the core
+Nextflow application and are applied to all commands. For options
+specific to any command, refer the CLI Commands section.</p>
+<p>An overview of the top-level options.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow
+Usage: nextflow [options] COMMAND [arg...]
+
+Options:
+-C
+    Use the specified configuration file(s) overriding any defaults
+-D
+    Set JVM properties
+-bg
+    Execute nextflow in background
+-c, -config
+    Add the specified file to configuration set
+-d, -dockerize
+    Launch nextflow via Docker (experimental)
+-h
+    Print this help
+-log
+    Set nextflow log file path
+-q, -quiet
+    Do not print information messages
+-syslog
+    Send logs to syslog server (eg. localhost:514)
+-v, -version
+    Print the program version
+
+Commands...
+</pre></div>
+</div>
+<section id="hard-configuration-override">
+<h3>Hard configuration override<a class="headerlink" href="#hard-configuration-override" title="Link to this heading">¶</a></h3>
+<p>Use the specified configuration file(s) overriding any defaults.</p>
+<p><strong>Usage</strong></p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow -C my.config COMMAND [arg...]
+</pre></div>
+</div>
+<p><strong>Description</strong></p>
+<p>The <code class="docutils literal notranslate"><span class="pre">-C</span></code> option is used to override <em>all</em> settings specified in the default config file.
+For soft override, please refer the <code class="docutils literal notranslate"><span class="pre">-c</span></code> option.</p>
+<p><strong>Examples</strong></p>
+<ul>
+<li><p>Override <strong>any</strong> default configuration with a custom configuration file.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow -C my.config run nextflow-io/hello
+</pre></div>
+</div>
+</li>
+</ul>
+</section>
+<section id="jvm-properties">
+<h3>JVM properties<a class="headerlink" href="#jvm-properties" title="Link to this heading">¶</a></h3>
+<p>Set JVM properties.</p>
+<p><strong>Usage</strong></p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow -Dkey=value COMMAND [arg...]
+</pre></div>
+</div>
+<p><strong>Description</strong></p>
+<p>This options allows the definition of custom Java system properties that can be used to
+properly configure or fine tuning the JVM instance used by the Nextflow runtime.</p>
+<p>For specifying other JVM level options, please refer to the <a class="reference external" href="https://www.nextflow.io/docs/latest/config.html#environment-variables">environment variables section</a>.</p>
+<p><strong>Examples</strong></p>
+<p>Add <cite>JVM properties</cite> to the invoked pipeline.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow -Dfile.encoding=UTF-8 run nextflow-io/hello
+</pre></div>
+</div>
+</section>
+<section id="execution-as-a-background-job">
+<h3>Execution as a background job<a class="headerlink" href="#execution-as-a-background-job" title="Link to this heading">¶</a></h3>
+<p>Execute <code class="docutils literal notranslate"><span class="pre">nextflow</span></code> in the background.</p>
+<p><strong>Usage</strong></p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow -bg COMMAND [arg...]
+</pre></div>
+</div>
+<p><strong>Description</strong></p>
+<p>The <code class="docutils literal notranslate"><span class="pre">-bg</span></code> option is used to invoke the nextflow execution in the background and allows
+the user to continue interacting with the terminal. This option is similar to <code class="docutils literal notranslate"><span class="pre">nohup</span></code> in
+behavior.</p>
+<p><strong>Examples</strong></p>
+<p>Invoke any execution as a background job.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow -bg run nextflow-io/hello
+</pre></div>
+</div>
+</section>
+<section id="soft-configuration-override">
+<h3>Soft configuration override<a class="headerlink" href="#soft-configuration-override" title="Link to this heading">¶</a></h3>
+<p>Add the specified file to configuration set.</p>
+<p><strong>Usage</strong></p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow -c nxf.config COMMAND [arg...]
+</pre></div>
+</div>
+<p><strong>Description</strong></p>
+<p>The <code class="docutils literal notranslate"><span class="pre">-c</span></code> option is used to append a new configuration to the default configuration.
+The <code class="docutils literal notranslate"><span class="pre">-c</span></code> option allows us to update the config in an additive manner. For <strong>hard override</strong>,
+refer the <code class="docutils literal notranslate"><span class="pre">-C</span></code> option.</p>
+<p><strong>Examples</strong></p>
+<p>Update <strong>some</strong> fields of the default config for any pipeline.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow -c nxf.config run nextflow-io/hello
+</pre></div>
+</div>
+</section>
+<section id="docker-driven-execution">
+<h3>Docker driven execution<a class="headerlink" href="#docker-driven-execution" title="Link to this heading">¶</a></h3>
+<p>Launch Nextflow via Docker.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>This is an experimental unsupported feature.</p>
+</div>
+<p><strong>Usage</strong></p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow -dockerize COMMAND [arg...]
+</pre></div>
+</div>
+<p><strong>Description</strong></p>
+<p>The <code class="docutils literal notranslate"><span class="pre">-dockerize</span></code> option is used to invoke the execution of <strong>Nextflow</strong> within a Docker container
+itself without installing a Java VM in the hosting environment.</p>
+<p>Note, this option is <em>not</em> needed to run containerised pipeline jobs. For invoking a pipeline with the <code class="docutils literal notranslate"><span class="pre">docker</span></code> profile or executor,
+please to refer the <code class="docutils literal notranslate"><span class="pre">-with-docker</span></code> options the <code class="docutils literal notranslate"><span class="pre">run</span></code> command.</p>
+<p><strong>Examples</strong></p>
+<p>Invoke <code class="docutils literal notranslate"><span class="pre">nextflow</span></code> as a docker container to execute a pipeline.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow -dockerize run nextflow-io/hello
+</pre></div>
+</div>
+</section>
+<section id="help">
+<h3>Help<a class="headerlink" href="#help" title="Link to this heading">¶</a></h3>
+<p>Print the help message.</p>
+<p><strong>Usage</strong></p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow -h
+</pre></div>
+</div>
+<p><strong>Description</strong></p>
+<p>The <code class="docutils literal notranslate"><span class="pre">-h</span></code> option prints out the overview of the CLI interface and enumerates the top-level <em>options</em>
+and <em>commands</em>.</p>
+</section>
+<section id="execution-logs">
+<h3>Execution logs<a class="headerlink" href="#execution-logs" title="Link to this heading">¶</a></h3>
+<p>Sets the path of the nextflow log file.</p>
+<p><strong>Usage</strong></p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow -log custom.log COMMAND [arg...]
+</pre></div>
+</div>
+<p><strong>Description</strong></p>
+<p>The <code class="docutils literal notranslate"><span class="pre">log</span></code> option takes a path of the new log file which to be used instead of the
+default <code class="docutils literal notranslate"><span class="pre">.nextflow.log</span></code> or to save logs files to another directory.</p>
+<p><strong>Examples</strong></p>
+<p>Save all execution logs to the custom <code class="docutils literal notranslate"><span class="pre">/var/log/nextflow.log</span></code> file.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow -log /var/log/nextflow.log run nextflow-io/hello
+</pre></div>
+</div>
+</section>
+<section id="quiet-execution">
+<h3>Quiet execution<a class="headerlink" href="#quiet-execution" title="Link to this heading">¶</a></h3>
+<p>Disable the printing of information to the terminal.</p>
+<p><strong>Usage</strong></p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow -q COMMAND [arg...]
+</pre></div>
+</div>
+<p><strong>Description</strong></p>
+<p>The <code class="docutils literal notranslate"><span class="pre">-q</span></code> option suppresses the banner, process related info and exits once the
+execution is completed. Please note that it does not affect any explicit print
+statement within a pipeline.</p>
+<p><strong>Examples</strong></p>
+<p>Invoke the pipeline execution without the banner and pipeline information.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow -q run nextflow-io/hello
+</pre></div>
+</div>
+</section>
+<section id="logging-to-a-syslog-server">
+<h3>Logging to a syslog server<a class="headerlink" href="#logging-to-a-syslog-server" title="Link to this heading">¶</a></h3>
+<p>Send logs to <a class="reference external" href="https://en.wikipedia.org/wiki/Syslog">Syslog</a> server endpoint.</p>
+<p><strong>Usage</strong></p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow -syslog localhost:1234 COMMAND [arg...]
+</pre></div>
+</div>
+<p><strong>Description</strong></p>
+<p>The <code class="docutils literal notranslate"><span class="pre">-syslog</span></code> option is used to send logs to a <cite>Syslog</cite> logging server at the specified endpoint.</p>
+<p><strong>Examples</strong></p>
+<p>Send the logs to a <cite>Syslog</cite> server at specific endpoint.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow -syslog localhost:1234 run nextflow-io/hello
+</pre></div>
+</div>
+</section>
+<section id="version">
+<h3>Version<a class="headerlink" href="#version" title="Link to this heading">¶</a></h3>
+<p>Print the Nextflow version information.</p>
+<p><strong>Usage</strong></p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow -v
+</pre></div>
+</div>
+<p><strong>Description</strong></p>
+<p>The <code class="docutils literal notranslate"><span class="pre">-v</span></code> option prints out information about <em>Nextflow</em> such as the version and build.
+The <code class="docutils literal notranslate"><span class="pre">-version</span></code> option in addition prints out the citation reference and official website.</p>
+<p><strong>Examples</strong></p>
+<ul>
+<li><p>The short version.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow -v
+nextflow version 20.07.1.5412
+</pre></div>
+</div>
+</li>
+<li><p>The full version info with citation and website link.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow -version
+N E X T F L O W
+version 20.07.1 build 5412
+created 24-07-2020 15:18 UTC (20:48 IDT)
+cite doi:10.1038/nbt.3820
+http://nextflow.io
+</pre></div>
+</div>
+</li>
+</ul>
+</section>
+</section>
+<section id="commands">
+<span id="cli-commands"></span><h2>Commands<a class="headerlink" href="#commands" title="Link to this heading">¶</a></h2>
+<p>An overview of the Nextflow top-level commands.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow
+
+Usage: nextflow [options] COMMAND [arg...]
+
+Options...
+
+Commands:
+clean         Clean up project cache and work directories
+clone         Clone a project into a folder
+config        Print a project configuration
+console       Launch Nextflow interactive console
+drop          Delete the local copy of a project
+help          Print the usage help for a command
+info          Print project and system runtime information
+kuberun       Execute a workflow in a Kubernetes cluster (experimental)
+list          List all downloaded projects
+log           Print executions log and runtime info
+pull          Download or update a project
+run           Execute a pipeline project
+self-update   Update nextflow runtime to the latest available version
+view          View project script file(s)
+</pre></div>
+</div>
+<section id="clean">
+<h3>clean<a class="headerlink" href="#clean" title="Link to this heading">¶</a></h3>
+<p>Clean up <em>cache</em> and <em>work</em> directories.</p>
+<p><strong>Usage</strong></p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow clean [run_name|session_id] [options]
+</pre></div>
+</div>
+<p><strong>Description</strong></p>
+<p>Upon invocation within a directory, <code class="docutils literal notranslate"><span class="pre">nextflow</span></code> creates a project specific <code class="docutils literal notranslate"><span class="pre">.nextflow.log</span></code>
+file, <code class="docutils literal notranslate"><span class="pre">.nextflow</span></code> cache directory as well as a <code class="docutils literal notranslate"><span class="pre">work</span></code> directory. The <code class="docutils literal notranslate"><span class="pre">clean</span></code> command is
+designed to facilitate removal of these files from previous executions.
+A list of of run names and session ids can be generated by invoking <code class="docutils literal notranslate"><span class="pre">nextflow</span> <span class="pre">log</span> <span class="pre">-q</span></code>.</p>
+<p><strong>Options</strong></p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Name, shorthand (if any)</p></th>
+<th class="head"><p>Default</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>-after</p></td>
+<td></td>
+<td><p>Clean up runs executed <em>after</em> the specified one.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-before</p></td>
+<td></td>
+<td><p>Clean up runs executed <em>before</em> the specified one.</p></td>
+</tr>
+<tr class="row-even"><td><p>-but</p></td>
+<td></td>
+<td><p>Clean up all runs <em>except</em> the specified one.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-dry-run, -n</p></td>
+<td><p>false</p></td>
+<td><p>Print names of files to be removed without deleting them.</p></td>
+</tr>
+<tr class="row-even"><td><p>-force, -f</p></td>
+<td><p>false</p></td>
+<td><p>Force clean command.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-help, -h</p></td>
+<td><p>false</p></td>
+<td><p>Print the command usage.</p></td>
+</tr>
+<tr class="row-even"><td><p>-keep-logs, -k</p></td>
+<td><p>false</p></td>
+<td><p>Removes only temporary files but retains execution log entries and metadata.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-quiet, -q</p></td>
+<td><p>false</p></td>
+<td><p>Do not print names of files removed.</p></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Examples</strong></p>
+<p>Dry run to remove work directories for the run name <code class="docutils literal notranslate"><span class="pre">boring_euler</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow clean boring_euler -n
+
+Would remove work/92/c1a9cd9a96e0531d81ca69f5dc3bb7
+Would remove work/3f/70944c7a549b6221e1ccc7b4b21b62
+Would remove work/0e/2ebdba85f76f6068b21a1bcbf10cab
+</pre></div>
+</div>
+<p>Remove work directories for the run name <code class="docutils literal notranslate"><span class="pre">boring_euler</span></code>.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow clean boring_euler -f
+
+Removed work/92/c1a9cd9a96e0531d81ca69f5dc3bb7
+Removed work/3f/70944c7a549b6221e1ccc7b4b21b62
+Removed work/0e/2ebdba85f76f6068b21a1bcbf10cab
+</pre></div>
+</div>
+<p>Remove the execution entries <em>except</em> for a specific execution.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow clean -but tiny_leavitt -f
+
+Removed work/1f/f1ea9158fb23b53d5083953121d6b6
+Removed work/bf/334115deec60929dc18edf0010032a
+Removed work/a3/06521d75da296d4dd7f4f8caaddad8
+</pre></div>
+</div>
+<p>Dry run to remove the execution data <em>before</em> a specific execution.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow clean -before tiny_leavitt -n
+
+Would remove work/5d/ad76f7b7ab3500cf616814ef644b61
+Would remove work/c4/69a82b080a477612ba8d8e4c27b579
+Would remove work/be/a4fa2aa38f76fd324958c81c2e4603
+Would remove work/54/39116773891c47a91e3c1733aad4de
+</pre></div>
+</div>
+<p>Dry run to remove the execution data <em>after</em> a specific execution.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow clean -after focused_payne -n
+
+Would remove work/1f/f1ea9158fb23b53d5083953121d6b6
+Would remove work/bf/334115deec60929dc18edf0010032a
+Would remove work/a3/06521d75da296d4dd7f4f8caaddad8
+</pre></div>
+</div>
+<p>Dry run to remove the temporary execution data for a specific execution, while keeping the log files.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow clean -keep-logs tiny_leavitt -n
+
+Would remove temp files from work/1f/f1ea9158fb23b53d5083953121d6b6
+Would remove temp files from work/bf/334115deec60929dc18edf0010032a
+Would remove temp files from work/a3/06521d75da296d4dd7f4f8caaddad8
+</pre></div>
+</div>
+</section>
+<section id="clone">
+<h3>clone<a class="headerlink" href="#clone" title="Link to this heading">¶</a></h3>
+<p>Clone a remote project into a folder.</p>
+<p><strong>Usage</strong></p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow clone [options] [project]
+</pre></div>
+</div>
+<p><strong>Description</strong></p>
+<p>The <code class="docutils literal notranslate"><span class="pre">clone</span></code> command downloads a pipeline from a Git-hosting platform into the <em>current directory</em>
+and modifies it accordingly. For downloading a pipeline into the global cache <code class="docutils literal notranslate"><span class="pre">~/.nextflow/assets</span></code>,
+please refer to the <code class="docutils literal notranslate"><span class="pre">nextflow</span> <span class="pre">pull</span></code> command.</p>
+<p><strong>Options</strong></p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Name, shorthand (if any)</p></th>
+<th class="head"><p>Default</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>-help, -h</p></td>
+<td><p>false</p></td>
+<td><p>Print the command usage.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-hub</p></td>
+<td><p>github</p></td>
+<td><p>Service hub where the project is hosted. Options: <code class="docutils literal notranslate"><span class="pre">gitlab</span></code> or <code class="docutils literal notranslate"><span class="pre">bitbucket</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>-r</p></td>
+<td><p>master</p></td>
+<td><p>Revision to clone - It can be a git <code class="docutils literal notranslate"><span class="pre">branch</span></code>, <code class="docutils literal notranslate"><span class="pre">tag</span></code> or <code class="docutils literal notranslate"><span class="pre">revision</span> <span class="pre">number</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>-user</p></td>
+<td></td>
+<td><p>Private repository user name</p></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Examples</strong></p>
+<p>Clone the latest revision of a pipeline.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow clone nextflow-io/hello
+nextflow-io/hello cloned to: hello
+</pre></div>
+</div>
+<p>Clone a specific revision of a pipeline.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow clone nextflow-io/hello -r v1.1
+nextflow-io/hello cloned to: hello
+</pre></div>
+</div>
+</section>
+<section id="config">
+<h3>config<a class="headerlink" href="#config" title="Link to this heading">¶</a></h3>
+<p>Print the resolved pipeline configuration.</p>
+<p><strong>Usage</strong></p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow config [options]
+</pre></div>
+</div>
+<p><strong>Description</strong></p>
+<p>The <code class="docutils literal notranslate"><span class="pre">config</span></code> command is used for printing the project’s configuration i.e. the <code class="docutils literal notranslate"><span class="pre">nextflow.config</span></code>
+and is especially useful for understanding the resolved profiles and parameters that Nextflow will use
+run a pipeline. For in-depth information, please refer <a class="reference external" href="https://www.nextflow.io/docs/latest/config.html#config-profiles">config-profiles section</a>.</p>
+<p><strong>Options</strong></p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Name, shorthand (if any)</p></th>
+<th class="head"><p>Default</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>-flat</p></td>
+<td><p>false</p></td>
+<td><p>Print config using flat notation.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-help, -h</p></td>
+<td><p>false</p></td>
+<td><p>Print the command usage.</p></td>
+</tr>
+<tr class="row-even"><td><p>-profile</p></td>
+<td></td>
+<td><p>Choose a configuration profile.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-properties</p></td>
+<td><p>false</p></td>
+<td><p>Print config using Java properties notation.</p></td>
+</tr>
+<tr class="row-even"><td><p>-show-profiles, -a</p></td>
+<td><p>false</p></td>
+<td><p>Show all configuration profiles.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-sort</p></td>
+<td><p>false</p></td>
+<td><p>Sort config attributes.</p></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Examples</strong></p>
+<p>Print out the inferred config using a the default group key-value notation.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow config
+
+docker {
+   enabled = true
+}
+
+process {
+   executor = &#39;local&#39;
+}
+</pre></div>
+</div>
+<p>Print out the config using a flat notation.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow config -flat
+
+docker.enabled = true
+process.executor = &#39;local&#39;
+</pre></div>
+</div>
+<p>Print out the config using the Java properties notation.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow config -properties
+
+docker.enabled = true
+process.executor = local
+</pre></div>
+</div>
+<p>Print out all profiles from the project’s configuration.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow config -show-profiles
+
+docker {
+   enabled = true
+}
+
+profiles {
+   standard {
+      process {
+         executor = &#39;local&#39;
+      }
+   }
+   cloud {
+      process {
+         executor = &#39;cirrus&#39;
+         container = &#39;cbcrg/imagex&#39;
+      }
+   }
+}
+</pre></div>
+</div>
+</section>
+<section id="console">
+<h3>console<a class="headerlink" href="#console" title="Link to this heading">¶</a></h3>
+<p>Launch the <em>Nextflow</em> interactive console.</p>
+<p><strong>Usage</strong></p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow console
+</pre></div>
+</div>
+<p><strong>Description</strong></p>
+<p>The <code class="docutils literal notranslate"><span class="pre">console</span></code> command is a wrapper over the Groovy <em>console</em> and provides a Graphic User
+Interface (GUI) and an interactive REPL (Read-Eval-Print-Loop) for quick experimentation.</p>
+<p><strong>Options</strong></p>
+<p>None available</p>
+<p><strong>Examples</strong></p>
+<p>Launch the <code class="docutils literal notranslate"><span class="pre">console</span></code> GUI.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow console
+</pre></div>
+</div>
+</section>
+<section id="drop">
+<h3>drop<a class="headerlink" href="#drop" title="Link to this heading">¶</a></h3>
+<p>Delete the local copy of a project.</p>
+<p><strong>Usage</strong></p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow drop [options] [project]
+</pre></div>
+</div>
+<p><strong>Description</strong></p>
+<p>The <code class="docutils literal notranslate"><span class="pre">drop</span></code> command is used to remove the projects which have been downloaded into the
+global cache. Please refer the <code class="docutils literal notranslate"><span class="pre">list</span></code> command for generating a list of downloaded pipelines.</p>
+<p><strong>Options</strong></p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Name, shorthand (if any)</p></th>
+<th class="head"><p>Default</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>-f</p></td>
+<td><p>false</p></td>
+<td><p>Delete the repository without taking care of local changes.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-help, -h</p></td>
+<td><p>false</p></td>
+<td><p>Print the command usage.</p></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Examples</strong></p>
+<p>Drop the <code class="docutils literal notranslate"><span class="pre">nextflow-io/hello</span></code> project.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow drop nextflow-io/hello
+</pre></div>
+</div>
+<p>Forcefully drop the <code class="docutils literal notranslate"><span class="pre">nextflow-io/hello</span></code> pipeline, ignoring any local changes.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow drop nextflow-io/hello -f
+</pre></div>
+</div>
+</section>
+<section id="id1">
+<h3>help<a class="headerlink" href="#id1" title="Link to this heading">¶</a></h3>
+<p>Print the top-level help or specific help for a command.</p>
+<p><strong>Usage</strong></p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow help [options] [command]
+</pre></div>
+</div>
+<p><strong>Description</strong></p>
+<p>The <code class="docutils literal notranslate"><span class="pre">help</span></code> command prints out the overview of the CLI interface and enumerates the top-level
+<em>options</em> and <em>commands</em>. Note that this command is equivalent to simply invoking <code class="docutils literal notranslate"><span class="pre">nextflow</span></code>
+at the command line.</p>
+<p><strong>Options</strong></p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Name, shorthand (if any)</p></th>
+<th class="head"><p>Default</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>-help, -h</p></td>
+<td><p>false</p></td>
+<td><p>Print the command usage.</p></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Examples</strong></p>
+<p>Invoke the <code class="docutils literal notranslate"><span class="pre">help</span></code> option for the <code class="docutils literal notranslate"><span class="pre">drop</span></code> command.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow help drop
+
+Delete the local copy of a project
+Usage: drop [options] name of the project to drop
+   Options:
+     -f
+          Delete the repository without taking care of local changes
+          Default: false
+     -h, -help
+          Print the command usage
+          Default: false
+</pre></div>
+</div>
+</section>
+<section id="info">
+<h3>info<a class="headerlink" href="#info" title="Link to this heading">¶</a></h3>
+<p>Print project or system runtime information.</p>
+<p><strong>Usage</strong></p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow info [options] [project]
+</pre></div>
+</div>
+<p><strong>Description</strong></p>
+<p>The <code class="docutils literal notranslate"><span class="pre">info</span></code> command prints out the nextflow runtime information about the hardware as
+well as the software versions of the <cite>Nextflow version and build</cite>, <cite>Operating System</cite>
+and <cite>Groovy and Java runtime</cite>. It can also be used to display information about a
+specific project.</p>
+<p><strong>Options</strong></p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Name, shorthand (if any)</p></th>
+<th class="head"><p>Default</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>-check-updates, -u</p></td>
+<td><p>false</p></td>
+<td><p>Check for remote updates.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-d</p></td>
+<td><p>false</p></td>
+<td><p>Show detailed information.</p></td>
+</tr>
+<tr class="row-even"><td><p>-help, -h</p></td>
+<td><p>false</p></td>
+<td><p>Print the command usage.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-o</p></td>
+<td><p>text</p></td>
+<td><p>Output format, either <code class="docutils literal notranslate"><span class="pre">text</span></code>, <code class="docutils literal notranslate"><span class="pre">json</span></code> or <code class="docutils literal notranslate"><span class="pre">yaml</span></code>.</p></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Examples</strong></p>
+<p>Display Nextflow runtime and system info:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow info
+
+  Version: 20.07.1 build 5412
+  Created: 24-07-2020 15:18 UTC (20:48 IDT)
+  System: Mac OS X 10.15.6
+  Runtime: Groovy 2.5.11 on OpenJDK 64-Bit Server VM 1.8.0_192-b01
+  Encoding: UTF-8 (UTF-8)
+</pre></div>
+</div>
+<p>Display information about a specific project:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow info nextflow-io/hello
+
+  project name: nextflow-io/hello
+  repository  : https://github.com/nextflow-io/hello
+  local path  : /Users/evanfloden/.nextflow/assets/nextflow-io/hello
+  main script : main.nf
+  revisions   :
+  * master (default)
+    mybranch
+    testing
+    v1.1 [t]
+    v1.2 [t]
+</pre></div>
+</div>
+</section>
+<section id="kuberun">
+<h3>kuberun<a class="headerlink" href="#kuberun" title="Link to this heading">¶</a></h3>
+<p>Deploy Nextflow into a Kubernetes cluster (experimental)</p>
+<p><strong>Usage</strong></p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow kuberun [options] [project]
+</pre></div>
+</div>
+<p><strong>Description</strong></p>
+<p>The <code class="docutils literal notranslate"><span class="pre">kuberun</span></code> command builds upon the <code class="docutils literal notranslate"><span class="pre">run</span></code> command and offers a deep integration with
+the Kubernetes execution environment. This command deploys the Nextflow runtime as a Kubernetes
+pod and assumes that you’ve already installed the <code class="docutils literal notranslate"><span class="pre">kubectl</span></code> CLI. The <code class="docutils literal notranslate"><span class="pre">kuberun</span></code> command
+does not allow the execution of <strong>local</strong> Nextflow scripts. For more information please refer
+the <a class="reference external" href="https://www.nextflow.io/docs/latest/config/kubernetes.html">Kubernetes executor section</a>.</p>
+<p><strong>Options</strong></p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Name, shorthand (if any)</p></th>
+<th class="head"><p>Default</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>-E</p></td>
+<td><p>false</p></td>
+<td><p>Exports all current system environment.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-ansi-log</p></td>
+<td></td>
+<td><p>Enable/disable ANSI console logging.</p></td>
+</tr>
+<tr class="row-even"><td><p>-bucket-dir</p></td>
+<td></td>
+<td><p>Remote bucket where intermediate result files are stored.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-cache</p></td>
+<td></td>
+<td><p>Enable/disable processes caching.</p></td>
+</tr>
+<tr class="row-even"><td><p>-dsl2</p></td>
+<td><p>false</p></td>
+<td><p>Execute the workflow using DSL2 syntax.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-dump-channels</p></td>
+<td></td>
+<td><p>Dump channels for debugging purpose.</p></td>
+</tr>
+<tr class="row-even"><td><p>-dump-hashes</p></td>
+<td><p>false</p></td>
+<td><p>Dump task hash keys for debugging purpose.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-e.</p></td>
+<td><p>{}</p></td>
+<td><p>Add the specified variable to execution environment. Syntax: <code class="docutils literal notranslate"><span class="pre">-e.key=value</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>-entry</p></td>
+<td></td>
+<td><p>Entry workflow name to be executed.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-h, -help</p></td>
+<td><p>false</p></td>
+<td><p>Print the command usage.</p></td>
+</tr>
+<tr class="row-even"><td><p>-hub</p></td>
+<td><p>github</p></td>
+<td><p>Service hub where the project is hosted. Options: <code class="docutils literal notranslate"><span class="pre">gitlab</span></code> or <code class="docutils literal notranslate"><span class="pre">bitbucket</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>-latest</p></td>
+<td><p>false</p></td>
+<td><p>Pull latest changes before run.</p></td>
+</tr>
+<tr class="row-even"><td><p>-lib</p></td>
+<td></td>
+<td><p>Library extension path.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-name</p></td>
+<td></td>
+<td><p>Assign a mnemonic name to the a pipeline run.</p></td>
+</tr>
+<tr class="row-even"><td><p>-n, -namespace</p></td>
+<td></td>
+<td><p>Specify the K8s namespace to use.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-offline</p></td>
+<td><p>false</p></td>
+<td><p>Do not check for remote project updates.</p></td>
+</tr>
+<tr class="row-even"><td><p>-params-file</p></td>
+<td></td>
+<td><p>Load script parameters from a JSON/YAML file.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-pod-image</p></td>
+<td></td>
+<td><p>Specify the container image for the Nextflow pod.</p></td>
+</tr>
+<tr class="row-even"><td><p>-process.</p></td>
+<td><p>{}</p></td>
+<td><p>Set process options. Syntax <code class="docutils literal notranslate"><span class="pre">-process.key=value</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>-profile</p></td>
+<td></td>
+<td><p>Choose a configuration profile.</p></td>
+</tr>
+<tr class="row-even"><td><p>-qs, -queue-size</p></td>
+<td></td>
+<td><p>Max number of processes that can be executed in parallel by each executor.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-resume</p></td>
+<td></td>
+<td><p>Execute the script using the cached results, useful to continue executions that
+was stopped by an error.</p></td>
+</tr>
+<tr class="row-even"><td><p>-r, -revision</p></td>
+<td></td>
+<td><p>Revision of the project to run (either a git branch, tag or commit SHA number)</p></td>
+</tr>
+<tr class="row-odd"><td><p>-test</p></td>
+<td></td>
+<td><p>Test a script function with the name specified.</p></td>
+</tr>
+<tr class="row-even"><td><p>-user</p></td>
+<td></td>
+<td><p>Private repository user name.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-v, -volume-mount</p></td>
+<td></td>
+<td><p>Volume claim mounts eg. <code class="docutils literal notranslate"><span class="pre">my-pvc:/mnt/path</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>-with-conda</p></td>
+<td></td>
+<td><p>Use the specified Conda environment package or
+file (must end with <code class="docutils literal notranslate"><span class="pre">.yml|.yaml</span></code>)</p></td>
+</tr>
+<tr class="row-odd"><td><p>-with-dag</p></td>
+<td><p>dag.dot</p></td>
+<td><p>Create pipeline DAG file.</p></td>
+</tr>
+<tr class="row-even"><td><p>-with-docker</p></td>
+<td></td>
+<td><p>Enable process execution in a Docker container.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-N, -with-notification</p></td>
+<td></td>
+<td><p>Send a notification email on workflow completion to the specified recipients.</p></td>
+</tr>
+<tr class="row-even"><td><p>-with-podman</p></td>
+<td></td>
+<td><p>Enable process execution in a Podman container.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-with-report</p></td>
+<td><p>report.html</p></td>
+<td><p>Create processes execution html report.</p></td>
+</tr>
+<tr class="row-even"><td><p>-with-singularity</p></td>
+<td></td>
+<td><p>Enable process execution in a Singularity container.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-with-timeline</p></td>
+<td><p>timeline.html</p></td>
+<td><p>Create processes execution timeline file.</p></td>
+</tr>
+<tr class="row-even"><td><p>-with-tower</p></td>
+<td></td>
+<td><p>Monitor workflow execution with Seqera Tower service.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-with-trace</p></td>
+<td><p>trace.txt</p></td>
+<td><p>Create processes execution tracing file.</p></td>
+</tr>
+<tr class="row-even"><td><p>-with-weblog</p></td>
+<td></td>
+<td><p>Send workflow status messages via HTTP to target URL.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-without-docker</p></td>
+<td><p>false</p></td>
+<td><p>Disable process execution with Docker.</p></td>
+</tr>
+<tr class="row-even"><td><p>-without-podman</p></td>
+<td></td>
+<td><p>Disable process execution in a Podman container.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-w, -work-dir</p></td>
+<td><p>work</p></td>
+<td><p>Directory where intermediate result files are stored.</p></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Examples</strong></p>
+<p>Execute a pipeline into a Kubernetes cluster.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow kuberun nextflow-io/hello
+</pre></div>
+</div>
+</section>
+<section id="list">
+<h3>list<a class="headerlink" href="#list" title="Link to this heading">¶</a></h3>
+<p>List all downloaded projects.</p>
+<p><strong>Usage</strong></p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow list [options]
+</pre></div>
+</div>
+<p><strong>Description</strong></p>
+<p>The <code class="docutils literal notranslate"><span class="pre">list</span></code> commands prints a list of the projects which are already downloaded into the global cache <code class="docutils literal notranslate"><span class="pre">~/.nextflow/assets</span></code>.</p>
+<p><strong>Options</strong></p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Name, shorthand (if any)</p></th>
+<th class="head"><p>Default</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>-help, -h</p></td>
+<td><p>false</p></td>
+<td><p>Print the command usage.</p></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Examples</strong></p>
+<p>List the downloaded pipelines.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow list
+
+nextflow-io/hello
+nextflow-hub/fastqc
+</pre></div>
+</div>
+</section>
+<section id="log">
+<h3>log<a class="headerlink" href="#log" title="Link to this heading">¶</a></h3>
+<p>Print the execution history and log information.</p>
+<p><strong>Usage</strong></p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow log [options] [run_name | session_id]
+</pre></div>
+</div>
+<p><strong>Description</strong></p>
+<p>The <code class="docutils literal notranslate"><span class="pre">log</span></code> command is used to query the execution metadata associated with pipelines executed
+by Nextflow. The list of executed pipelines can be generated by issuing <code class="docutils literal notranslate"><span class="pre">nextflow</span> <span class="pre">log</span></code> at the terminal.
+Instead of run name, it’s also possible to use a session id. Moreover, this command contains multiple options
+to facilitate the queries and is especially useful while debugging a pipeline and while inspecting pipeline
+execution metadata.</p>
+<p><strong>Options</strong></p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Name, shorthand (if any)</p></th>
+<th class="head"><p>Default</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>-after</p></td>
+<td></td>
+<td><p>Show log entries for runs executed <em>after</em> the specified one.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-before</p></td>
+<td></td>
+<td><p>Show log entries for runs executed <em>before</em> the specified one.</p></td>
+</tr>
+<tr class="row-even"><td><p>-but</p></td>
+<td></td>
+<td><p>Show log entries for runs executed <em>but</em> the specified one.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-filter, -F</p></td>
+<td></td>
+<td><p>Filter log entires by a custom expression
+e.g. <code class="docutils literal notranslate"><span class="pre">process</span> <span class="pre">=~</span> <span class="pre">/foo.*/</span> <span class="pre">&amp;&amp;</span> <span class="pre">status</span> <span class="pre">==</span> <span class="pre">'COMPLETED'</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>-help, -h</p></td>
+<td><p>false</p></td>
+<td><p>Print the command usage.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-list-fields, -l</p></td>
+<td><p>false</p></td>
+<td><p>Show all available fields.</p></td>
+</tr>
+<tr class="row-even"><td><p>-quiet</p></td>
+<td><p>false</p></td>
+<td><p>Show only run names.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-s</p></td>
+<td></td>
+<td><p>Character used to separate column values</p></td>
+</tr>
+<tr class="row-even"><td><p>-template, -t</p></td>
+<td></td>
+<td><p>Text template used to each record in the log.</p></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Examples</strong></p>
+<p>Listing the execution logs of previous invocations of all pipelines in a project.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow log
+
+TIMESTAMP           DURATION        RUN NAME        STATUS  REVISION ID     SESSION ID                              COMMAND
+2020-10-07 11:52:24 2.1s            focused_payne   OK      96eb04d6a4      af6adaaa-ad4f-48a2-9f6a-b121e789adf5    nextflow run nextflow-io/hello -r master
+2020-10-07 11:53:00 3.1s            tiny_leavitt    OK      e3b475a61b      4d3b95c5-4385-42b6-b430-c865a70d56a4    nextflow run ./tutorial.nf
+2020-10-07 11:53:29 2.5s            boring_euler    OK      e3b475a61b      a6276975-7173-4208-ae09-ab9d6dce8737    nextflow run tutorial.nf
+</pre></div>
+</div>
+<p>Listing only the <em>run names</em> of the execution logs of all pipelines invocations in a project.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow log -quiet
+
+focused_payne
+tiny_leavitt
+boring_euler
+</pre></div>
+</div>
+<p>List the execution entries <em>only</em> a specific execution.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow log tiny_leavitt
+
+work/1f/f1ea9158fb23b53d5083953121d6b6
+work/bf/334115deec60929dc18edf0010032a
+work/a3/06521d75da296d4dd7f4f8caaddad8
+</pre></div>
+</div>
+<p>List the execution entries <em>after</em> a specific execution.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow log -after tiny_leavitt
+
+work/92/c1a9cd9a96e0531d81ca69f5dc3bb7
+work/3f/70944c7a549b6221e1ccc7b4b21b62
+work/0e/2ebdba85f76f6068b21a1bcbf10cab
+</pre></div>
+</div>
+<p>List the execution entries <em>before</em> a specific execution.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow log -before tiny_leavitt
+
+work/5d/ad76f7b7ab3500cf616814ef644b61
+work/c4/69a82b080a477612ba8d8e4c27b579
+work/be/a4fa2aa38f76fd324958c81c2e4603
+work/54/39116773891c47a91e3c1733aad4de
+</pre></div>
+</div>
+<p>List the execution entries <em>except</em> for a specific execution.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow log -but tiny_leavitt
+
+ work/5d/ad76f7b7ab3500cf616814ef644b61
+ work/c4/69a82b080a477612ba8d8e4c27b579
+ work/be/a4fa2aa38f76fd324958c81c2e4603
+ work/54/39116773891c47a91e3c1733aad4de
+</pre></div>
+</div>
+<p>Filter specific fields from the execution log of a process.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow log tiny_leavitt -f &#39;process,exit,hash,duration&#39;
+
+splitLetters        0       1f/f1ea91       112ms
+convertToUpper      0       bf/334115       144ms
+convertToUpper      0       a3/06521d       139ms
+</pre></div>
+</div>
+<p>Filter fields from the execution log of a process based on a criteria.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow log tiny_leavitt -F &#39;process =~ /splitLetters/&#39;
+
+work/1f/f1ea9158fb23b53d5083953121d6b6
+</pre></div>
+</div>
+</section>
+<section id="pull">
+<h3>pull<a class="headerlink" href="#pull" title="Link to this heading">¶</a></h3>
+<p>Download or update a project.</p>
+<p><strong>Usage</strong></p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow pull [options] [project]
+</pre></div>
+</div>
+<p><strong>Description</strong></p>
+<p>The <code class="docutils literal notranslate"><span class="pre">pull</span></code> command downloads a pipeline from a Git-hosting platform into the global cache <code class="docutils literal notranslate"><span class="pre">~/.nextflow/assets</span></code>
+and modifies it accordingly. For downloading a pipeline into a local directory, please refer to the <code class="docutils literal notranslate"><span class="pre">nextflow</span> <span class="pre">clone</span></code> command.</p>
+<p><strong>Options</strong></p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Name, shorthand (if any)</p></th>
+<th class="head"><p>Default</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>-all</p></td>
+<td><p>false</p></td>
+<td><p>Update all downloaded projects.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-help, -h</p></td>
+<td><p>false</p></td>
+<td><p>Print the command usage.</p></td>
+</tr>
+<tr class="row-even"><td><p>-hub</p></td>
+<td><p>github</p></td>
+<td><p>Service hub where the project is hosted. Options: <code class="docutils literal notranslate"><span class="pre">gitlab</span></code> or <code class="docutils literal notranslate"><span class="pre">bitbucket</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>-r</p></td>
+<td></td>
+<td><p>Revision to run (either a git <code class="docutils literal notranslate"><span class="pre">branch</span></code>, <code class="docutils literal notranslate"><span class="pre">tag</span></code> or commit <code class="docutils literal notranslate"><span class="pre">SHA</span></code> number).</p></td>
+</tr>
+<tr class="row-even"><td><p>-user</p></td>
+<td></td>
+<td><p>Private repository user name</p></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Examples</strong></p>
+<p>Download a new pipeline or pull the latest revision for a specific project.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow pull nextflow-io/hello
+
+Checking nextflow-io/hello ...
+done - revision: 96eb04d6a4 [master]
+</pre></div>
+</div>
+<p>Pull the latest revision for all downloaded projects.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow pull -all
+
+Checking nextflow-io/hello ...
+done - revision: 96eb04d6a4 [master]
+Checking nextflow-hub/fastqc ...
+done - revision: 087659b18e [master]
+</pre></div>
+</div>
+<p>Download a specific revision of a new project or pull the latest revision for a specific project.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow pull nextflow-io/hello -r v1.1
+
+Checking nextflow-io/hello ...
+checkout-out at AnyObjectId[1c3e9e7404127514d69369cd87f8036830f5cf64] - revision: 1c3e9e7404 [v1.1]
+</pre></div>
+</div>
+</section>
+<section id="run">
+<h3>run<a class="headerlink" href="#run" title="Link to this heading">¶</a></h3>
+<p>Execute a pipeline.</p>
+<p><strong>Usage</strong></p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow run [options] [project]
+</pre></div>
+</div>
+<p><strong>Description</strong></p>
+<p>The <code class="docutils literal notranslate"><span class="pre">run</span></code> command is used to initiate the execution of the a pipeline script or
+download a pipeline project. Along with serving the purpose of script execution, this command
+facilitates rapid iterations, inspections of any pipeline as well as debugging.</p>
+<p><strong>Options</strong></p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Name, shorthand (if any)</p></th>
+<th class="head"><p>Default</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>-E</p></td>
+<td><p>false</p></td>
+<td><p>Exports all current system environment.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-ansi-log</p></td>
+<td></td>
+<td><p>Enable/disable ANSI console logging.</p></td>
+</tr>
+<tr class="row-even"><td><p>-bucket-dir</p></td>
+<td></td>
+<td><p>Remote bucket where intermediate result files are stored.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-cache</p></td>
+<td></td>
+<td><p>Enable/disable processes caching.</p></td>
+</tr>
+<tr class="row-even"><td><p>-dsl2</p></td>
+<td><p>false</p></td>
+<td><p>Execute the workflow using DSL2 syntax.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-dump-channels</p></td>
+<td></td>
+<td><p>Dump channels for debugging purpose.</p></td>
+</tr>
+<tr class="row-even"><td><p>-dump-hashes</p></td>
+<td><p>false</p></td>
+<td><p>Dump task hash keys for debugging purpose.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-e.</p></td>
+<td><p>{}</p></td>
+<td><p>Add the specified variable to execution environment. Syntax: <code class="docutils literal notranslate"><span class="pre">-e.key=value</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>-entry</p></td>
+<td></td>
+<td><p>Entry workflow name to be executed.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-h, -help</p></td>
+<td><p>false</p></td>
+<td><p>Print the command usage.</p></td>
+</tr>
+<tr class="row-even"><td><p>-hub</p></td>
+<td><p>github</p></td>
+<td><p>Service hub where the project is hosted. Options: <code class="docutils literal notranslate"><span class="pre">gitlab</span></code> or <code class="docutils literal notranslate"><span class="pre">bitbucket</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>-latest</p></td>
+<td><p>false</p></td>
+<td><p>Pull latest changes before run.</p></td>
+</tr>
+<tr class="row-even"><td><p>-lib</p></td>
+<td></td>
+<td><p>Library extension path.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-main-script</p></td>
+<td><p>main.nf</p></td>
+<td><p>The script file to be executed when launching a project directory or repository
+(requires version 20.09.1-edge or later).</p></td>
+</tr>
+<tr class="row-even"><td><p>-name</p></td>
+<td></td>
+<td><p>Assign a mnemonic name to the a pipeline run.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-offline</p></td>
+<td><p>false</p></td>
+<td><p>Do not check for remote project updates.</p></td>
+</tr>
+<tr class="row-even"><td><p>-params-file</p></td>
+<td></td>
+<td><p>Load script parameters from a JSON/YAML file.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-process.</p></td>
+<td><p>{}</p></td>
+<td><p>Set process options. Syntax <code class="docutils literal notranslate"><span class="pre">-process.key=value</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>-profile</p></td>
+<td></td>
+<td><p>Choose a configuration profile.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-qs, -queue-size</p></td>
+<td></td>
+<td><p>Max number of processes that can be executed in parallel by each executor.</p></td>
+</tr>
+<tr class="row-even"><td><p>-resume</p></td>
+<td></td>
+<td><p>Execute the script using the cached results, useful to continue executions that
+was stopped by an error.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-r, -revision</p></td>
+<td></td>
+<td><p>Revision of the project to run
+(either a git <code class="docutils literal notranslate"><span class="pre">branch</span></code>, <code class="docutils literal notranslate"><span class="pre">tag</span></code> or commit <code class="docutils literal notranslate"><span class="pre">SHA</span></code> number).</p></td>
+</tr>
+<tr class="row-even"><td><p>-test</p></td>
+<td></td>
+<td><p>Test a script function with the name specified.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-user</p></td>
+<td></td>
+<td><p>Private repository user name.</p></td>
+</tr>
+<tr class="row-even"><td><p>-with-conda</p></td>
+<td></td>
+<td><p>Use the specified Conda environment package or
+file (must end with <code class="docutils literal notranslate"><span class="pre">.yml|.yaml</span></code>)</p></td>
+</tr>
+<tr class="row-odd"><td><p>-with-dag</p></td>
+<td><p>dag.dot</p></td>
+<td><p>Create pipeline DAG file.</p></td>
+</tr>
+<tr class="row-even"><td><p>-with-docker</p></td>
+<td></td>
+<td><p>Enable process execution in a Docker container.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-N, -with-notification</p></td>
+<td></td>
+<td><p>Send a notification email on workflow completion to the specified recipients.</p></td>
+</tr>
+<tr class="row-even"><td><p>-with-podman</p></td>
+<td></td>
+<td><p>Enable process execution in a Podman container.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-with-report</p></td>
+<td><p>report.html</p></td>
+<td><p>Create processes execution html report.</p></td>
+</tr>
+<tr class="row-even"><td><p>-with-singularity</p></td>
+<td></td>
+<td><p>Enable process execution in a Singularity container.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-with-timeline</p></td>
+<td><p>timeline.html</p></td>
+<td><p>Create processes execution timeline file.</p></td>
+</tr>
+<tr class="row-even"><td><p>-with-tower</p></td>
+<td></td>
+<td><p>Monitor workflow execution with Seqera Tower service.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-with-trace</p></td>
+<td><p>trace.txt</p></td>
+<td><p>Create processes execution tracing file.</p></td>
+</tr>
+<tr class="row-even"><td><p>-with-weblog</p></td>
+<td></td>
+<td><p>Send workflow status messages via HTTP to target URL.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-without-docker</p></td>
+<td><p>false</p></td>
+<td><p>Disable process execution with Docker.</p></td>
+</tr>
+<tr class="row-even"><td><p>-without-podman</p></td>
+<td></td>
+<td><p>Disable process execution in a Podman container.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-w, -work-dir</p></td>
+<td><p>work</p></td>
+<td><p>Directory where intermediate result files are stored.</p></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Examples</strong></p>
+<ul>
+<li><p>Run a specific revision of a downloaded pipeline.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow run nextflow-io/hello -r v1.1
+
+N E X T F L O W  ~  version 20.07.1
+Launching `nextflow-io/hello` [grave_cajal] - revision: 1c3e9e7404 [v1.1]
+</pre></div>
+</div>
+</li>
+<li><p>Choose a <cite>profile</cite> for running the project. Assumes that a profile named <code class="docutils literal notranslate"><span class="pre">docker</span></code> has already been defined in the config file.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow run main.nf -profile docker
+</pre></div>
+</div>
+</li>
+<li><p>Invoke the pipeline execution and generate the summary HTML report. For more information on the metrics, please refer the <a class="reference external" href="https://www.nextflow.io/docs/latest/tracing.html">Tracing &amp; visualization section</a>.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow run main.nf -with-report
+</pre></div>
+</div>
+</li>
+<li><p>Invoke the nextflow pipeline execution with a custom queue size. By default, the value of <strong>queue-size</strong> is the same as the number of available CPUs.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow run nextflow-io/hello -qs 4
+</pre></div>
+</div>
+</li>
+<li><p>Execute the pipeline with DSL-2 syntax.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow run nextflow-io/hello -dsl2
+</pre></div>
+</div>
+</li>
+<li><p>Invoke the pipeline with a specific workflow as the entry-point, this option is meant to be used with DSL-2.</p></li>
+</ul>
+<p>For more information on DSL-2, please refer the <a class="reference external" href="https://www.nextflow.io/docs/latest/dsl2.html">DSL2 section</a>.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow run main.nf -entry workflow_A
+</pre></div>
+</div>
+<ul>
+<li><p>Invoke the nextflow pipeline execution with the integrated monitoring dashboard Tower. For more information, please refer to the <a class="reference external" href="https://www.tower.nf">tower.nf</a> website.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow run nextflow-io/hello -with-tower
+</pre></div>
+</div>
+</li>
+</ul>
+</section>
+<section id="self-update">
+<h3>self-update<a class="headerlink" href="#self-update" title="Link to this heading">¶</a></h3>
+<p>Update the nextflow runtime to the latest available version.</p>
+<p><strong>Usage</strong></p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow self-update
+</pre></div>
+</div>
+<p><strong>Description</strong></p>
+<p>The <code class="docutils literal notranslate"><span class="pre">self-update</span></code> command directs the <code class="docutils literal notranslate"><span class="pre">nextflow</span></code> cli to update itself to the latest stable release.</p>
+<p><strong>Examples</strong></p>
+<p>Update Nextflow.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow self-update
+
+      N E X T F L O W
+      version 20.07.1 build 5412
+      created 24-07-2020 15:18 UTC (20:48 IDT)
+      cite doi:10.1038/nbt.3820
+      http://nextflow.io
+
+
+Nextflow installation completed. Please note:
+- the executable file `nextflow` has been created in the folder: /usr/local/bin
+</pre></div>
+</div>
+</section>
+<section id="view">
+<h3>view<a class="headerlink" href="#view" title="Link to this heading">¶</a></h3>
+<p>View a projects script file(s).</p>
+<p><strong>Usage</strong></p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow view [options] [project]
+</pre></div>
+</div>
+<p><strong>Description</strong></p>
+<p>The <code class="docutils literal notranslate"><span class="pre">view</span></code> command is used to inspect the pipelines which are already stored in the global nextflow cache.
+For downloading a pipeline into the global cache <code class="docutils literal notranslate"><span class="pre">~/.nextflow/assets</span></code>, please refer to the <code class="docutils literal notranslate"><span class="pre">pull</span></code> command.</p>
+<p><strong>Options</strong></p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Name, shorthand (if any)</p></th>
+<th class="head"><p>Default</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>-help, -h</p></td>
+<td><p>false</p></td>
+<td><p>Print the command usage.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-l</p></td>
+<td><p>false</p></td>
+<td><p>List repository content.</p></td>
+</tr>
+<tr class="row-even"><td><p>-q</p></td>
+<td><p>false</p></td>
+<td><p>Hide header line.</p></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Examples</strong></p>
+<p>Viewing the contents of a downloaded pipeline.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow view nextflow-io/hello
+
+== content of file: .nextflow/assets/nextflow-io/hello/main.nf
+#!/usr/bin/env nextflow
+
+cheers = Channel.from &#39;Bonjour&#39;, &#39;Ciao&#39;, &#39;Hello&#39;, &#39;Hola&#39;
+
+ process sayHello {
+   echo true
+   input:
+     val x from cheers
+   script:
+     &quot;&quot;&quot;
+     echo &#39;$x world!&#39;
+     &quot;&quot;&quot;
+ }
+</pre></div>
+</div>
+<p>Listing the folder structure of the downloaded pipeline.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow view -l nextflow-io/hello
+
+== content of path: .nextflow/assets/nextflow-io/hello
+LICENSE
+README.md
+nextflow.config
+.gitignore
+circle.yml
+foo.nf
+.git
+.travis.yml
+main.nf
+</pre></div>
+</div>
+<p>Viewing the contents of a downloaded pipeline without omitting the header.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ nextflow view -q nextflow-io/hello
+
+#!/usr/bin/env nextflow
+
+cheers = Channel.from &#39;Bonjour&#39;, &#39;Ciao&#39;, &#39;Hello&#39;, &#39;Hola&#39;
+
+ process sayHello {
+   echo true
+   input:
+     val x from cheers
+   script:
+     &quot;&quot;&quot;
+     echo &#39;$x world!&#39;
+     &quot;&quot;&quot;
+ }
+</pre></div>
+</div>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="dsl2.html" class="btn btn-neutral float-left" title="DSL 2" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="awscloud.html" class="btn btn-neutral float-right" title="Amazon Cloud" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2020, Seqera Labs. 2013-2019, Centre for Genomic Regulation (CRG)..</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+    <!-- Theme Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-364526-10"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'UA-364526-10', {
+          'anonymize_ip': false,
+      });
+    </script> 
+
+</body>
+</html>
