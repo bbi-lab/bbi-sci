@@ -123,14 +123,6 @@ rt_stats <- function(sample_name, cds) {
 }
 
 
-# 
-recovery_plots <- function(cds) {
-    # Violin plot of percent mitochondrial umis by RT barcode with threshold line at 10% 
-
-
-}
-
-
 # Perform well check for each RT well 
 # Looks at number of UMIs, percent mitochondrial UMIs and 
 # percent of a UMAP cluster in a well 
@@ -462,90 +454,54 @@ gen_plots <- function(sample_name, sample_path) {
 
     # Subsample cells from cds object if > 300,000 cells for preprocessing and clustering
     # Original cds will be used for RT umi and mitochondrial stats
-
-    sub_cds <- NULL 
-    wellcheck_data <- NULL 
-
+    
     if(nrow(colData(samp_cds)) >300000) {
-
-      sub_cds <- samp_cds[, samp_cds$cell %in% sample(samp_cds$cell, 300000)]
-      sub_cds <- preprocess_cds(sub_cds)
-      sub_cds <- reduce_dimension(sub_cds)
-      sub_cds <- cluster_cells(sub_cds, k=ceiling(sqrt(dim(sub_cds)[2])*0.25))
-
-      # Reduce number of clusters if clusters are > 12 
-      if (dim(table(clusters(sub_cds))) > 12 ) {
-        sub_cds <- cluster_cells(sub_cds, k=ceiling(sqrt(dim(sub_cds)[2])*0.75))
-      }  
-
-      # Increase number of clusters if clusters are < 5
-      if (dim(table(clusters(sub_cds))) < 5 ) {
-        sub_cds <- cluster_cells(sub_cds, k=ceiling(sqrt(dim(sub_cds)[2])*0.1))
-      }  
-
-      wellcheck_data = well_check(sample_name, sub_cds)
-      colpal = wellcheck_data[[3]]
-
-      # Plot umap 
-      file_name <- paste0(sample_name, "_UMAP.png")
-      ggp_obj <- suppressMessages(plot_cells_simp(sub_cds, colpal) + theme(text = element_text(size = 8)))
-      ggsave(filename=file_name, ggp_obj, device='png', width=5, height=5, dpi=600, units='in')
-
-    } else {
-
-      samp_cds <- preprocess_cds(samp_cds)
-      samp_cds <- reduce_dimension(samp_cds)
-      samp_cds <- cluster_cells(samp_cds, k=ceiling(sqrt(dim(samp_cds)[2])*0.25))
-
-      # Reduce number of clusters if clusters are > 12 
-      if (dim(table(clusters(samp_cds))) > 12 ) {
-        samp_cds <- cluster_cells(samp_cds, k=ceiling(sqrt(dim(samp_cds)[2])*0.75))
-      }  
-
-      # Increase number of clusters if clusters are < 5
-      if (dim(table(clusters(samp_cds))) < 5 ) {
-        samp_cds <- cluster_cells(samp_cds, k=ceiling(sqrt(dim(sub_cds)[2])*0.1))
-      }  
-
-      wellcheck_data = well_check(sample_name, samp_cds)
-      colpal = wellcheck_data[[3]]
-      
-#    file_name <- paste0(sample_name, "_UMAP.png")
-#    png(file_name, width = 5, height = 5, res = 600, units = "in")
-#    print(suppressMessages(plot_cells_simp(samp_cds, colpal) + theme(text = element_text(size = 8))))
-#    dev.off()
-
-      # Plot umap
-      file_name <- paste0(sample_name, "_UMAP.png")
-      
-      ggp_obj <- suppressMessages(plot_cells_simp(samp_cds, colpal) + theme(text = element_text(size = 8)))
-      ggsave(filename=file_name, ggp_obj, device='png', width=5, height=5, dpi=600, units='in')
-      
+      samp_cds <- samp_cds[, samp_cds$cell %in% sample(samp_cds$cell, 300000)]
     }
+    
+    samp_cds <- preprocess_cds(samp_cds)
+    samp_cds <- reduce_dimension(samp_cds)
+    samp_cds <- cluster_cells(samp_cds, k=ceiling(sqrt(dim(samp_cds)[2])*0.25))
+
+    # Reduce number of clusters if clusters are > 12 
+    if (dim(table(clusters(samp_cds))) > 12 ) {
+      samp_cds <- cluster_cells(samp_cds, k=ceiling(sqrt(dim(samp_cds)[2])*0.75))
+    }  
+    
+    # Increase number of clusters if clusters are < 5
+    if (dim(table(clusters(samp_cds))) < 5 ) {
+      samp_cds <- cluster_cells(samp_cds, k=ceiling(sqrt(dim(samp_cds)[2])*0.1))
+    }  
+    wellcheck_data = well_check(sample_name, samp_cds)
+    colpal = wellcheck_data[[3]]
+    # Plot umap 
+    file_name <- paste0(sample_name, "_UMAP.png")
+    ggp_obj <- suppressMessages(plot_cells_simp(samp_cds, colpal) + theme(text = element_text(size = 8)))
+    ggsave(filename=file_name, ggp_obj, device='png', width=5, height=5, dpi=600, units='in')
 
     # Combine mito, umi, and rt well check plots 
-    well_check_combined <- plot_grid(cds_rt_data[[2]], cds_rt_data[[3]], # mito and umi rt barcode plots 
-                    wellcheck_data[[1]], wellcheck_data[[2]], # perc cluster plots from rt well check
-                    nrow=4, align='hv',
-                    rel_heights = c(1,1,1,2))
+  well_check_combined <- plot_grid(cds_rt_data[[2]], cds_rt_data[[3]], # mito and umi rt barcode plots 
+                  wellcheck_data[[1]], wellcheck_data[[2]], # perc cluster plots from rt well check
+                  nrow=4, align='hv',
+                  rel_heights = c(1,1,1,2))
 
 
-    ggsave(paste0(sample_name, "_wellcheck.png"), well_check_combined, width=15, height = 30)
+  ggsave(paste0(sample_name, "_wellcheck.png"), well_check_combined, width=15, height = 30)
 
 
-    for (mod in garnett_mods) {
+  for (mod in garnett_mods) {
 #      file_name <- paste0(sample_name, "_", gsub("garnett_type_", "", mod) ,"_Garnett.png")
 #      png(file_name, width = 7, height = 5, res = 600, units = "in")
 #      print(suppressMessages(plot_cells_simp(samp_cds, color_cells_by = mod) + theme(text = element_text(size = 8)) + theme(legend.position = "none")))
 #      dev.off()
 
-      file_name <- paste0(sample_name, "_", gsub("garnett_type_", "", mod) ,"_Garnett.png")
-      ggp_obj <- suppressMessages(plot_cells_simp(samp_cds, color_cells_by = mod) + theme(text = element_text(size = 8)) + theme(legend.position = "none"))
-      ggsave(filename=file_name, ggp_obj, device='png', width=7, height=5, dpi=600, units='in')
-    }
+    file_name <- paste0(sample_name, "_", gsub("garnett_type_", "", mod) ,"_Garnett.png")
+    ggp_obj <- suppressMessages(plot_cells_simp(samp_cds, color_cells_by = mod) + theme(text = element_text(size = 8)) + theme(legend.position = "none"))
+    ggsave(filename=file_name, ggp_obj, device='png', width=7, height=5, dpi=600, units='in')
+  }
     
     samp_cds
-  }, error = function(e) {
+}, error = function(e) {
 
 #    png(paste0(sample_name, "_UMAP.png"), width = 5, height = 5, res = 600, units = "in")
 #    print(ggplot() + geom_text(aes(x = 1, y = 1, label = "Insufficient cells for UMAP")) + monocle3:::monocle_theme_opts() + theme(legend.position = "none") + labs(x="UMAP 1", y = "UMAP 2"))
