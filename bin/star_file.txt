@@ -1,6 +1,7 @@
 Human   /net/bbi/vol1/data/genomes_stage/human/human_star 60
 Human_gencode /net/bbi/vol1/data/genomes_stage/human_gencode/human_gencode_star 60
 Mouse   /net/bbi/vol1/data/genomes_stage/mouse/mouse_star 47
+Mouse_bcp   /net/bbi/vol1/data/genomes_stage/mouse_bcp/mouse_bcp_star 47
 Mouse_davis    /net/bbi/vol1/data/genomes_stage/mouse_davis/mouse_davis_star 47
 Mouse_gencode /net/bbi/vol1/data/genomes_stage/mouse_gencode/mouse_gencode_star 47
 Mouse_liachko /net/bbi/vol1/data/genomes_stage/mouse_liachko/mouse_liachko_star 47
@@ -8,6 +9,7 @@ Mouse_tdTomato /net/bbi/vol1/data/genomes_stage/mouse_tdtomato/mouse_tdtomato_st
 Mouse_tdTomato_WPRE /net/bbi/vol1/data/genomes_stage/mouse_tdtomato_wpre/mouse_tdtomato_wpre_star 47
 Mouse_ttbk1 /net/bbi/vol1/data/genomes_stage/mouse_ttbk1/mouse_ttbk1_star 47
 Barnyard    /net/bbi/vol1/data/genomes_stage/barnyard/barnyard_star  90
+Barnyard_bcp    /net/bbi/vol1/data/genomes_stage/barnyard_bcp/barnyard_bcp_star 90
 Barnyard_gencode /net/bbi/vol1/data/genomes_stage/barnyard_gencode/barnyard_gencode_star 90
 Barnyard_10X_bbi /net/bbi/vol1/data/genomes_stage/barnyard_10X/barnyard_10X_homebrew/barnyard_10X_homebrew_star 90
 Fishbowl_seahub /net/bbi/vol1/data/genomes_stage/fishbowl_seahub/fishbowl_seahub_star 70
@@ -15,6 +17,7 @@ Worm    /net/bbi/vol1/data/genomes_stage/worm/worm_star  10
 Rat /net/bbi/vol1/data/genomes_stage/rat/rat_star 37
 Macaque /net/bbi/vol1/data/genomes_stage/macaque/macaque_star 110
 Zebrafish   /net/bbi/vol1/data/genomes_stage/zebrafish/zebrafish_star 20
+Zebrafish_bcp  /net/bbi/vol1/data/genomes_stage/zebrafish_bcp/zebrafish_star 20
 Zebrafish_rasmussen   /net/bbi/vol1/data/genomes_stage/zebrafish_rasmussen/zebrafish_rasmussen_star 20
 Drosophila  /net/bbi/vol1/data/genomes_stage/drosophila/drosophila_star  10
 Chicken	/net/bbi/vol1/data/genomes_stage/chicken/chicken_star 15
