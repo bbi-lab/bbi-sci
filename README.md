@@ -1,7 +1,10 @@
 # bbi-sci
 
+This is BBI's legacy pipeline. Please see https://github.com/bbi-lab/bbi-scirna-analyze for out latest pipeline.
+
+
 ## Intro
-This pipeline is the under-construction pipe for processing 2-level and 3-level data. It uses the pipeline management system Nextflow to operate.
+This pipeline is for processing 2-level and 3-level data. It uses the pipeline management system Nextflow to operate.
 
 The pipeline is run in two parts, the first is [bbi-dmux](https://github.com/bbi-lab/bbi-dmux) which runs the demultiplexing, and the second is [bbi-sci](https://github.com/bbi-lab/bbi-sci/) which completes the preprocessing. The instructions below apply to both pipelines, and both pipelines can use the same configuration file.
 
